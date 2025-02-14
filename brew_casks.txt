@@ -1,0 +1,40 @@
+# 开发工具
+android-studio
+xcodes
+visual-studio-code
+github-copilot-for-xcode
+flutter
+epic-games
+iterm2
+sourcetree
+docker
+
+# 社交软件
+wechat
+whatsapp
+telegram
+discord
+
+# 日常软件
+google-chrome
+iina
+transmission
+hammerspoon
+chatgpt
+obsidian
+notion
+
+# 办公软件
+feishu
+lark
+tencent-meeting
+
+# 专业软件
+blender
+splashtop-personal
+splashtop-streamer
+
+
+
+
+

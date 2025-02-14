@@ -1,0 +1,11 @@
+# 基础开发工具
+cmake
+cmake-docs
+ninja
+ncdu
+pipx
+protobuf
+tmux
+jq
+ffmpeg
+hugo
