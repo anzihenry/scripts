@@ -36,45 +36,37 @@ update_casks() {
     
     local exclude_pattern=$(IFS="|"; echo "${EXCLUDED_CASKS[*]}")
     
-    # 改进点1：精确提取Cask名称 + 过滤无效条目
+    # 关键修复：精准提取Cask名称
     local outdated_casks=$(brew outdated --cask --greedy 2>/dev/null | \
-        awk '/^[a-zA-Z0-9-]+/{print $1}' | \
-        grep -E '^[a-zA-Z0-9-]+$' | \
+        awk -F'[ ()]' '{print $1}' | \
+        grep -E '^[a-z0-9-]+$' | \
         sort -u)
     
-    # 改进点2：空列表检查
     if [ -z "$outdated_casks" ]; then
         yellow "\n⏳ 没有检测到需要更新的Cask应用"
         return 0
     fi
     
     local total=$(echo "$outdated_casks" | wc -l | tr -d ' ')
-    
-    # 改进点3：增强正则表达式边界匹配
-    local filtered_casks=$(echo "$outdated_casks" | \
-        grep -v -E "^(${exclude_pattern})$")
-    
+    local filtered_casks=$(echo "$outdated_casks" | grep -v -E "^(${exclude_pattern})$")
     local filtered_count=$(echo "$filtered_casks" | wc -l | tr -d ' ')
     
     yellow "\n⏳ 发现 $total 个可更新应用，已排除 $((total - filtered_count)) 个"
     
-    # 改进点4：添加空行过滤和有效性检查
     local counter=0
     while read -r cask; do
-        # 跳过空行和非合法Cask名称
-        if [[ -z "$cask" || ! "$cask" =~ ^[a-zA-Z0-9-]+$ ]]; then
+        if [[ -z "$cask" || ! "$cask" =~ ^[a-z0-9-]+$ ]]; then
             red "⚠️ 跳过无效Cask名称: ${cask:-<空值>}"
+            continue
+        fi
+        
+        if ! brew info --cask "$cask" &>/dev/null; then
+            red "❌ Cask '$cask' 不存在或已失效"
             continue
         fi
         
         ((counter++))
         blue "\n🔍 正在处理 ($counter/$filtered_count): $cask"
-        
-        # 改进点5：添加前置存在性检查
-        if ! brew info --cask "$cask" &>/dev/null; then
-            red "❌ Cask '$cask' 不存在或已失效"
-            continue
-        fi
         
         if ! brew upgrade --cask "$cask"; then
             red "❌ 更新失败: $cask"
