@@ -35,10 +35,9 @@ update_casks() {
     green "\n🖥️ 正在检测可更新的Cask应用..."
     
     local exclude_pattern=$(IFS="|"; echo "${EXCLUDED_CASKS[*]}")
-    
-    # 关键修复：精准提取Cask名称
+
     local outdated_casks=$(brew outdated --cask --greedy 2>/dev/null | \
-        awk -F'[ ()]' '{print $1}' | \
+        awk '/^[a-zA-Z0-9-]+/ {print substr($0, 1, index($0," ")-1)}' | \
         grep -E '^[a-z0-9-]+$' | \
         sort -u)
     
