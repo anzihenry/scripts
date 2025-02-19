@@ -21,8 +21,6 @@ iina
 transmission
 hammerspoon
 chatgpt
-obsidian
-notion
 
 # 办公软件
 feishu
