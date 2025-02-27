@@ -15,7 +15,7 @@ EXCLUDED_CASKS = [
     r"obsidian",
     r"notion",
     r"feishu",
-    r"lark",
+    r"lark"
 ]
 
 # -------------------- 功能实现 --------------------
