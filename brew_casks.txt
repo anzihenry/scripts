@@ -21,7 +21,7 @@ google-chrome
 iina
 transmission
 hammerspoon
-chatgpt
+the-unarchiver
 
 # 办公软件
 feishu
@@ -34,6 +34,7 @@ splashtop-personal
 splashtop-streamer
 
 # AI
+chatgpt
 ollama
 
 
