@@ -15,7 +15,8 @@ EXCLUDED_CASKS = [
     r"obsidian",
     r"notion",
     r"feishu",
-    r"lark"
+    r"lark",
+    r"flutter"
 ]
 
 # -------------------- 功能实现 --------------------
@@ -33,19 +34,34 @@ class BrewManager:
     def _print(self, color, message):
         print(f"{self.colors[color]}{message}{self.colors['reset']}")
 
-    def _run_cmd(self, cmd, check=True):
+    def _run_cmd(self, cmd, show_output=True):
+        """执行命令并实时显示输出"""
         try:
-            result = subprocess.run(
-                cmd, 
-                shell=True, 
-                check=check,
+            process = subprocess.Popen(
+                cmd,
+                shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True
+                text=True,
+                bufsize=1,
+                universal_newlines=True
             )
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            self._print('red', f"命令执行失败: {e.cmd}\n错误信息: {e.stdout}")
+
+            # 实时输出处理
+            output_lines = []
+            while True:
+                line = process.stdout.readline()
+                if not line and process.poll() is not None:
+                    break
+                if line:
+                    line = line.rstrip('\n')
+                    output_lines.append(line)
+                    if show_output:
+                        print(line)  # 实时显示输出
+
+            return '\n'.join(output_lines)
+        except Exception as e:
+            self._print('red', f"命令执行异常: {str(e)}")
             return None
 
     def update_brew(self):
@@ -57,17 +73,16 @@ class BrewManager:
         self._run_cmd("brew upgrade")
 
     def _get_outdated_casks(self):
-        output = self._run_cmd("brew outdated --cask --greedy", check=False)
+        output = self._run_cmd("brew outdated --cask --greedy", show_output=False)
         if not output:
             return []
             
         casks = []
         for line in output.split('\n'):
-            # 使用正则提取纯Cask名称
             match = re.match(r'^([a-zA-Z0-9-]+)\b', line)
             if match:
-                casks.append(match.group(1).lower())  # 统一转为小写
-        return list(set(casks))  # 去重
+                casks.append(match.group(1).lower())
+        return list(set(casks))
 
     def update_casks(self):
         self._print('green', "\n🖥️ 正在检测可更新的Cask应用...")
@@ -88,17 +103,16 @@ class BrewManager:
         for idx, cask in enumerate(filtered, 1):
             self._print('blue', f"\n🔍 正在处理 ({idx}/{filtered_count}): {cask}")
             
-            # 前置校验
             if not self._cask_exists(cask):
                 self._print('red', f"❌ Cask '{cask}' 不存在或已失效")
                 continue
                 
-            result = self._run_cmd(f"brew upgrade --cask {cask}", check=False)
-            if not result or "Error" in result:
+            result = self._run_cmd(f"brew upgrade --cask {cask}")
+            if "Error" in (result or ""):
                 self._log_error(cask)
 
     def _cask_exists(self, cask):
-        return self._run_cmd(f"brew info --cask {cask}") is not None
+        return bool(self._run_cmd(f"brew info --cask {cask}", show_output=False))
 
     def _log_error(self, cask):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

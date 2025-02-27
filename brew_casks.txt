@@ -8,6 +8,7 @@ epic-games
 iterm2
 sourcetree
 docker
+zulu@17
 
 # 社交软件
 wechat
