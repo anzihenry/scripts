@@ -32,6 +32,9 @@ blender
 splashtop-personal
 splashtop-streamer
 
+# AI
+ollama
+
 
 
 

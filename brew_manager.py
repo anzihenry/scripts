@@ -5,17 +5,17 @@ from datetime import datetime
 
 # ---------------------- 配置区域 ----------------------
 EXCLUDED_CASKS = [
-    r"notion",                # 支持正则表达式
-    r"zoom",
-    r"microsoft-.*",
+    r"microsoft-.*",   # 支持正则表达式
     r"adobe-.*",
     r"android-studio",
-    r"docker",
     r"visual-studio-code",
+    r"docker",
     r"iterm2",
-    r"epic-games",
     r"google-chrome",
-    r"obsidian"
+    r"obsidian",
+    r"notion",
+    r"feishu",
+    r"lark",
 ]
 
 # -------------------- 功能实现 --------------------
