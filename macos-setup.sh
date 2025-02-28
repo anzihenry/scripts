@@ -119,8 +119,13 @@ configure_homebrew() {
         if [ $install_status -eq 0 ]; then
             success "官方源安装成功"
             
-            # 确保环境变量立即生效
-            eval "$(${BREW_PREFIX}/bin/brew shellenv)"
+            # 强制加载环境变量
+            if [[ -f "${BREW_PREFIX}/bin/brew" ]]; then
+                eval "$(${BREW_PREFIX}/bin/brew shellenv)"
+                export PATH="${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:$PATH"
+            else
+                error "brew 可执行文件未找到"
+            fi
         else
             warning "官方源安装失败 (状态码 $install_status)，尝试中科大镜像..."
             
@@ -132,14 +137,16 @@ configure_homebrew() {
             # 重新确认安装路径
             [ -d "/opt/homebrew" ] && BREW_PREFIX="/opt/homebrew" || BREW_PREFIX="/usr/local"
             eval "$(${BREW_PREFIX}/bin/brew shellenv)"
+            export PATH="${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:$PATH"
         fi
 
         # 持久化配置
         {
-            echo "\n# Homebrew 配置"
+            echo "\n# Homebrew"
             for conf in ${BREW_CONF[@]}; do
                 echo $conf
             done
+            echo "export PATH=\"${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:\$PATH\""
             echo "eval \"\$(${BREW_PREFIX}/bin/brew shellenv)\""
         } >> ~/.zshrc
 
@@ -154,15 +161,38 @@ configure_homebrew() {
 
     # 验证安装
     if ! brew --version &>/dev/null; then
-        error "Homebrew 安装后验证失败，请检查日志"
+        warning "Homebrew 验证失败，尝试修复..."
+        
+        # 检查路径是否存在
+        if [[ ! -d "${BREW_PREFIX}" ]]; then
+            error "Homebrew 安装目录不存在：${BREW_PREFIX}"
+        fi
+        
+        # 重新加载环境变量
+        eval "$(${BREW_PREFIX}/bin/brew shellenv)"
+        export PATH="${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:$PATH"
+        
+        if ! brew --version &>/dev/null; then
+            error "Homebrew 验证仍失败，请检查 ${BREW_PREFIX} 权限"
+        fi
     fi
 
-    # 仓库修复
+    # 仓库修复（带重试机制）
     warning "正在同步仓库配置..."
-    brew update-reset -q || {
-        sudo chown -R $(whoami) $(brew --prefix)/*
-        brew update-reset -q
-    }
+    (
+        set +e
+        for i in {1..3}; do
+            brew update-reset -q
+            if [ $? -eq 0 ]; then
+                break
+            else
+                echo -e "${YELLOW}第 ${i} 次同步失败，10秒后重试...${NC}"
+                sleep 10
+                sudo chown -R $(whoami) $(brew --prefix)/*
+            fi
+        done
+        set -e
+    )
 
     success "Homebrew 配置完成 (版本: $(brew --version | head -n1))"
 }
@@ -181,26 +211,26 @@ install_core_software() {
     config_android_and_java
     
     # 从配置文件加载软件列表
-    local formulae=($(load_packages $FORMULAE_FILE))
-    local casks=($(load_packages $CASKS_FILE))
+    #local formulae=($(load_packages $FORMULAE_FILE))
+    #local casks=($(load_packages $CASKS_FILE))
     
     # 安装 formulae
-    for tool in $formulae; do
-        if ! brew install $tool; then
-            warning "$tool 安装失败，尝试从国内镜像下载..."
-            brew fetch --force $tool
-            brew install $tool
-        fi
-    done
+    #for tool in $formulae; do
+    #    if ! brew install $tool; then
+    #        warning "$tool 安装失败，尝试从国内镜像下载..."
+    #        brew fetch --force $tool
+    #        brew install $tool
+    #    fi
+    #done
 
     # 安装 casks
-    for cask in $casks; do
-        if ! brew install --cask $cask; then
-            warning "$cask 安装失败，尝试从国内镜像下载..."
-            brew fetch --cask --force $cask
-            brew install --cask $cask
-        fi
-    done
+    #for cask in $casks; do
+    #    if ! brew install --cask $cask; then
+    #        warning "$cask 安装失败，尝试从国内镜像下载..."
+    #        brew fetch --cask --force $cask
+    #        brew install --cask $cask
+    #    fi
+    #done
 
     success "核心软件安装完成"
 }
@@ -216,10 +246,10 @@ install_node() {
     mkdir -p ~/.nvm
     cat >> ~/.zshrc <<EOF
 
-# Node.js 配置
-export NVM_DIR="$HOME/.nvm"
-[ -s "$(brew --prefix)/opt/nvm/nvm.sh" ] && \. "$(brew --prefix)/opt/nvm/nvm.sh"
-[ -s "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm"
+# Node.js
+export NVM_DIR="\$HOME/.nvm"
+[ -s "\$(brew --prefix)/opt/nvm/nvm.sh" ] && \. "\$(brew --prefix)/opt/nvm/nvm.sh"
+[ -s "\$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm" ] && \. "\$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm"
 EOF
     source ~/.zshrc
 
@@ -239,22 +269,25 @@ install_python() {
     brew install python
     
     # 配置路径和环境变量
-    cat > ~/.zshrc <<EOF
+    cat >> ~/.zshrc <<EOF
 
-export PATH="$(brew --prefix python)/libexec/bin:$PATH"
+# Python
+export PATH="\$(brew --prefix python)/libexec/bin:\$PATH"
 EOF
     
     # 配置 pip 镜像
     mkdir -p ~/.pip
-    cat > ~/.pip/pip.conf <<EOF
+    cat >> ~/.pip/pip.conf <<EOF
 [global]
 index-url = https://mirrors.ustc.edu.cn/pypi/simple
 trusted-host = mirrors.ustc.edu.cn
 EOF
 
     source ~/.zshrc
-    python3 --version || error "Python 安装失败"
-    pip3 --version || error "pip 安装失败"
+    python3 --version || error "Python3 安装失败"
+    pip3 --version || error "pip3 安装失败"
+    python --version || error "Python 安装失败"
+    pip --version || error "pip 安装失败"
 
     success "$(python --version) 安装完成"
 }
@@ -267,12 +300,12 @@ install_ruby() {
     brew install ruby
     
     # 配置路径和环境变量
-    cat > ~/.zshrc <<EOF
+    cat >> ~/.zshrc <<EOF
 
-# Ruby 配置
-export PATH="$(brew --prefix ruby)/bin:$PATH"
-export LDFLAGS="-L$(brew --prefix ruby)/lib"
-export CPPFLAGS="-I$(brew --prefix ruby)/include"
+# Ruby
+export PATH="\$(brew --prefix ruby)/bin:\$PATH"
+export LDFLAGS="-L\$(brew --prefix ruby)/lib"
+export CPPFLAGS="-I\$(brew --prefix ruby)/include"
 EOF
     source ~/.zshrc
     
@@ -292,9 +325,9 @@ install_go() {
     # 配置环境变量
     cat >> ~/.zshrc <<EOF
 
-# Go 配置
-export GOPATH="$HOME/Coding/go"
-export PATH="$GOPATH/bin:$PATH"
+# Go
+export GOPATH="\$HOME/Coding/go"
+export PATH="\$GOPATH/bin:\$PATH"
 export GOPROXY="https://goproxy.cn,direct"
 EOF
     source ~/.zshrc
@@ -331,9 +364,9 @@ config_android_and_java() {
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
 
 # Android
-export ANDROID_HOME=$HOME/Library/Android/sdk
-export PATH=$PATH:$ANDROID_HOME/emulator
-export PATH=$PATH:$ANDROID_HOME/platform-tools
+export ANDROID_HOME=\$HOME/Library/Android/sdk
+export PATH=\$PATH:\$ANDROID_HOME/emulator
+export PATH=\$PATH:\$ANDROID_HOME/platform-tools
 EOF
     source ~/.zshrc
 
@@ -346,7 +379,7 @@ post_verification() {
     echo -e "\n${GREEN}=== 安装后验证 ===${NC}"
     
     # 关键命令检查
-    local critical_cmds=(git brew node npm python3 pip3 ruby go)
+    local critical_cmds=(git brew node npm ruby go python pip python3 pip3)
     for cmd in $critical_cmds; do
         if ! command -v $cmd &>/dev/null; then
             warning "命令缺失: $cmd"
@@ -360,7 +393,8 @@ post_verification() {
     [[ -z $(gem sources -l | grep ustc) ]] && warning "Ruby 镜像源未配置"
     [[ -z $(pip config get global.index-url) ]] && warning "pip 镜像源未配置"
 
-    [[ $(which python3) != $(brew --prefix python)* ]] && warning "Python 路径优先级异常"
+    [[ $(which python) != $(brew --prefix python)* ]] && warning "Python 路径优先级异常"
+    [[ $(which python3) != $(brew --prefix python3)* ]] && warning "Python 路径优先级异常"
     [[ $(which ruby) != $(brew --prefix ruby)* ]] && warning "Ruby 路径优先级异常"
 
     # 路径安全检测
