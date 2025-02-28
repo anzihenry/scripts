@@ -89,7 +89,7 @@ install_xcode_cli() {
 # ===== Homebrew 安装与配置 =====
 configure_homebrew() {
     echo -e "\n${GREEN}=== 配置 Homebrew (官方源优先) ===${NC}"
-    
+
     # 环境变量配置（安装后生效）
     local BREW_CONF=(
         "export HOMEBREW_BREW_GIT_REMOTE=\"https://mirrors.ustc.edu.cn/brew.git\""
@@ -102,45 +102,71 @@ configure_homebrew() {
     if ! command -v brew &>/dev/null; then
         warning "正在尝试官方源安装..."
         
-        # 优先使用官方安装脚本
-        if /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
-            success "官方源安装成功"
+        # 获取架构信息
+        local BREW_PREFIX
+        if [[ $(uname -m) == "arm64" ]]; then
+            BREW_PREFIX="/opt/homebrew"
         else
-            warning "官方源安装失败，尝试中科大镜像..."
-            /bin/bash -c "$(curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh)"
+            BREW_PREFIX="/usr/local"
         fi
 
-        # 配置环境变量
-        local brew_prefix
-        if [[ $(uname -m) == "arm64" ]]; then
-            brew_prefix="/opt/homebrew"
+        # 临时取消错误中断以处理安装失败
+        set +e
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        local install_status=$?
+        set -e
+
+        if [ $install_status -eq 0 ]; then
+            success "官方源安装成功"
+            
+            # 确保环境变量立即生效
+            eval "$(${BREW_PREFIX}/bin/brew shellenv)"
         else
-            brew_prefix="/usr/local"
+            warning "官方源安装失败 (状态码 $install_status)，尝试中科大镜像..."
+            
+            # 使用中科大安装脚本
+            /bin/bash -c "$(curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh)" || {
+                error "Homebrew 安装失败，请检查网络连接"
+            }
+            
+            # 重新确认安装路径
+            [ -d "/opt/homebrew" ] && BREW_PREFIX="/opt/homebrew" || BREW_PREFIX="/usr/local"
+            eval "$(${BREW_PREFIX}/bin/brew shellenv)"
         fi
-        
-        # 写入镜像配置
-        echo "# Homebrew 镜像配置" >> ~/.zshrc
-        for conf in ${BREW_CONF[@]}; do
-            echo $conf >> ~/.zshrc
-        done
-        echo "eval \"\$(${brew_prefix}/bin/brew shellenv)\"" >> ~/.zshrc
-        
+
+        # 持久化配置
+        {
+            echo "\n# Homebrew 配置"
+            for conf in ${BREW_CONF[@]}; do
+                echo $conf
+            done
+            echo "eval \"\$(${BREW_PREFIX}/bin/brew shellenv)\""
+        } >> ~/.zshrc
+
+        # 立即生效配置
         source ~/.zshrc
     fi
 
-    # 强制应用镜像配置
+    # 强制应用镜像配置（当前会话）
     for conf in ${BREW_CONF[@]}; do
         eval $conf
     done
 
-    # 仓库配置
-    brew config &>/dev/null || {
-        warning "修复 Homebrew 仓库..."
+    # 验证安装
+    if ! brew --version &>/dev/null; then
+        error "Homebrew 安装后验证失败，请检查日志"
+    fi
+
+    # 仓库修复
+    warning "正在同步仓库配置..."
+    brew update-reset -q || {
         sudo chown -R $(whoami) $(brew --prefix)/*
         brew update-reset -q
     }
-    success "Homebrew 配置完成"
+
+    success "Homebrew 配置完成 (版本: $(brew --version | head -n1))"
 }
+
 
 # ===== 核心软件安装 =====
 install_core_software() {
