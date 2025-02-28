@@ -330,7 +330,9 @@ post_verification() {
 
     # 验证环境变量
     [[ -z $(go env GOPROXY) ]] && warning "GOPROXY 未正确配置"
+    [[ $(which go) != $(brew --prefix go)* ]] && warning "Go 路径优先级异常"
     [[ $(which python3) != $(brew --prefix python)* ]] && warning "Python 路径优先级异常"
+    [[ $(which ruby) != $(brew --prefix ruby)* ]] && warning "Ruby 路径优先级异常"
 
     # 路径安全检测
     local sensitive_paths=(/usr/local/bin /usr/local/sbin /etc/paths.d)
@@ -355,7 +357,6 @@ main() {
     echo "2. 检查配置文件位置："
     echo "   - Formulae: $FORMULAE_FILE"
     echo "   - Casks:    $CASKS_FILE"
-    echo "3. 运行 docker --context default 初始化 Docker"
 }
 
 # 启动主流程
