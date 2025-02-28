@@ -1,13 +1,13 @@
 # 开发工具
+visual-studio-code
 android-studio
 xcodes
-visual-studio-code
 github-copilot-for-xcode
 flutter
-epic-games
 iterm2
 sourcetree
 docker
+epic-games
 zulu@17
 
 # 社交软件
