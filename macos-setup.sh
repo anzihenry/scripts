@@ -47,6 +47,11 @@ precheck() {
         fi
     fi
 
+    # 验证brew是否安装成功
+    if ! command -v brew &>/dev/null; then
+        error "brew 未安装，请先安装 Homebrew"
+    fi
+
     success "系统环境预检通过"
 }
 
@@ -86,11 +91,11 @@ install_xcode_cli() {
     success "Xcode 命令行工具就绪"
 }
 
-# ===== Homebrew 安装与配置 =====
+# ===== Homebrew 配置 =====
 configure_homebrew() {
-    echo -e "\n${GREEN}=== 配置 Homebrew (官方源优先) ===${NC}"
+    echo -e "\n${GREEN}=== 配置 Homebrew 镜像 ===${NC}"
 
-    # 环境变量配置（安装后生效）
+    # 镜像配置参数
     local BREW_CONF=(
         "export HOMEBREW_BREW_GIT_REMOTE=\"https://mirrors.ustc.edu.cn/brew.git\""
         "export HOMEBREW_CORE_GIT_REMOTE=\"https://mirrors.ustc.edu.cn/homebrew-core.git\""
@@ -98,103 +103,40 @@ configure_homebrew() {
         "export HOMEBREW_API_DOMAIN=\"https://mirrors.ustc.edu.cn/homebrew-bottles/api\""
     )
 
-    # 安装 Homebrew
-    if ! command -v brew &>/dev/null; then
-        warning "正在尝试官方源安装..."
-        
-        # 获取架构信息
-        local BREW_PREFIX
-        if [[ $(uname -m) == "arm64" ]]; then
-            BREW_PREFIX="/opt/homebrew"
-        else
-            BREW_PREFIX="/usr/local"
-        fi
-
-        # 临时取消错误中断以处理安装失败
-        set +e
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        local install_status=$?
-        set -e
-
-        if [ $install_status -eq 0 ]; then
-            success "官方源安装成功"
-            
-            # 强制加载环境变量
-            if [[ -f "${BREW_PREFIX}/bin/brew" ]]; then
-                eval "$(${BREW_PREFIX}/bin/brew shellenv)"
-                export PATH="${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:$PATH"
-            else
-                error "brew 可执行文件未找到"
-            fi
-        else
-            warning "官方源安装失败 (状态码 $install_status)，尝试中科大镜像..."
-            
-            # 使用中科大安装脚本
-            /bin/bash -c "$(curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh)" || {
-                error "Homebrew 安装失败，请检查网络连接"
-            }
-            
-            # 重新确认安装路径
-            [ -d "/opt/homebrew" ] && BREW_PREFIX="/opt/homebrew" || BREW_PREFIX="/usr/local"
-            eval "$(${BREW_PREFIX}/bin/brew shellenv)"
-            export PATH="${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:$PATH"
-        fi
-
-        # 持久化配置
-        {
-            echo "\n# Homebrew"
-            for conf in ${BREW_CONF[@]}; do
-                echo $conf
-            done
-            echo "export PATH=\"${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:\$PATH\""
-            echo "eval \"\$(${BREW_PREFIX}/bin/brew shellenv)\""
-        } >> ~/.zshrc
-
-        # 立即生效配置
+    # 应用镜像配置
+    if ! grep -q "HOMEBREW_BREW_GIT_REMOTE" ~/.zshrc; then
+        echo "\n# Homebrew Mirror" >> ~/.zshrc
+        for conf in ${BREW_CONF[@]}; do
+            echo $conf >> ~/.zshrc
+        done
         source ~/.zshrc
     fi
 
-    # 强制应用镜像配置（当前会话）
+    # 强制应用当前会话
     for conf in ${BREW_CONF[@]}; do
         eval $conf
     done
-
-    # 验证安装
-    if ! brew --version &>/dev/null; then
-        warning "Homebrew 验证失败，尝试修复..."
-        
-        # 检查路径是否存在
-        if [[ ! -d "${BREW_PREFIX}" ]]; then
-            error "Homebrew 安装目录不存在：${BREW_PREFIX}"
-        fi
-        
-        # 重新加载环境变量
-        eval "$(${BREW_PREFIX}/bin/brew shellenv)"
-        export PATH="${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:$PATH"
-        
-        if ! brew --version &>/dev/null; then
-            error "Homebrew 验证仍失败，请检查 ${BREW_PREFIX} 权限"
-        fi
-    fi
 
     # 仓库修复（带重试机制）
     warning "正在同步仓库配置..."
     (
         set +e
         for i in {1..3}; do
-            brew update-reset -q
-            if [ $? -eq 0 ]; then
-                break
-            else
-                echo -e "${YELLOW}第 ${i} 次同步失败，10秒后重试...${NC}"
-                sleep 10
-                sudo chown -R $(whoami) $(brew --prefix)/*
-            fi
+            brew update-reset -q && break
+            echo -e "${YELLOW}第 ${i} 次同步失败，10秒后重试...${NC}"
+            sleep 10
+            sudo chown -R $(whoami) $(brew --prefix)/*
         done
         set -e
     )
 
-    success "Homebrew 配置完成 (版本: $(brew --version | head -n1))"
+    # 验证镜像配置
+    if ! brew config | grep -q 'mirrors.ustc.edu.cn'; then
+        warning "镜像配置未生效，尝试强制刷新..."
+        brew update --force
+    fi
+
+    success "Homebrew 镜像配置完成"
 }
 
 
@@ -211,26 +153,26 @@ install_core_software() {
     config_android_and_java
     
     # 从配置文件加载软件列表
-    #local formulae=($(load_packages $FORMULAE_FILE))
-    #local casks=($(load_packages $CASKS_FILE))
+    local formulae=($(load_packages $FORMULAE_FILE))
+    local casks=($(load_packages $CASKS_FILE))
     
     # 安装 formulae
-    #for tool in $formulae; do
-    #    if ! brew install $tool; then
-    #        warning "$tool 安装失败，尝试从国内镜像下载..."
-    #        brew fetch --force $tool
-    #        brew install $tool
-    #    fi
-    #done
+    for tool in $formulae; do
+        if ! brew install $tool; then
+            warning "$tool 安装失败，尝试从国内镜像下载..."
+            brew fetch --force $tool
+            brew install $tool
+        fi
+    done
 
     # 安装 casks
-    #for cask in $casks; do
-    #    if ! brew install --cask $cask; then
-    #        warning "$cask 安装失败，尝试从国内镜像下载..."
-    #        brew fetch --cask --force $cask
-    #        brew install --cask $cask
-    #    fi
-    #done
+    for cask in $casks; do
+        if ! brew install --cask $cask; then
+            warning "$cask 安装失败，尝试从国内镜像下载..."
+            brew fetch --cask --force $cask
+            brew install --cask $cask
+        fi
+    done
 
     success "核心软件安装完成"
 }
