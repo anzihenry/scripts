@@ -10,17 +10,28 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}
-______________________________________________________________
-  #####   ##   ##  ##   ##  ##  ##   #######   #####   ##   ##
- ##   ##  ##   ##  ### ###  ##  ##   #   ##   ##   ##  ##   ##
- ##   ##  ##   ##  #######  ##  ##      ##    #        ##   ##
- ##   ##  #######  #######   ####      ##      #####   #######
- ##   ##  ##   ##  ## # ##    ##      ##           ##  ##   ##
- ##   ##  ##   ##  ##   ##    ##     ##    #  ##   ##  ##   ##
-  #####   ##   ##  ##   ##   ####    #######   #####   ##   ##
-______________________________________________________________
-${NC}"
+# ===== Xcode CLI 工具安装 =====
+install_xcode_cli() {
+    echo -e "\n${YELLOW}安装 Xcode 命令行工具...${NC}"
+    
+    if ! xcode-select -p &>/dev/null; then
+        xcode-select --install
+        
+        # 异步等待安装完成
+        local wait_count=0
+        until xcode-select -p &>/dev/null; do
+            sleep $(( wait_count++ ))
+            [[ $wait_count -gt 300 ]] && echo -e "\n${RED}安装超时，请手动执行: xcode-select --install${NC}"
+        done
+        
+        # 验证编译器存在
+        [[ -f /usr/bin/clang ]] || echo -e "\n${RED}CLI 工具安装不完整${NC}"
+    fi
+    echo -e "${GREEN}✓ Xcode 命令行工具就绪${NC}"
+}
+
+# 0. 安装 Xcode CLI 工具
+install_xcode_cli
 
 # 1. 安装/配置 oh-my-zsh
 OHMYZSH_DIR="${HOME}/.oh-my-zsh"

@@ -11,17 +11,6 @@ success() { echo -e "${GREEN}[✓] $1${NC}"; }
 warning() { echo -e "${YELLOW}[!] $1${NC}"; }
 error() { echo -e "${RED}[✗] $1${NC}"; exit 1; }
 
-echo -e "${GREEN}
-______________________________________________________________
-                        ___  ____             _               
-  _ __ ___   __ _  ___ / _ \/ ___|   ___  ___| |_ _   _ _ __  
- | '_ ` _ \ / _` |/ __| | | \___ \  / __|/ _ \ __| | | | '_ \ 
- | | | | | | (_| | (__| |_| |___) | \__ \  __/ |_| |_| | |_) |
- |_| |_| |_|\__,_|\___|\___/|____/  |___/\___|\__|\__,_| .__/ 
-                                                       |_|    
-______________________________________________________________
-${NC}"
-
 # ===== 配置文件路径 =====
 CONFIG_DIR=$(cd "$(dirname "$0")"; pwd)  # 脚本所在目录
 FORMULAE_FILE="${CONFIG_DIR}/brew_formulae.txt"
@@ -99,37 +88,50 @@ install_xcode_cli() {
 
 # ===== Homebrew 安装与配置 =====
 configure_homebrew() {
-    echo -e "\n${GREEN}=== 配置 Homebrew (中科大源) ===${NC}"
+    echo -e "\n${GREEN}=== 配置 Homebrew (官方源优先) ===${NC}"
     
-    # 环境变量配置
-    export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
-    export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
-    export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
-    export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
+    # 环境变量配置（安装后生效）
+    local BREW_CONF=(
+        "export HOMEBREW_BREW_GIT_REMOTE=\"https://mirrors.ustc.edu.cn/brew.git\""
+        "export HOMEBREW_CORE_GIT_REMOTE=\"https://mirrors.ustc.edu.cn/homebrew-core.git\""
+        "export HOMEBREW_BOTTLE_DOMAIN=\"https://mirrors.ustc.edu.cn/homebrew-bottles\""
+        "export HOMEBREW_API_DOMAIN=\"https://mirrors.ustc.edu.cn/homebrew-bottles/api\""
+    )
 
     # 安装 Homebrew
     if ! command -v brew &>/dev/null; then
-        warning "正在安装 Homebrew..."
-        local install_script=$(mktemp)
-        # 中科大源的安装脚本 详见https://mirrors.ustc.edu.cn/help/brew.git.html
-        curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh -o $install_script
-        /bin/bash $install_script || {
-            rm -f $install_script
-            error "Homebrew 安装失败"
-        }
-        rm -f $install_script
+        warning "正在尝试官方源安装..."
+        
+        # 优先使用官方安装脚本
+        if /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+            success "官方源安装成功"
+        else
+            warning "官方源安装失败，尝试中科大镜像..."
+            /bin/bash -c "$(curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh)"
+        fi
 
-        # 环境变量持久化
-        cat >> ~/.zshrc <<EOF
-
-# Homebrew 配置
-export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
-export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
-export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
-export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
-EOF
+        # 配置环境变量
+        local brew_prefix
+        if [[ $(uname -m) == "arm64" ]]; then
+            brew_prefix="/opt/homebrew"
+        else
+            brew_prefix="/usr/local"
+        fi
+        
+        # 写入镜像配置
+        echo "# Homebrew 镜像配置" >> ~/.zshrc
+        for conf in ${BREW_CONF[@]}; do
+            echo $conf >> ~/.zshrc
+        done
+        echo "eval \"\$(${brew_prefix}/bin/brew shellenv)\"" >> ~/.zshrc
+        
         source ~/.zshrc
     fi
+
+    # 强制应用镜像配置
+    for conf in ${BREW_CONF[@]}; do
+        eval $conf
+    done
 
     # 仓库配置
     brew config &>/dev/null || {
