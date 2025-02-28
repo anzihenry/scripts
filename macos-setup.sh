@@ -11,6 +11,17 @@ success() { echo -e "${GREEN}[✓] $1${NC}"; }
 warning() { echo -e "${YELLOW}[!] $1${NC}"; }
 error() { echo -e "${RED}[✗] $1${NC}"; exit 1; }
 
+echo -e "${GREEN}
+______________________________________________________________
+                        ___  ____             _               
+  _ __ ___   __ _  ___ / _ \/ ___|   ___  ___| |_ _   _ _ __  
+ | '_ ` _ \ / _` |/ __| | | \___ \  / __|/ _ \ __| | | | '_ \ 
+ | | | | | | (_| | (__| |_| |___) | \__ \  __/ |_| |_| | |_) |
+ |_| |_| |_|\__,_|\___|\___/|____/  |___/\___|\__|\__,_| .__/ 
+                                                       |_|    
+______________________________________________________________
+${NC}"
+
 # ===== 配置文件路径 =====
 CONFIG_DIR=$(cd "$(dirname "$0")"; pwd)  # 脚本所在目录
 FORMULAE_FILE="${CONFIG_DIR}/brew_formulae.txt"
@@ -24,20 +35,30 @@ precheck() {
     [[ ! -f $FORMULAE_FILE ]] && error "缺失 formulae 配置文件: $FORMULAE_FILE"
     [[ ! -f $CASKS_FILE ]] && error "缺失 cask 配置文件: $CASKS_FILE"
 
-    # 系统版本检查 (macOS 10.15+)
-    [[ $(sw_vers -productVersion | cut -d. -f2) -lt 15 ]] && error "需要 macOS Catalina (10.15) 或更高版本"
+    # 系统版本检查 (macOS 10.15+) - 修正版本判断逻辑
+    local os_version=$(sw_vers -productVersion)
+    local major_version=$(echo $os_version | awk -F. '{print $1}')
+    local minor_version=$(echo $os_version | awk -F. '{print $2}')
+    
+    # 转换为可比较的数值（10.15 → 1015，11.0 → 1100）
+    local version_code=$(( major_version * 100 + minor_version ))
+    
+    if [[ $version_code -lt 1015 ]]; then
+        error "需要 macOS Catalina (10.15) 或更高版本，当前版本：$os_version"
+    fi
 
     # 磁盘空间检查 (15GB+)
     local free_space=$(df -g / | tail -1 | awk '{print $4}')
     [[ $free_space -lt 15 ]] && error "磁盘空间不足15GB (剩余: ${free_space}GB)"
 
     # 网络连通性检查
-    if ! curl -sIm3 --retry 2 --connect-timeout 30 https://mirrors.aliyun.com >/dev/null; then
-        warning "阿里云镜像站连接异常，尝试备用检测..."
+    if ! curl -sIm3 --retry 2 --connect-timeout 30 https://mirrors.ustc.edu.cn >/dev/null; then
         if ! ping -c2 223.5.5.5 &>/dev/null; then
-            error "网络连接失败，请检查网络设置"
+            error "中科大源异常，网络连接失败，请检查网络设置"
         fi
     fi
+
+    success "系统环境预检通过"
 }
 
 # ===== 配置文件解析函数 =====
@@ -78,20 +99,20 @@ install_xcode_cli() {
 
 # ===== Homebrew 安装与配置 =====
 configure_homebrew() {
-    echo -e "\n${GREEN}=== 配置 Homebrew (阿里云源) ===${NC}"
+    echo -e "\n${GREEN}=== 配置 Homebrew (中科大源) ===${NC}"
     
     # 环境变量配置
-    export HOMEBREW_INSTALL_FROM_API=1
-    export HOMEBREW_API_DOMAIN="https://mirrors.aliyun.com/homebrew/homebrew-bottles/api"
-    export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.aliyun.com/homebrew/brew.git"
-    export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.aliyun.com/homebrew/homebrew-core.git"
-    export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.aliyun.com/homebrew/homebrew-bottles"
+    export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
+    export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
+    export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
+    export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
 
     # 安装 Homebrew
     if ! command -v brew &>/dev/null; then
         warning "正在安装 Homebrew..."
         local install_script=$(mktemp)
-        curl -fsSL https://mirrors.aliyun.com/misc/brew-install.sh -o $install_script
+        # 中科大源的安装脚本 详见https://mirrors.ustc.edu.cn/help/brew.git.html
+        curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh -o $install_script
         /bin/bash $install_script || {
             rm -f $install_script
             error "Homebrew 安装失败"
@@ -99,8 +120,14 @@ configure_homebrew() {
         rm -f $install_script
 
         # 环境变量持久化
-        local brew_prefix=$(if [[ $(uname -m) == "arm64" ]]; then echo "/opt/homebrew"; else echo "/usr/local"; fi)
-        echo "eval \"\$(${brew_prefix}/bin/brew shellenv)\"" >> ~/.zshrc
+        cat >> ~/.zshrc <<EOF
+
+# Homebrew 配置
+export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
+export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
+export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
+export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
+EOF
         source ~/.zshrc
     fi
 
@@ -122,6 +149,8 @@ install_core_software() {
     install_python
     install_ruby
     install_go
+    config_flutter
+    config_android_and_java
     
     # 从配置文件加载软件列表
     local formulae=($(load_packages $FORMULAE_FILE))
@@ -158,14 +187,20 @@ install_node() {
     # 配置环境变量
     mkdir -p ~/.nvm
     cat >> ~/.zshrc <<EOF
+
+# Node.js 配置
 export NVM_DIR="$HOME/.nvm"
 [ -s "$(brew --prefix)/opt/nvm/nvm.sh" ] && \. "$(brew --prefix)/opt/nvm/nvm.sh"
 [ -s "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm"
 EOF
-    
     source ~/.zshrc
+
     nvm install --lts --latest-npm
+    # 配置 npm 镜像为淘宝源
     npm config set registry https://registry.npmmirror.com
+    source ~/.zshrc
+
+    success "Node $(node --version) 安装完成"
 }
 
 # ===== Python 环境配置 (新增PATH设置) =====
@@ -176,20 +211,24 @@ install_python() {
     brew install python
     
     # 配置路径和环境变量
-    local python_path=$(brew --prefix python)/libexec/bin
-    echo "export PATH=\"$python_path:\$PATH\"" >> ~/.zshrc
+    cat > ~/.zshrc <<EOF
+
+export PATH="$(brew --prefix python)/libexec/bin:$PATH"
+EOF
     
     # 配置 pip 镜像
     mkdir -p ~/.pip
     cat > ~/.pip/pip.conf <<EOF
 [global]
-index-url = https://mirrors.aliyun.com/pypi/simple/
-trusted-host = mirrors.aliyun.com
+index-url = https://mirrors.ustc.edu.cn/pypi/simple
+trusted-host = mirrors.ustc.edu.cn
 EOF
 
     source ~/.zshrc
     python3 --version || error "Python 安装失败"
     pip3 --version || error "pip 安装失败"
+
+    success "$(python --version) 安装完成"
 }
 
 # ===== Ruby 环境配置 =====
@@ -199,13 +238,19 @@ install_ruby() {
     # 安装最新 Ruby
     brew install ruby
     
-    # 配置环境变量
-    local ruby_path=$(brew --prefix ruby)/bin
-    echo "export PATH=\"$ruby_path:\$PATH\"" >> ~/.zshrc
+    # 配置路径和环境变量
+    cat > ~/.zshrc <<EOF
+
+# Ruby 配置
+export PATH="$(brew --prefix ruby)/bin:$PATH"
+export LDFLAGS="-L$(brew --prefix ruby)/lib"
+export CPPFLAGS="-I$(brew --prefix ruby)/include"
+EOF
     source ~/.zshrc
     
-    # 配置 gem 镜像
-    gem sources --add https://mirrors.aliyun.com/rubygems/ --remove https://rubygems.org/
+    # 配置 gem 镜像为中科大源
+    gem sources --add https://mirrors.ustc.edu.cn/rubygems/ --remove https://rubygems.org/
+
     success "Ruby $(ruby -v) 安装完成"
 }
 
@@ -218,23 +263,62 @@ install_go() {
     
     # 配置环境变量
     cat >> ~/.zshrc <<EOF
-export GOPATH="\$HOME/go"
-export PATH="\$GOPATH/bin:\$PATH"
+
+# Go 配置
+export GOPATH="$HOME/Coding/go"
+export PATH="$GOPATH/bin:$PATH"
 export GOPROXY="https://goproxy.cn,direct"
 EOF
     source ~/.zshrc
     
     # 创建 Go 工作目录
-    mkdir -p $HOME/go/{src,bin,pkg}
-    success "Go $(go version) 安装完成"
+    mkdir -p $GOPATH/{src,bin,pkg}
+
+    success "$(go version) 安装完成"
 }
+
+# ===== 其他 环境配置 (Flutter配置、 Java和Android配置) =====
+config_flutter() {
+    echo -e "\n${GREEN}=== 配置 Flutter 环境 ===${NC}"
+    
+    # 配置环境变量
+    cat >> ~/.zshrc <<EOF
+
+# Flutter
+export PUB_HOSTED_URL="https://mirrors.cloud.tencent.com/dart-pub"
+export FLUTTER_STORAGE_BASE_URL="https://mirrors.cloud.tencent.com/flutter"
+EOF
+    source ~/.zshrc
+
+    success "Flutter环境变量 设置完成"
+}
+
+config_android_and_java() {
+    echo -e "\n${GREEN}=== 配置 Android和Java 环境 ===${NC}"
+    
+    # 配置环境变量
+    cat >> ~/.zshrc <<EOF
+
+# Java
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+
+# Android
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+EOF
+    source ~/.zshrc
+
+    success "Android和Java环境变量 设置完成"
+}
+
 
 # ===== 安装后验证 =====
 post_verification() {
     echo -e "\n${GREEN}=== 安装后验证 ===${NC}"
     
     # 关键命令检查
-    local critical_cmds=(git node python3 brew nvim npm pip3 ruby go)
+    local critical_cmds=(git brew node npm python3 pip3 ruby go)
     for cmd in $critical_cmds; do
         if ! command -v $cmd &>/dev/null; then
             warning "命令缺失: $cmd"
