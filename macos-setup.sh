@@ -330,7 +330,10 @@ post_verification() {
 
     # 验证环境变量
     [[ -z $(go env GOPROXY) ]] && warning "GOPROXY 未正确配置"
-    [[ $(which go) != $(brew --prefix go)* ]] && warning "Go 路径优先级异常"
+    [[ -z $(npm config get registry) ]] && warning "NPM 镜像源未配置"
+    [[ -z $(gem sources -l | grep ustc) ]] && warning "Ruby 镜像源未配置"
+    [[ -z $(pip config get global.index-url) ]] && warning "pip 镜像源未配置"
+
     [[ $(which python3) != $(brew --prefix python)* ]] && warning "Python 路径优先级异常"
     [[ $(which ruby) != $(brew --prefix ruby)* ]] && warning "Ruby 路径优先级异常"
 
