@@ -108,9 +108,9 @@ verify_brew_env() {
 configure_homebrew() {
     echo -e "\n${GREEN}=== 配置 Homebrew 镜像 ===${NC}"
 
-    # 加载基础环境
+    # 加载环境变量
     source ~/.zshrc
-    eval "$(brew shellenv)"
+    eval "$(brew shellenv 2>/dev/null)" || true
 
     # 镜像配置参数
     local BREW_CONF=(
@@ -118,8 +118,6 @@ configure_homebrew() {
         "export HOMEBREW_CORE_GIT_REMOTE=\"https://mirrors.ustc.edu.cn/homebrew-core.git\""
         "export HOMEBREW_BOTTLE_DOMAIN=\"https://mirrors.ustc.edu.cn/homebrew-bottles\""
         "export HOMEBREW_API_DOMAIN=\"https://mirrors.ustc.edu.cn/homebrew-bottles/api\""
-        "export HOMEBREW_CURL_RETRIES=3"
-        "export HOMEBREW_CURL_TIMEOUT=60"
     )
 
     # 应用镜像配置
@@ -139,22 +137,38 @@ configure_homebrew() {
     # 验证环境加载
     verify_brew_env
 
-    # 仓库修复（带详细日志）
+    # 仓库修复（带重试机制）
     warning "正在同步仓库配置..."
     (
-        set -x
-        brew update-reset -v --retry 3 --timeout 60 || {
-            warning "强制重置仓库..."
-            rm -rf $(brew --repo) $(brew --repo homebrew/core)
+        set -ex
+
+        # 检查并修复主仓库
+        if [[ ! -d $(brew --repo) ]]; then
             git clone $HOMEBREW_BREW_GIT_REMOTE $(brew --repo)
+        fi
+
+        # 检查并修复 core 仓库
+        if [[ ! -d $(brew --repo homebrew/core) ]]; then
             git clone $HOMEBREW_CORE_GIT_REMOTE $(brew --repo homebrew/core)
-        }
+        fi
+
+        # 同步仓库（最多重试3次）
+        local retry_count=0
+        until brew update-reset -v; do
+            ((retry_count++))
+            [[ $retry_count -ge 3 ]] && break
+            echo -e "${YELLOW}第 ${retry_count} 次重试...${NC}"
+            sudo chown -R $(whoami) $(brew --prefix)/*
+            sleep 10
+        done
+
+        # 最终清理
         brew cleanup -s --prune=all
     ) 2>&1 | tee -a setup.log
 
-    # 最终验证
-    if ! brew config | grep -qE 'mirrors.ustc.edu.cn|USTC'; then
-        error "镜像配置最终验证失败，请检查网络和权限"
+    # 验证镜像配置
+    if ! brew config | grep -q 'mirrors.ustc.edu.cn'; then
+        error "镜像配置验证失败，请检查日志"
     fi
 
     success "Homebrew 镜像配置完成"
