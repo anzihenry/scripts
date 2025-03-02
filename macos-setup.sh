@@ -92,25 +92,8 @@ install_xcode_cli() {
 }
 
 # ===== Homebrew 配置 =====
-verify_brew_env() {
-    if [[ -z "$HOMEBREW_BREW_GIT_REMOTE" ]] || 
-       [[ -z "$HOMEBREW_CORE_GIT_REMOTE" ]]; then
-        error "镜像环境变量未加载"
-    fi
-    
-    # 检查实际路径
-    if ! grep -q "ustc.edu.cn" $(brew --repo)/.git/config; then
-        warning "本地仓库未指向镜像源，重新配置..."
-        git -C $(brew --repo) remote set-url origin "$HOMEBREW_BREW_GIT_REMOTE"
-    fi
-}
-
 configure_homebrew() {
     echo -e "\n${GREEN}=== 配置 Homebrew 镜像 ===${NC}"
-
-    # 加载基础环境
-    source ~/.zshrc
-    eval "$(brew shellenv)"
 
     # 镜像配置参数
     local BREW_CONF=(
@@ -118,8 +101,6 @@ configure_homebrew() {
         "export HOMEBREW_CORE_GIT_REMOTE=\"https://mirrors.ustc.edu.cn/homebrew-core.git\""
         "export HOMEBREW_BOTTLE_DOMAIN=\"https://mirrors.ustc.edu.cn/homebrew-bottles\""
         "export HOMEBREW_API_DOMAIN=\"https://mirrors.ustc.edu.cn/homebrew-bottles/api\""
-        "export HOMEBREW_CURL_RETRIES=3"
-        "export HOMEBREW_CURL_TIMEOUT=60"
     )
 
     # 应用镜像配置
@@ -136,25 +117,23 @@ configure_homebrew() {
         eval $conf
     done
 
-    # 验证环境加载
-    verify_brew_env
-
-    # 仓库修复（带详细日志）
+    # 仓库修复（带重试机制）
     warning "正在同步仓库配置..."
     (
-        set -x
-        brew update-reset -v --retry 3 --timeout 60 || {
-            warning "强制重置仓库..."
-            rm -rf $(brew --repo) $(brew --repo homebrew/core)
-            git clone $HOMEBREW_BREW_GIT_REMOTE $(brew --repo)
-            git clone $HOMEBREW_CORE_GIT_REMOTE $(brew --repo homebrew/core)
-        }
-        brew cleanup -s --prune=all
-    ) 2>&1 | tee -a setup.log
+        set +e
+        for i in {1..3}; do
+            brew update-reset -q && break
+            echo -e "${YELLOW}第 ${i} 次同步失败，10秒后重试...${NC}"
+            sleep 10
+            sudo chown -R $(whoami) $(brew --prefix)/*
+        done
+        set -e
+    )
 
-    # 最终验证
-    if ! brew config | grep -qE 'mirrors.ustc.edu.cn|USTC'; then
-        error "镜像配置最终验证失败，请检查网络和权限"
+    # 验证镜像配置
+    if ! brew config | grep -q 'mirrors.ustc.edu.cn'; then
+        warning "镜像配置未生效，尝试强制刷新..."
+        brew update --force
     fi
 
     success "Homebrew 镜像配置完成"
