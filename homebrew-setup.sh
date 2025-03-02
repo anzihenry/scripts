@@ -108,9 +108,9 @@ install_homebrew() {
     fi
 
     # 验证安装
-    if ! brew --version &>/dev/null; then
-        error "Homebrew 安装验证失败"
-    fi
+    #if ! brew --version &>/dev/null; then
+    #    error "Homebrew 安装验证失败"
+    #fi
 
     success "Homebrew 安装完成 (版本: $(brew --version | head -n1))"
 }

@@ -103,18 +103,26 @@ configure_homebrew() {
         "export HOMEBREW_API_DOMAIN=\"https://mirrors.ustc.edu.cn/homebrew-bottles/api\""
     )
 
-    # 应用镜像配置
-    if ! grep -q "HOMEBREW_BREW_GIT_REMOTE" ~/.zshrc; then
+    # 检测并追加配置到 .zshrc
+    local should_append=0
+    for var in "HOMEBREW_BREW_GIT_REMOTE" "HOMEBREW_CORE_GIT_REMOTE" "HOMEBREW_BOTTLE_DOMAIN" "HOMEBREW_API_DOMAIN"; do
+        if ! grep -q "$var" ~/.zshrc; then
+            should_append=1
+            break
+        fi
+    done
+
+    if [ $should_append -eq 1 ]; then
         echo "\n# Homebrew Mirror" >> ~/.zshrc
-        for conf in ${BREW_CONF[@]}; do
-            echo $conf >> ~/.zshrc
+        for conf in "${BREW_CONF[@]}"; do
+            echo "$conf" >> ~/.zshrc
         done
         source ~/.zshrc
     fi
 
     # 强制应用当前会话
-    for conf in ${BREW_CONF[@]}; do
-        eval $conf
+    for conf in "${BREW_CONF[@]}"; do
+        eval "$conf"
     done
 
     # 仓库修复（带重试机制）
@@ -122,18 +130,34 @@ configure_homebrew() {
     (
         set +e
         for i in {1..3}; do
-            brew update-reset -q && break
+            if [[ -w $(brew --prefix) ]]; then
+                brew update-reset -q && break
+            else
+                warning "检测到权限问题，尝试自动修复..."
+                sudo chown -R "$(whoami):admin" $(brew --prefix)/*
+                brew update-reset -q && break
+            fi
             echo -e "${YELLOW}第 ${i} 次同步失败，10秒后重试...${NC}"
             sleep 10
-            sudo chown -R $(whoami) $(brew --prefix)/*
         done
         set -e
     )
 
-    # 验证镜像配置
-    if ! brew config | grep -q 'mirrors.ustc.edu.cn'; then
-        warning "镜像配置未生效，尝试强制刷新..."
-        brew update --force
+    # 验证仓库配置
+    if ! git -C "$(brew --repo)" remote -v | grep -q 'mirrors.ustc.edu.cn'; then
+        error "BREW 仓库镜像配置失败"
+        return 1
+    fi
+
+    if ! git -C "$(brew --repo homebrew/core)" remote -v | grep -q 'mirrors.ustc.edu.cn'; then
+        error "CORE 仓库镜像配置失败"
+        return 1
+    fi
+
+    # 验证 API 可达性
+    if ! curl -sI "${HOMEBREW_API_DOMAIN}/formula.json" | grep -q "200 OK"; then
+        error "API 镜像不可用，请检查 HOMEBREW_API_DOMAIN 配置"
+        return 1
     fi
 
     success "Homebrew 镜像配置完成"
