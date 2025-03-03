@@ -398,8 +398,6 @@ post_verification() {
     [[ -z $(gem sources -l | grep ustc) ]] && warning "Ruby 镜像源未配置"
     [[ -z $(pip config get global.index-url) ]] && warning "pip 镜像源未配置"
 
-    [[ $(which python) != $(brew --prefix python)* ]] && warning "Python 路径优先级异常"
-    [[ $(which python3) != $(brew --prefix python3)* ]] && warning "Python 路径优先级异常"
     [[ $(which ruby) != $(brew --prefix ruby)* ]] && warning "Ruby 路径优先级异常"
 
     # 路径安全检测
