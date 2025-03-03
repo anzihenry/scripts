@@ -140,8 +140,23 @@ configure_homebrew() {
 
     # 强制设置 Git 远程地址
     warning "正在切换仓库远程地址..."
+    
     git -C "$(brew --repo)" remote set-url origin "$HOMEBREW_BREW_GIT_REMOTE"
+    success "homebrew仓库地址  切换完成"
+
+    # 新增：核心仓库初始化
+    init_core_repo() {
+        local core_repo_path="$(brew --repo)/Library/Taps/homebrew/homebrew-core"
+        
+        if [ ! -d "$core_repo_path" ]; then
+            warning "初始化 homebrew-core 仓库..."
+            mkdir -p "$(dirname "$core_repo_path")"
+            git clone "$HOMEBREW_CORE_GIT_REMOTE" "$core_repo_path"
+        fi
+    }
+    init_core_repo
     git -C "$(brew --repo homebrew/core)" remote set-url origin "$HOMEBREW_CORE_GIT_REMOTE"
+    success "homebrew-core仓库地址  切换完成"
 
     # 仓库同步（带重试机制）
     warning "正在同步仓库配置..."
