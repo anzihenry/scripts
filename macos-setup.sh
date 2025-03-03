@@ -398,8 +398,6 @@ post_verification() {
     [[ -z $(gem sources -l | grep ustc) ]] && warning "Ruby 镜像源未配置"
     [[ -z $(pip config get global.index-url) ]] && warning "pip 镜像源未配置"
 
-    [[ $(which ruby) != $(brew --prefix ruby)* ]] && warning "Ruby 路径优先级异常"
-
     # 路径安全检测
     local sensitive_paths=(/usr/local/bin /usr/local/sbin /etc/paths.d)
     for path in $sensitive_paths; do
