@@ -95,6 +95,12 @@ install_xcode_cli() {
 configure_homebrew() {
     echo -e "\n${GREEN}=== 配置 Homebrew 镜像 ===${NC}"
 
+    # 检查 Homebrew 是否安装
+    if ! command -v brew &>/dev/null; then
+        error "Homebrew 未安装，请先安装 Homebrew"
+        return 1
+    fi
+
     # 镜像配置参数
     local BREW_CONF=(
         "export HOMEBREW_BREW_GIT_REMOTE=\"https://mirrors.ustc.edu.cn/brew.git\""
@@ -125,22 +131,40 @@ configure_homebrew() {
         eval "$conf"
     done
 
-    # 仓库修复（带重试机制）
+    # 网络连通性检查
+    warning "正在检查镜像源连通性..."
+    if ! curl -sIf --connect-timeout 30 "https://mirrors.ustc.edu.cn" >/dev/null; then
+        error "无法连接 USTC 镜像源，请检查网络连接"
+        return 1
+    fi
+
+    # 强制设置 Git 远程地址
+    warning "正在切换仓库远程地址..."
+    git -C "$(brew --repo)" remote set-url origin "$HOMEBREW_BREW_GIT_REMOTE"
+    git -C "$(brew --repo homebrew/core)" remote set-url origin "$HOMEBREW_CORE_GIT_REMOTE"
+
+    # 仓库同步（带重试机制）
     warning "正在同步仓库配置..."
     (
         set +e
-        for i in {1..3}; do
-            if [[ -w $(brew --prefix) ]]; then
-                brew update-reset -q && break
-            else
+        local retry_count=3
+        for ((i=1; i<=retry_count; i++)); do
+            # 权限自动修复
+            if [[ ! -w $(brew --prefix)/.git ]]; then
                 warning "检测到权限问题，尝试自动修复..."
                 sudo chown -R "$(whoami):admin" $(brew --prefix)/*
-                brew update-reset -q && break
             fi
-            echo -e "${YELLOW}第 ${i} 次同步失败，10秒后重试...${NC}"
+
+            if brew update-reset -q; then
+                set -e
+                return 0
+            fi
+
+            warning "第 ${i} 次同步失败，10秒后重试..."
             sleep 10
         done
-        set -e
+        error "同步失败，已达最大重试次数"
+        return 1
     )
 
     # 验证仓库配置
@@ -155,7 +179,7 @@ configure_homebrew() {
     fi
 
     # 验证 API 可达性
-    if ! curl -sI "${HOMEBREW_API_DOMAIN}/formula.json" | grep -q "200 OK"; then
+    if ! curl -sIf --connect-timeout 30 ""${HOMEBREW_API_DOMAIN}/formula.json"" >/dev/null; then
         error "API 镜像不可用，请检查 HOMEBREW_API_DOMAIN 配置"
         return 1
     fi
