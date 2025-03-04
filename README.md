@@ -14,11 +14,11 @@
     ```
 2. 进入脚本目录：
     ```bash
-    cd personal_scripts/scripts
+    cd personal_scripts
     ```
 3. 运行你需要的脚本，例如：
     ```bash
-    python example_script.py
+    python brew_manager.py
     ```
 
 ## 贡献
