@@ -5,13 +5,16 @@
 ## 目录结构
 
 - `README.md` - 说明文档
-- `brew_casks.txt` - Homebrew Casks 列表
-- `brew_formulae.txt` - Homebrew Formulaes 列表
-- `ohmyzsh-setup.sh` - Oh My Zsh 配置工具，包括主题、插件等
-- `homebrew-setup.sh` - Homebrew 安装工具
-- `macos-setup.sh` - macOS 配置工具，包括homebrew镜像配置，formulae安装，软件安装等，已经配置对应的环境变量
-- `brew_manager.py` - Homebrew formulaes/casks 管理工具
-- `git_setup.py` - Git SSH Key 配置工具，具体用法建议使用pipx，eg： “pipx run --spec requests python git_setup.py -d github.com -t personal”
+- `LICENSE` - 许可证
+- `maintain/` - 维护脚本
+    - `brew_manager.py` - Homebrew formulaes/casks 管理工具
+- `setup/` - 安装配置脚本
+    - `brew_casks.txt` - Homebrew Casks 列表
+    - `brew_formulae.txt` - Homebrew Formulaes 列表
+    - `ohmyzsh-setup.sh` - Oh My Zsh 配置工具，包括主题、插件等
+    - `homebrew-setup.sh` - Homebrew 安装工具
+    - `macos-setup.sh` - macOS 配置工具，包括homebrew镜像配置，formulae安装，软件安装等，已经配置对应的环境变量
+    - `git_forge_ssh_setup.py` - Git托管服务（如GitHub） SSH Key 配置工具，具体用法建议使用pipx，eg： “pipx run --spec requests python git_forge_ssh_setup.py -d github.com -t personal”
 
 
 ## 使用方法
@@ -20,20 +23,20 @@
     ```bash
     git clone https://github.com/anzihenry/personal_scripts.git
     ```
-2. 进入脚本目录：
+2. 进入相关脚本目录：
     ```bash
-    cd personal_scripts
+    cd maintain
     ```
 3. 运行你需要的脚本，例如：
     ```bash
     python brew_manager.py
     ```
 4. shell脚本在执行前需要增加执行权限：
-    ```zsh
+    ```bash
     chmod +x ohmyzsh-setup.sh
     ```
     然后运行：
-    ```zsh
+    ```bash
     ./ohmyzsh-setup.sh
     ```
 
