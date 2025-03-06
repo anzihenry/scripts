@@ -28,6 +28,14 @@
     ```bash
     python brew_manager.py
     ```
+4. shell脚本在执行前需要增加执行权限：
+    ```zsh
+    chmod +x ohmyzsh-setup.sh
+    ```
+    然后运行：
+    ```zsh
+    ./ohmyzsh-setup.sh
+    ```
 
 ## 贡献
 
