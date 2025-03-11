@@ -21,7 +21,7 @@
 
 1. 克隆仓库到本地：
     ```bash
-    git clone https://github.com/anzihenry/personal_scripts.git
+    git clone https://github.com/anzihenry/scripts.git
     ```
 2. 进入相关脚本目录：
     ```bash
