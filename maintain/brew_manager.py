@@ -9,6 +9,7 @@ EXCLUDED_CASKS = [
     r"adobe-.*",
     r"android-studio",
     r"visual-studio-code",
+    r"rider",
     r"docker",
     r"iterm2",
     r"google-chrome",

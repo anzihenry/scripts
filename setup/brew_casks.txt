@@ -3,6 +3,7 @@ visual-studio-code
 android-studio
 xcodes
 github-copilot-for-xcode
+rider
 flutter
 iterm2
 sourcetree
