@@ -23,6 +23,7 @@ iina
 transmission
 hammerspoon
 the-unarchiver
+bilibili
 
 # 办公软件
 feishu
