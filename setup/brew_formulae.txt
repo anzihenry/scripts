@@ -7,4 +7,4 @@ pipx
 protobuf
 tmux
 jq
-ffmpeg
+mactop
