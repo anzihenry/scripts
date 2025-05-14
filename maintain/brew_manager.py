@@ -13,8 +13,6 @@ EXCLUDED_CASKS = [
     r"docker",
     r"iterm2",
     r"google-chrome",
-    r"obsidian",
-    r"notion",
     r"feishu",
     r"lark",
     r"flutter"
