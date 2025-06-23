@@ -1,13 +1,13 @@
 # 开发工具
 visual-studio-code
 android-studio
-xcodes
+xcodes-app
 github-copilot-for-xcode
 rider
 flutter
 iterm2
 sourcetree
-docker
+docker-desktop
 epic-games
 zulu@17
 
@@ -37,7 +37,7 @@ splashtop-streamer
 
 # AI
 chatgpt
-ollama
+ollama-app
 
 
 
