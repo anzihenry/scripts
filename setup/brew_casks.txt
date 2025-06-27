@@ -37,7 +37,7 @@ splashtop-streamer
 
 # AI
 chatgpt
-ollama-app
+lm-studio
 
 
 
