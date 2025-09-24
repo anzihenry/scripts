@@ -12,8 +12,7 @@ source "$SCRIPT_DIR/../lib/colors.sh"
 
 # ===== 配置文件路径 =====
 CONFIG_DIR=$(cd "$(dirname "$0")"; pwd)  # 脚本所在目录
-FORMULAE_FILE="${CONFIG_DIR}/brew_formulae.txt"
-CASKS_FILE="${CONFIG_DIR}/brew_casks.txt"
+BREW_CONFIG_FILE="${CONFIG_DIR}/brew.conf.sh"
 
 # ===== 通用工具函数 =====
 # 幂等地更新 shell 配置文件
@@ -43,8 +42,7 @@ update_shell_config() {
 precheck() {
     print_header "系统环境预检"
 
-    [[ ! -f $FORMULAE_FILE ]] && log_fatal "缺失 formulae 配置文件: $FORMULAE_FILE"
-    [[ ! -f $CASKS_FILE ]] && log_fatal "缺失 cask 配置文件: $CASKS_FILE"
+    [[ ! -f $BREW_CONFIG_FILE ]] && log_fatal "缺失 Homebrew 配置文件: $BREW_CONFIG_FILE"
 
     local os_version=$(sw_vers -productVersion)
     local major_version=$(echo $os_version | awk -F. '{print $1}')
@@ -64,13 +62,6 @@ precheck() {
 
     ! command -v brew &>/dev/null && log_fatal "brew 未安装，请先安装 Homebrew"
     success "系统环境预检通过"
-}
-
-# ===== 配置文件解析函数 =====
-load_packages() {
-    local file=$1
-    [[ ! -f "$file" ]] && return
-    grep -v '^\s*#' "$file" | grep -v '^\s*$' | tr -d ' '
 }
 
 # ===== Xcode CLI 工具安装 =====
@@ -136,15 +127,19 @@ EOF
 install_core_software() {
     print_header "安装核心开发工具"
 
-    local formulae=($(load_packages $FORMULAE_FILE))
-    local casks=($(load_packages $CASKS_FILE))
+    # 加载配置文件中的所有数组
+    source "$BREW_CONFIG_FILE"
+
+    # 合并所有 Formulae 和 Casks 数组
+    local all_formulae=(${(F)FORMULAE_@})
+    local all_casks=(${(F)CASKS_@})
     
     # 优先批量安装 formulae
-    if [[ ${#formulae[@]} -gt 0 ]]; then
-        info "正在批量安装 ${#formulae[@]} 个 formulae..."
-        if ! brew install "${formulae[@]}"; then
+    if [[ ${#all_formulae[@]} -gt 0 ]]; then
+        info "正在批量安装 ${#all_formulae[@]} 个 formulae..."
+        if ! brew install "${all_formulae[@]}"; then
             warning "批量安装失败，回退到逐个安装模式..."
-            for tool in "${formulae[@]}"; do
+            for tool in "${all_formulae[@]}"; do
                 info "正在安装: $tool"
                 brew list "$tool" &>/dev/null || brew install "$tool" || warning "Formulae '$tool' 安装失败"
             done
@@ -152,11 +147,11 @@ install_core_software() {
     fi
 
     # 优先批量安装 casks
-    if [[ ${#casks[@]} -gt 0 ]]; then
-        info "正在批量安装 ${#casks[@]} 个 casks..."
-        if ! brew install --cask "${casks[@]}"; then
+    if [[ ${#all_casks[@]} -gt 0 ]]; then
+        info "正在批量安装 ${#all_casks[@]} 个 casks..."
+        if ! brew install --cask "${all_casks[@]}"; then
             warning "批量安装失败，回退到逐个安装模式..."
-            for cask in "${casks[@]}"; do
+            for cask in "${all_casks[@]}"; do
                 info "正在安装: $cask"
                 brew list --cask "$cask" &>/dev/null || brew install --cask "$cask" || warning "Cask '$cask' 安装失败"
             done
@@ -298,9 +293,8 @@ main() {
     print_header "🎉 配置完成!"
     info "建议后续操作:"
     info "1. ${BOLD}完全重启终端${NC} 或执行 $(highlight 'source ~/.zshrc') 来刷新环境。"
-    info "2. 检查配置文件位置："
-    info "   - Formulae: $(highlight "$FORMULAE_FILE")"
-    info "   - Casks:    $(highlight "$CASKS_FILE")"
+    info "2. 检查新的配置文件位置："
+    info "   - $(highlight "$BREW_CONFIG_FILE")"
 }
 
 # 启动主流程
