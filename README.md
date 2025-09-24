@@ -4,7 +4,7 @@
 
 ## ✨ 核心特性
 
-- **一键配置**: `macos-setup.sh` 作为主入口，可一键完成从系统预检、环境配置到软件安装的全过程。
+- **分步式一键配置**: 提供清晰的脚本执行顺序，从终端美化、包管理器安装到开发环境配置，一气呵成。
 - **幂等性设计**: 所有脚本均可安全地重复执行，无需担心重复配置或产生副作用。
 - **国内网络优化**: 自动为 Homebrew、Git、npm、pip、gem 等工具配置国内镜像源（中科大、Gitee、腾讯云等），大幅提升下载和安装速度。
 - **模块化与独立性**: 每个安装脚本（如 `homebrew-setup.sh`, `ohmyzsh-setup.sh`）均可独立运行，满足特定的配置需求。
@@ -23,68 +23,70 @@
 │   └── formulaes_casks_updater.sh # Homebrew 软件包批量更新与维护工具
 └── setup/
     ├── brew.conf.sh            # Homebrew 软件包结构化配置文件
-    ├── macos-setup.sh          # [主脚本] macOS 开发环境一站式配置工具
-    ├── homebrew-setup.sh       # [独立] Homebrew 安装与镜像配置工具
-    ├── ohmyzsh-setup.sh        # [独立] Oh My Zsh 及 Powerlevel10k 主题安装配置工具
-    └── git_forge_ssh_setup.sh  # [独立] Git 托管服务 SSH 密钥自动生成与配置工具
+    ├── macos-setup.sh          # [步骤3] macOS 开发环境与软件批量安装
+    ├── homebrew-setup.sh       # [步骤2] Homebrew 安装与镜像配置
+    ├── ohmyzsh-setup.sh        # [步骤1] Oh My Zsh 及 Powerlevel10k 主题安装
+    └── git_forge_ssh_setup.sh  # [可选] Git 托管服务 SSH 密钥自动生成与配置
 ```
 
 ## 🚀 使用方法
 
-### 1. 快速开始 (推荐)
+### 快速开始：在新 Mac 上分步配置 (推荐)
 
-对于一台新的 Mac，推荐直接运行主脚本 `macos-setup.sh` 来完成所有配置。
+对于一台新的 Mac，推荐按照以下顺序执行脚本，以完成一个完整、漂亮的开发环境搭建。
 
 ```bash
-# 1. 克隆仓库
+# 1. 克隆仓库到本地
 git clone https://github.com/anzihenry/scripts.git
 cd scripts/setup
 
-# 2. (可选) 自定义要安装的软件
-#    编辑 brew.conf.sh 文件，添加或删除你需要的软件包。
+# 2. 赋予所有安装脚本执行权限
+chmod +x ./*.sh
+```
 
-# 3. 赋予执行权限并运行主脚本
-chmod +x macos-setup.sh
+#### 步骤 1: 配置终端环境 (Oh My Zsh)
+此脚本将安装 Oh My Zsh、Powerlevel10k 主题及推荐字体，美化你的终端。
+```bash
+./ohmyzsh-setup.sh
+```
+> 执行完毕后，请按照提示设置终端字体，并**完全重启终端**以加载新环境。
+
+#### 步骤 2: 安装包管理器 (Homebrew)
+此脚本将安装 Homebrew 并自动配置国内镜像源。
+```bash
+./homebrew-setup.sh
+```
+> 执行完毕后，强烈推荐**完全重启终端**以加载新环境。
+
+#### 步骤 3: 安装开发环境和应用
+此脚本是核心步骤，它会根据 `brew.conf.sh` 的配置，批量安装所有开发工具和图形化应用。
+```bash
+# (可选) 在执行前，编辑 brew.conf.sh 文件，自定义你需要的软件包。
 ./macos-setup.sh
 ```
 
-### 2. 运行独立脚本
-
-如果你只需要完成某项特定任务，可以单独运行对应的脚本。所有脚本都位于 `setup/` 或 `maintain/` 目录下。
-
-**示例：单独配置 Oh My Zsh**
+#### 步骤 4 (可选): 配置 Git SSH 密钥
+此脚本可以帮你为不同的 Git 平台（如 GitHub, GitLab）生成和配置独立的 SSH 密钥。
 ```bash
-cd scripts/setup
-chmod +x ohmyzsh-setup.sh
-./ohmyzsh-setup.sh
-```
-
-**示例：更新所有 Homebrew 软件**
-```bash
-cd scripts/maintain
-chmod +x formulaes_casks_updater.sh
-./formulaes_casks_updater.sh
-```
-
-### 3. 配置 SSH 密钥
-
-`git_forge_ssh_setup.sh` 脚本可以帮你为不同的 Git 平台（如 GitHub, GitLab）生成和配置独立的 SSH 密钥。
-
-```bash
-cd scripts/setup
-chmod +x git_forge_ssh_setup.sh
-
 # 为 github.com 生成一个个人用途的密钥
 ./git_forge_ssh_setup.sh -d github.com -t personal
 
 # 为公司内部的 gitlab.company.com 生成一个工作用途的密钥
 ./git_forge_ssh_setup.sh -d gitlab.company.com -t work
 ```
-脚本会自动处理密钥生成、`~/.ssh/config` 文件更新、公钥上传（仅 GitHub）和连接测试。
+
+### 日常维护
+
+**更新所有 Homebrew 软件**
+```bash
+cd ../maintain
+chmod +x formulaes_casks_updater.sh
+./formulaes_casks_updater.sh
+```
 
 ## 🔧 自定义配置
 
-自定义开发环境的核心是修改 `setup/brew.conf.sh` 文件。你可以按类别添加、修改或删除 `FORMULAE_*` 和 `CASKS_*` 数组中的软件包名称。主脚本在运行时会自动读取这些配置进行安装。
+自定义开发环境的核心是修改 `setup/brew.conf.sh` 文件。你可以按类别添加、修改或删除 `FORMULAE_*` 和 `CASKS_*` 数组中的软件包名称。`macos-setup.sh` 脚本在运行时会自动读取这些配置进行安装。
 
 ## 🤝 贡献
 
