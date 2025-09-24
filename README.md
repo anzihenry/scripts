@@ -22,11 +22,11 @@
 ├── maintain/
 │   └── formulaes_casks_updater.sh # Homebrew 软件包批量更新与维护工具
 └── setup/
-    ├── brew.conf.sh        # Homebrew 软件包结构化配置文件 (替代旧的 .txt 文件)
-    ├── macos-setup.sh      # [主脚本] macOS 开发环境一站式配置工具
-    ├── homebrew-setup.sh   # [独立] Homebrew 安装与镜像配置工具
-    ├── ohmyzsh-setup.sh    # [独立] Oh My Zsh 及 Powerlevel10k 主题安装配置工具
-    └── git_forge_ssh_setup.sh # [独立] Git 托管服务 SSH 密钥自动生成与配置工具
+    ├── brew.conf.sh            # Homebrew 软件包结构化配置文件
+    ├── macos-setup.sh          # [主脚本] macOS 开发环境一站式配置工具
+    ├── homebrew-setup.sh       # [独立] Homebrew 安装与镜像配置工具
+    ├── ohmyzsh-setup.sh        # [独立] Oh My Zsh 及 Powerlevel10k 主题安装配置工具
+    └── git_forge_ssh_setup.sh  # [独立] Git 托管服务 SSH 密钥自动生成与配置工具
 ```
 
 ## 🚀 使用方法
