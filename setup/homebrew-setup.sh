@@ -49,14 +49,17 @@ install_xcode_cli() {
     echo -e "\n${GREEN}=== 安装 Xcode 命令行工具 ===${NC}"
     
     if ! xcode-select -p &>/dev/null; then
-        warning "正在安装 Xcode CLI 工具..."
+        warning "正在安装 Xcode CLI 工具... 请在弹出的窗口中完成安装。"
         xcode-select --install
         
-        # 异步等待安装完成
+        # 使用固定的轮询间隔等待安装完成
         local wait_count=0
+        local max_wait=60 # 最多等待 60 * 5 = 300 秒
         until xcode-select -p &>/dev/null; do
-            sleep $(( wait_count++ ))
-            [[ $wait_count -gt 300 ]] && error "安装超时，请手动执行: xcode-select --install"
+            info "等待 Xcode CLI 安装完成... (${wait_count}/${max_wait})"
+            sleep 5
+            ((wait_count++))
+            [[ $wait_count -gt $max_wait ]] && error "安装超时，请手动执行: xcode-select --install"
         done
         
         # 验证编译器存在
@@ -96,11 +99,17 @@ install_homebrew() {
         fi
 
         # 基础环境配置
-        {
-            echo "\n# Homebrew Basic"
-            echo "export PATH=\"${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:\$PATH\""
-            echo "eval \"\$(${BREW_PREFIX}/bin/brew shellenv)\""
-        } >> ~/.zshrc
+        if ! grep -q "# Homebrew Basic" ~/.zshrc; then
+            success "正在向 ~/.zshrc 添加 Homebrew 配置..."
+            {
+                echo ""
+                echo "# Homebrew Basic (Added by script)"
+                echo "export PATH=\"${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:\$PATH\""
+                echo "eval \"\$(${BREW_PREFIX}/bin/brew shellenv)\""
+            } >> ~/.zshrc
+        else
+            warning "检测到已存在 Homebrew 配置，跳过添加。"
+        fi
 
         # 立即生效配置
         source ~/.zshrc
@@ -108,9 +117,9 @@ install_homebrew() {
     fi
 
     # 验证安装
-    #if ! brew --version &>/dev/null; then
-    #    error "Homebrew 安装验证失败"
-    #fi
+    if ! command -v brew &>/dev/null || ! brew --version &>/dev/null; then
+        error "Homebrew 安装验证失败，请检查 ~/.zshrc 配置或重新运行脚本。"
+    fi
 
     success "Homebrew 安装完成 (版本: $(brew --version | head -n1))"
 }
