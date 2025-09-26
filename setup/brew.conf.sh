@@ -15,6 +15,7 @@ FORMULAE_DEV_TOOLS=(
     "jq"
     "mactop"
     "uv"
+    "gh"
 )
 
 # ------------------- Casks (图形界面应用) -------------------
