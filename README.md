@@ -1,97 +1,134 @@
 # macOS 高效自动化脚本库
 
-本仓库提供了一套功能强大、高度自动化的 Shell 脚本，旨在快速、可靠地配置全新的 macOS 开发环境，并提供日常维护工具。
+本仓库收集了一组经过打磨的 Shell 脚本，用于在全新的 macOS 上极速搭建开发环境、封装日常维护操作，并提供彩色、透明的执行日志。
 
-## ✨ 核心特性
+## ✨ 亮点能力
 
-- **分步式一键配置**: 提供清晰的脚本执行顺序，从终端美化、包管理器安装到开发环境配置，一气呵成。
-- **幂等性设计**: 所有脚本均可安全地重复执行，无需担心重复配置或产生副作用。
-- **国内网络优化**: 自动为 Homebrew、Git、npm、pip、gem 等工具配置国内镜像源（中科大、Gitee、腾讯云等），大幅提升下载和安装速度。
-- **模块化与独立性**: 每个安装脚本（如 `homebrew-setup.sh`, `ohmyzsh-setup.sh`）均可独立运行，满足特定的配置需求。
-- **结构化配置**: 通过 `brew.conf.sh` 文件，可以清晰、分类地管理需要通过 Homebrew 安装的软件包和应用。
-- **统一的彩色日志**: 所有脚本均使用统一的日志库 `colors.sh`，输出信息清晰、美观，易于追踪执行过程。
+- **分步式初始化流程**：从终端美化、Homebrew 安装到常用开发工具与 GUI 应用的批量部署，一套脚本走完全部流程。
+- **幂等与安全**：核心脚本内置状态检测、重试与互斥锁，可重复运行而不会破坏现有环境。
+- **国内网络加速**：自动配置 Homebrew、npm、pip、gem 等镜像，提高下载成功率与速度。
+- **模块化组件**：所有功能按需调用，可单独运行 `homebrew-setup.sh`、`macos_sys_usb_maker.sh` 等完成特定工作。
+- **统一日志与耗时统计**：`lib/colors.sh` 提供丰富的彩色日志 API 与计时器，执行过程可视化、一目了然。
+- **结构化配置 & 辅助库**：`brew.conf.sh` 管理安装清单，`setup/lib/brew_helpers.sh`、`maintain/lib/macos_installer_utils.sh` 等复用工具帮助保持代码整洁可测。
 
 ## 📂 目录结构
 
 ```
 .
-├── README.md               # 本说明文档
-├── LICENSE                 # MIT 许可证
+├── README.md
+├── LICENSE
+├── brew_update_errors.log        # Homebrew 批量安装失败记录（由维护脚本生成）
 ├── lib/
-│   └── colors.sh           # 通用彩色日志输出库
+│   └── colors.sh                 # 彩色日志 & 计时工具库
+├── lint/
+│   └── lint_shell.sh             # Shell 脚本 lint & 格式化工具
 ├── maintain/
-│   └── formulaes_casks_updater.sh # Homebrew 软件包批量更新与维护工具
+│   ├── macos_sys_usb_maker.sh    # macOS 安装器下载 & USB 启动盘制作
+│   ├── formulaes_casks_updater.sh# Homebrew 批量更新工具
+│   └── lib/
+│       └── macos_installer_utils.sh # 安装器辅助函数
 └── setup/
-    ├── brew.conf.sh            # Homebrew 软件包结构化配置文件
-    ├── macos-setup.sh          # [步骤3] macOS 开发环境与软件批量安装
-    ├── homebrew-setup.sh       # [步骤2] Homebrew 安装与镜像配置
-    ├── ohmyzsh-setup.sh        # [步骤1] Oh My Zsh 及 Powerlevel10k 主题安装
-    └── git_forge_ssh_setup.sh  # [可选] Git 托管服务 SSH 密钥自动生成与配置
+     ├── brew.conf.sh              # Homebrew 安装清单（Formulae & Casks）
+     ├── macos-setup.sh            # [步骤3] 批量安装开发工具 & GUI 应用
+     ├── homebrew-setup.sh         # [步骤2] 安装 Homebrew 并配置镜像
+     ├── ohmyzsh-setup.sh          # [步骤1] 终端环境与主题
+     ├── git_forge_ssh_setup.sh    # [可选] Git 平台 SSH 密钥自动化
+     └── lib/
+          └── brew_helpers.sh       # Homebrew 安装/重试/汇总辅助函数
 ```
 
-## 🚀 使用方法
-
-### 快速开始：在新 Mac 上分步配置 (推荐)
-
-对于一台新的 Mac，推荐按照以下顺序执行脚本，以完成一个完整、漂亮的开发环境搭建。
+## 🚀 快速开始
 
 ```bash
-# 1. 克隆仓库到本地
+# 克隆仓库
 git clone https://github.com/anzihenry/scripts.git
-cd scripts/setup
+cd scripts
 
-# 2. 赋予所有安装脚本执行权限
-chmod +x ./*.sh
+# 授权脚本可执行（按需操作）
+chmod +x setup/*.sh maintain/*.sh lint/*.sh
 ```
 
-#### 步骤 1: 配置终端环境 (Oh My Zsh)
-此脚本将安装 Oh My Zsh、Powerlevel10k 主题及推荐字体，美化你的终端。
+## ️💻 四步搭建开发环境
+
+1. **终端美化** – 安装 Oh My Zsh、Powerlevel10k、字体等：
+    ```bash
+    cd setup
+    ./ohmyzsh-setup.sh
+    ```
+    > 完成后请根据提示设置终端字体，并重启终端。
+
+2. **安装 Homebrew（含镜像配置）**：
+    ```bash
+    ./homebrew-setup.sh
+    ```
+    > 安装过程中会自动检测 Xcode CLI、网络与磁盘空间；多次重试后仍失败会给出明确提示。
+
+3. **批量安装开发工具 / GUI 应用**：
+    ```bash
+    # 如需自定义安装清单，先编辑 setup/brew.conf.sh
+    ./macos-setup.sh
+    ```
+    > 脚本使用 `setup/lib/brew_helpers.sh` 以批量/逐项方式安装，并输出成功/跳过/失败统计与耗时。
+
+4. **（可选）配置多平台 SSH 密钥**：
+    ```bash
+    ./git_forge_ssh_setup.sh -d github.com -t personal
+    ./git_forge_ssh_setup.sh -d gitlab.company.com -t work
+    ```
+
+## 🧰 常用工具脚本
+
+### Shell 脚本 Lint & 格式化
+
 ```bash
-./ohmyzsh-setup.sh
+./lint/lint_shell.sh           # 仅检查
+./lint/lint_shell.sh --fix     # 自动使用 shfmt 格式化
 ```
-> 执行完毕后，请按照提示设置终端字体，并**完全重启终端**以加载新环境。
+> 依赖 `shellcheck` 与 `shfmt`（可通过 Homebrew 安装）。
 
-#### 步骤 2: 安装包管理器 (Homebrew)
-此脚本将安装 Homebrew 并自动配置国内镜像源。
+### Homebrew 日常维护
+
 ```bash
-./homebrew-setup.sh
+cd maintain
+./formulaes_casks_updater.sh   # 更新所有 Formulae/Cask，失败项写入 brew_update_errors.log
 ```
-> 执行完毕后，强烈推荐**完全重启终端**以加载新环境。
 
-#### 步骤 3: 安装开发环境和应用
-此脚本是核心步骤，它会根据 `brew.conf.sh` 的配置，批量安装所有开发工具和图形化应用。
+### macOS 安装器下载 & USB 启动盘制作
+
 ```bash
-# (可选) 在执行前，编辑 brew.conf.sh 文件，自定义你需要的软件包。
-./macos-setup.sh
-```
+cd maintain
+# 列出可用完整安装器
+./macos_sys_usb_maker.sh list
 
-#### 步骤 4 (可选): 配置 Git SSH 密钥
-此脚本可以帮你为不同的 Git 平台（如 GitHub, GitLab）生成和配置独立的 SSH 密钥。
+# 下载指定版本安装器（幂等、可加 --force）
+./macos_sys_usb_maker.sh download --version 14.6.1
+
+# 制作 USB 启动盘（需要 sudo，支持 --force 覆盖、--yes 跳过交互）
+./macos_sys_usb_maker.sh create --volume /Volumes/MyUSB --version 14.6 -y
+```
+> 脚本为关键命令记录耗时，并使用锁避免并发冲突。
+
+## 🔧 自定义安装清单
+
+- 编辑 `setup/brew.conf.sh` 调整 `FORMULAE_*`、`CASKS_*` 数组即可。
+- `macos-setup.sh` 会自动加载这些数组并通过新封装的 helper 执行安装。
+- 可在运行前通过设置环境变量 `BH_DRY_RUN=true` 做干跑测试（只输出将安装的项目，不实际执行）。
+
+## 🧪 运行验证
+
+- 所有核心脚本均可通过 `zsh -n path/to/script.sh` 做语法检查。
+- `lint/lint_shell.sh` 用于持续保持脚本风格与质量。
+- `lib/colors.sh` 的 `log_time_start/log_time_end` 可嵌入到自定义脚本中，统计关键步骤耗时。
+
+## 🤝 贡献指南
+
+欢迎通过 Issue 或 Pull Request 反馈问题与改进建议。提交前建议运行：
+
 ```bash
-# 为 github.com 生成一个个人用途的密钥
-./git_forge_ssh_setup.sh -d github.com -t personal
-
-# 为公司内部的 gitlab.company.com 生成一个工作用途的密钥
-./git_forge_ssh_setup.sh -d gitlab.company.com -t work
+./lint/lint_shell.sh            # 确保脚本通过 lint
+zsh -n setup/*.sh maintain/*.sh # 快速语法检查
 ```
-
-### 日常维护
-
-**更新所有 Homebrew 软件**
-```bash
-cd ../maintain
-chmod +x formulaes_casks_updater.sh
-./formulaes_casks_updater.sh
-```
-
-## 🔧 自定义配置
-
-自定义开发环境的核心是修改 `setup/brew.conf.sh` 文件。你可以按类别添加、修改或删除 `FORMULAE_*` 和 `CASKS_*` 数组中的软件包名称。`macos-setup.sh` 脚本在运行时会自动读取这些配置进行安装。
-
-## 🤝 贡献
-
-欢迎通过提交 Pull Request 来改进这些脚本。如果你有任何问题或建议，请创建一个 Issue。
 
 ## 📜 许可证
 
-这个项目使用 MIT 许可证。详情请参阅 `LICENSE` 文件。
+本项目采用 MIT 许可证，详见 `LICENSE`。
