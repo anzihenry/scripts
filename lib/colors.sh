@@ -97,6 +97,76 @@ log_fatal() {
     exit 1
 }
 
+# ===== 计时工具 =====
+__color_timer_key() {
+    local raw="${1:-default}"
+    # 转换成仅包含字母数字与下划线的大写形式，便于作为变量名
+    echo "${raw//[^A-Za-z0-9]/_}" | tr '[:lower:]' '[:upper:]'
+}
+
+__color_format_duration() {
+    local total="${1:-0}"
+    if ! [[ "$total" =~ ^[0-9]+$ ]]; then
+        echo "${total}s"
+        return 0
+    fi
+
+    local hours=$(( total / 3600 ))
+    local minutes=$(( (total % 3600) / 60 ))
+    local seconds=$(( total % 60 ))
+    local parts=()
+
+    (( hours > 0 )) && parts+=("${hours}h")
+    (( minutes > 0 )) && parts+=("${minutes}m")
+    parts+=("${seconds}s")
+
+    printf "%s" "${parts[*]}"
+}
+
+log_time_start() {
+    local key="${1:-default}"
+    local message="${2:-}"
+    local var="__COLOR_TIMER_$(__color_timer_key "$key")"
+    local now
+    now="$(date +%s 2>/dev/null || printf '%s' "${EPOCHSECONDS:-0}")"
+    eval "$var=$now"
+    [[ -n "$message" ]] && log_info "$message (开始)"
+}
+
+log_time_end() {
+    local key="${1:-default}"
+    local message="${2:-任务完成}"
+    local status="${3:-success}"
+    local var="__COLOR_TIMER_$(__color_timer_key "$key")"
+    local start=""
+    eval "start=\${$var:-}"
+
+    if [[ -z "$start" ]]; then
+        log_warn "未找到计时器：$key"
+        return 1
+    fi
+
+    local now
+    now="$(date +%s 2>/dev/null || printf '%s' "${EPOCHSECONDS:-0}")"
+    local duration=$(( now - start ))
+    local formatted
+    formatted="$(__color_format_duration "$duration")"
+
+    case "$status" in
+        success|ok)
+            log_success "$message，耗时 $formatted"
+            ;;
+        warn|warning)
+            log_warn "$message，耗时 $formatted"
+            ;;
+        *)
+            log_error "$message，耗时 $formatted"
+            ;;
+    esac
+
+    eval "unset $var"
+}
+
 # 带图标的日志函数
 success() {
     echo -e "${COLOR_GREEN}✓${COLOR_NC} $*"

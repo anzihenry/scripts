@@ -9,10 +9,15 @@ set -o pipefail                   # 管道错误捕获
 # 引入颜色库
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
+source "$SCRIPT_DIR/lib/brew_helpers.sh"
 
 # ===== 预检模块 =====
 precheck() {
     print_header "系统环境预检"
+
+    if ! bh_require_commands curl; then
+        log_fatal "缺少必要命令，请确保 curl 已安装"
+    fi
 
     # 系统版本检查 (macOS 10.15+)
     local os_version=$(sw_vers -productVersion)

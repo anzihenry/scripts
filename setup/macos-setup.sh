@@ -9,6 +9,7 @@ set -o pipefail                   # 管道错误捕获
 # 引入颜色库
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
+source "$SCRIPT_DIR/lib/brew_helpers.sh"
 
 # ===== 配置文件路径 =====
 CONFIG_DIR=$(cd "$(dirname "$0")"; pwd)  # 脚本所在目录
@@ -130,34 +131,45 @@ install_core_software() {
     # 加载配置文件中的所有数组
     source "$BREW_CONFIG_FILE"
 
+    bh_reset_summary
+
+    local install_failed=false
+
     # 合并所有 Formulae 和 Casks 数组
     local all_formulae=(${(F)FORMULAE_@})
     local all_casks=(${(F)CASKS_@})
-    
-    # 优先批量安装 formulae
+
     if [[ ${#all_formulae[@]} -gt 0 ]]; then
-        info "正在批量安装 ${#all_formulae[@]} 个 formulae..."
-        if ! brew install "${all_formulae[@]}"; then
-            warning "批量安装失败，回退到逐个安装模式..."
-            for tool in "${all_formulae[@]}"; do
-                info "正在安装: $tool"
-                brew list "$tool" &>/dev/null || brew install "$tool" || warning "Formulae '$tool' 安装失败"
-            done
+        log_time_start "brew_formulae" "安装 ${#all_formulae[@]} 个 Homebrew Formulae"
+        if bh_install_packages --formulae --retries 2 --label "Homebrew Formulae" "${all_formulae[@]}"; then
+            log_time_end "brew_formulae" "Formulae 安装" "success"
+        else
+            install_failed=true
+            log_time_end "brew_formulae" "Formulae 安装" "warn"
         fi
+    else
+        info "未在配置中检测到 Formulae 项"
     fi
 
-    # 优先批量安装 casks
     if [[ ${#all_casks[@]} -gt 0 ]]; then
-        info "正在批量安装 ${#all_casks[@]} 个 casks..."
-        if ! brew install --cask "${all_casks[@]}"; then
-            warning "批量安装失败，回退到逐个安装模式..."
-            for cask in "${all_casks[@]}"; do
-                info "正在安装: $cask"
-                brew list --cask "$cask" &>/dev/null || brew install --cask "$cask" || warning "Cask '$cask' 安装失败"
-            done
+        log_time_start "brew_casks" "安装 ${#all_casks[@]} 个 Homebrew Casks"
+        if bh_install_packages --cask --retries 2 --label "Homebrew Casks" "${all_casks[@]}"; then
+            log_time_end "brew_casks" "Cask 安装" "success"
+        else
+            install_failed=true
+            log_time_end "brew_casks" "Cask 安装" "warn"
         fi
+    else
+        info "未在配置中检测到 Cask 项"
     fi
-    success "核心软件安装完成"
+
+    bh_print_summary "核心软件安装报告"
+
+    if [[ "$install_failed" == "true" ]]; then
+        warning "部分 Homebrew 包安装失败，请查看上方失败列表并手动处理。"
+    else
+        success "核心软件安装完成"
+    fi
 }
 
 # ===== 各语言环境配置 =====

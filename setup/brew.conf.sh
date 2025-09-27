@@ -16,6 +16,8 @@ FORMULAE_DEV_TOOLS=(
     "mactop"
     "uv"
     "gh"
+    "shellcheck"
+    "shfmt"
 )
 
 # ------------------- Casks (图形界面应用) -------------------

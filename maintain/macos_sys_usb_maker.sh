@@ -37,6 +37,45 @@ else
 fi
 [ $__HAD_U -eq 1 ] && set -u
 
+if [ -f "$SCRIPT_DIR/lib/macos_installer_utils.sh" ]; then
+  # shellcheck disable=SC1090
+  source "$SCRIPT_DIR/lib/macos_installer_utils.sh"
+else
+  log_warn "未找到 macos_installer_utils.sh，将使用脚本内置的简化逻辑。"
+  sanitize_key() { echo "$1" | sed 's#[^A-Za-z0-9]#_#g'; }
+  get_installer_short_ver() { /usr/bin/defaults read "$1/Contents/Info" CFBundleShortVersionString 2>/dev/null || true; }
+  get_installer_label() { basename "$1" .app; }
+  detect_volume_installer_app() {
+    local vol="$1" a
+    for a in "$vol"/Install\ macOS*.app; do
+      [ -d "$a" ] && { echo "$a"; return 0; }
+    done
+    return 1
+  }
+  find_installer_app() {
+    local WANT_VERSION="${1:-}" app found=""
+    for app in /Applications/Install\ macOS*.app; do
+      [ -d "$app" ] || continue
+      if [ -n "$WANT_VERSION" ]; then
+        local ver=""
+        ver="$(get_installer_short_ver "$app")"
+        log_debug "检测到安装器: $app (版本: $ver)"
+        if [ "$ver" = "$WANT_VERSION" ] || [[ "$ver" == "$WANT_VERSION"* ]]; then
+          echo "$app"
+          return 0
+        fi
+      else
+        found="$app"
+      fi
+    done
+    if [ -z "$WANT_VERSION" ]; then
+      found="$(/bin/ls -1t /Applications/Install\ macOS*.app 2>/dev/null | /usr/bin/head -n1 || true)"
+      [ -n "$found" ] && { echo "$found"; return 0; }
+    fi
+    return 1
+  }
+fi
+
 die() { log_fatal "$@"; }
 
 VERBOSE="false"
@@ -63,9 +102,6 @@ need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "缺少命令: $1"
 }
 
-# ---------- 工具与幂等辅助 ----------
-sanitize_key() { echo "$1" | sed 's#[^A-Za-z0-9]#_#g'; }
-
 LOCK_DIR=""
 acquire_lock() {
   local key="$(sanitize_key "$1")"
@@ -78,52 +114,6 @@ acquire_lock() {
   fi
 }
 
-get_installer_short_ver() {
-  # $1: path to Install macOS*.app
-  /usr/bin/defaults read "$1/Contents/Info" CFBundleShortVersionString 2>/dev/null || true
-}
-
-get_installer_label() {
-  # Install macOS Sequoia.app -> Install macOS Sequoia
-  basename "$1" .app
-}
-
-detect_volume_installer_app() {
-  # 返回卷根目录下的第一个安装器 app 路径
-  local vol="$1"
-  local a
-  for a in "$vol"/Install\ macOS*.app; do
-    [ -d "$a" ] && { echo "$a"; return 0; }
-  done
-  return 1
-}
-
-# 自动发现 /Applications 中的安装器
-find_installer_app() {
-  local WANT_VERSION="${1:-}"
-  local app
-  local found=""
-  for app in /Applications/Install\ macOS*.app; do
-    [ -d "$app" ] || continue
-    if [ -n "$WANT_VERSION" ]; then
-      local ver=""
-      ver="$(get_installer_short_ver "$app")"
-      log_debug "检测到安装器: $app (版本: $ver)"
-      if [ "$ver" = "$WANT_VERSION" ] || [[ "$ver" == "$WANT_VERSION"* ]]; then
-        echo "$app"
-        return 0
-      fi
-    else
-      found="$app"
-    fi
-  done
-  if [ -z "$WANT_VERSION" ]; then
-    found="$(/bin/ls -1t /Applications/Install\ macOS*.app 2>/dev/null | /usr/bin/head -n1 || true)"
-    [ -n "$found" ] && { echo "$found"; return 0; }
-  fi
-  return 1
-}
-
 # ------------------- 子命令：list -------------------
 sub_list() {
   need_cmd softwareupdate
@@ -133,10 +123,13 @@ sub_list() {
   log_info "softwareupdate 版本: $(softwareupdate --version 2>/dev/null || echo 'unknown')"
 
   print_step 1 1 "查询可用的完整安装器..."
+  log_time_start "list_full_installers" "softwareupdate 查询完整安装器"
   if ! softwareupdate --list-full-installers; then
+    log_time_end "list_full_installers" "softwareupdate 列表查询" "error"
     log_error "softwareupdate 列表查询失败"
     exit 1
   fi
+  log_time_end "list_full_installers" "softwareupdate 列表查询"
 
   success "列表获取完成"
 }
@@ -174,10 +167,13 @@ sub_download() {
 
   print_step 2 3 "开始下载 macOS 安装器版本: $(highlight "$VERSION")"
   log_info "目标目录: /Applications (将生成 Install macOS *.app)"
+  log_time_start "download_${VERSION}" "softwareupdate 下载 ${VERSION}"
   if ! softwareupdate --fetch-full-installer --full-installer-version "${VERSION}"; then
+    log_time_end "download_${VERSION}" "macOS 安装器下载" "error"
     log_error "下载失败，请检查版本号是否有效、网络是否可用，或先执行 '$SCRIPT_NAME list' 查看可用版本。"
     exit 1
   fi
+  log_time_end "download_${VERSION}" "macOS 安装器下载"
 
   print_step 3 3 "校验下载结果..."
   local after="" after_ver=""
@@ -284,10 +280,13 @@ sub_create() {
 
   print_step 5 6 "执行 createinstallmedia"
   log_info "需要管理员权限，可能会提示输入密码。"
+  log_time_start "createinstallmedia_${VOLUME}" "写入安装器至 $VOLUME"
   if ! sudo "$CIM" --volume "$VOLUME" --nointeraction; then
+    log_time_end "createinstallmedia_${VOLUME}" "createinstallmedia 执行" "error"
     log_error "createinstallmedia 执行失败。请检查 USB 是否可写、容量是否足够（建议 ≥ 16GB），或查看系统日志。"
     exit 1
   fi
+  log_time_end "createinstallmedia_${VOLUME}" "createinstallmedia 执行"
 
   print_step 6 6 "收尾与提示"
   success "USB 启动盘制作完成: $VOLUME（应被重命名为：$APP_LABEL）"
