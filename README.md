@@ -17,7 +17,6 @@
 .
 ├── README.md
 ├── LICENSE
-├── brew_update_errors.log        # Homebrew 批量安装失败记录（由维护脚本生成）
 ├── lib/
 │   └── colors.sh                 # 彩色日志 & 计时工具库
 ├── lint/
