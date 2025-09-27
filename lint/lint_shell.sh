@@ -4,7 +4,7 @@
 #   - 调用 shellcheck 进行静态分析
 #   - 使用 shfmt 检查或格式化
 # 用法：
-#   scripts/lint_shell.sh [--fix] [路径 ...]
+#   lint/lint_shell.sh [--fix] [路径 ...]
 
 set -e
 set -o pipefail
@@ -20,13 +20,13 @@ while [[ $# -gt 0 ]]; do
     --fix) FIX_MODE="true"; shift ;;
     -h|--help)
       cat <<'EOF'
-用法: scripts/lint_shell.sh [--fix] [路径 ...]
+用法: lint/lint_shell.sh [--fix] [路径 ...]
 说明:
   --fix    使用 shfmt 自动格式化脚本
   未提供路径时默认检查整个仓库
 示例:
-  scripts/lint_shell.sh
-  scripts/lint_shell.sh --fix setup
+  lint/lint_shell.sh
+  lint/lint_shell.sh --fix setup
 EOF
       exit 0
       ;;
