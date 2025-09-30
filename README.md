@@ -121,12 +121,20 @@ cd maintain
 
 ## 🤝 贡献指南
 
-欢迎通过 Issue 或 Pull Request 反馈问题与改进建议。提交前建议运行：
+欢迎通过 Issue 或 Pull Request 反馈问题与改进建议。在提交前请：
+
+- 阅读遵循 [`CODE_OF_CONDUCT.md`](./.github/CODE_OF_CONDUCT.md)，保持专业、友善的协作氛围。
+- 使用对应的 Issue / PR 模板，补充复现信息、测试记录与回滚方案：
+    - Issue：`Bug 报告` 与 `功能需求` 模板覆盖常见场景。
+    - PR：根据修改范围选择 `setup_script.md`、`maintenance_script.md`、`docs_config_update.md` 或 `multi_scope_change.md`。
+- 运行以下校验命令，确认脚本质量：
 
 ```bash
 ./lint/lint_shell.sh            # 确保脚本通过 lint
 zsh -n setup/*.sh maintain/*.sh # 快速语法检查
 ```
+
+> 如果变更涉及 `maintain/` 脚本，请额外执行 `bash -n maintain/*.sh`；若涉及长耗时任务，建议附带 `log_time_start/_end` 输出截图或日志片段。
 
 ## 📜 许可证
 
