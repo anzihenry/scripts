@@ -1,0 +1,32 @@
+{
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "yaml": false,
+    "markdown": true,
+    "shellscript": true
+  },
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "chat.checkpoints.enabled": true,
+  "chat.checkpoints.showFileChanges": true,
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.nextEditSuggestions.fixes": true,
+  "editor.inlineSuggest.edits.showCollapsed": true,
+  "editor.inlineSuggest.minShowDelay": 120,
+  "chat.useAgentsMdFile": true,
+  "github.copilot.chat.reviewSelection.instructions": [
+    {
+      "text": "Review Shell 代码时，请重点检查幂等性、macOS 兼容性、日志输出是否覆盖关键步骤，以及是否复用了仓库现有的辅助函数。"
+    }
+  ],
+  "github.copilot.chat.pullRequestDescriptionGeneration.instructions": [
+    {
+      "text": "生成 PR 描述时按以下结构输出：1) 中文摘要（含动机）；2) 关键修改点（列表）；3) 验证方式（列出 lint、zsh -n 或其他脚本结果）。"
+    }
+  ],
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "提交信息需使用英文动词开头的祈使句，并在描述中补充关键脚本或文件名，例如 maintain/formulaes_casks_updater.sh。"
+    }
+  ]
+}
