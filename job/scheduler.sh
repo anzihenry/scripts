@@ -106,12 +106,21 @@ require_command() {
 }
 
 xml_escape() {
-    local input="$1"
-    local escaped="${input//&/&amp;}"
-    escaped="${escaped//</&lt;}"
-    escaped="${escaped//>/&gt;}"
-    escaped="${escaped//\"/&quot;}"
-    escaped="${escaped//'/&apos;}"
+    local input="${1:-}"
+    local escaped="$input"
+    local replacements=(
+        '&' '&amp;'
+        '<' '&lt;'
+        '>' '&gt;'
+        '"' '&quot;'
+        "'" '&apos;'
+    )
+    local index original replacement
+    for ((index = 1; index <= ${#replacements[@]}; index += 2)); do
+        original="${replacements[index]}"
+        replacement="${replacements[index + 1]}"
+        escaped="${escaped//$original/$replacement}"
+    done
     printf "%s" "$escaped"
 }
 
