@@ -1,5 +1,5 @@
 #!/bin/zsh
-# filepath: /Users/xiejinheng/Coding/scripts/setup/ohmyzsh-setup.sh
+# filepath: setup/ohmyzsh-setup.sh
 
 # 启用错误中断和显示执行命令
 set -e

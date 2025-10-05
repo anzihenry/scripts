@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /Users/xiejinheng/Coding/scripts/setup/git_forge_ssh_setup.sh
+# filepath: setup/git_forge_ssh_setup.sh
 
 set -euo pipefail
 

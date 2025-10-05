@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /Users/xiejinheng/Coding/scripts/maintain/formulaes_casks_updater.sh
+# filepath: maintain/formulaes_casks_updater.sh
 
 # 引入颜色库
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

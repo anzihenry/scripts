@@ -1,5 +1,5 @@
 #!/bin/zsh
-# filepath: /Users/xiejinheng/Coding/scripts/setup/macos-setup.sh
+# filepath: setup/macos-setup.sh
 
 # ===== 初始化配置 =====
 exec > >(tee -a setup.log) 2>&1  # 启用日志记录

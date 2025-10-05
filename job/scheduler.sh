@@ -1,5 +1,5 @@
 #!/bin/zsh
-# filepath: /Users/xiejinheng/Coding/scripts/job/scheduler.sh
+# filepath: job/scheduler.sh
 
 set -e
 set -o pipefail
