@@ -2,15 +2,66 @@
 # filepath: /Users/xiejinheng/Coding/scripts/job/scheduler.sh
 
 set -e
-set -u
 set -o pipefail
 setopt EXTENDED_GLOB
+set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-source "${SCRIPT_DIR}/../lib/colors.sh"
 
-JOB_LABEL_PREFIX="com.coding.scripts.job"
+set +u
+source "${SCRIPT_DIR}/../lib/colors.sh"
+set -u
+
+typeset -gA JOB_TIMERS
+
+_job_timer_key() {
+    local raw="${1:-default}"
+    echo "${raw//[^A-Za-z0-9]/_}" | tr '[:lower:]' '[:upper:]'
+}
+
+job_timer_start() {
+    local key="$(_job_timer_key "$1")"
+    local message="${2:-}"
+    local now
+    now="$(date +%s 2>/dev/null || printf '%s' "${EPOCHSECONDS:-0}")"
+    JOB_TIMERS[$key]="$now"
+    [[ -n "$message" ]] && info "$message (开始)"
+}
+
+job_timer_end() {
+    local key="$(_job_timer_key "$1")"
+    local message="${2:-任务完成}"
+    local level="${3:-success}"
+    local start="${JOB_TIMERS[$key]-}"
+
+    if [[ -z "$start" ]]; then
+        warning "未找到计时器：$1"
+        return 1
+    fi
+
+    local now
+    now="$(date +%s 2>/dev/null || printf '%s' "${EPOCHSECONDS:-0}")"
+    local duration=$(( now - start ))
+    local formatted
+    formatted="$(__color_format_duration "$duration")"
+
+    case "$level" in
+        success|ok)
+            success "${message}，耗时 ${formatted}"
+            ;;
+        warn|warning)
+            warning "${message}，耗时 ${formatted}"
+            ;;
+        *)
+            error "${message}，耗时 ${formatted}"
+            ;;
+    esac
+
+    unset "JOB_TIMERS[$key]"
+}
+
+JOB_LABEL_PREFIX="com.biucing.scripts.job"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 LOG_BASE_DIR="${HOME}/Library/Logs/scripts-jobs"
 
@@ -70,8 +121,8 @@ resolve_path() {
         printf "%s" "$path"
         return
     fi
-    local dir_part="$(dirname "$path")"
-    local base_part="$(basename "$path")"
+    local dir_part="${path:h}"
+    local base_part="${path:t}"
     local resolved_dir
     if ! resolved_dir="$(cd "$PWD" && cd "$dir_part" 2>/dev/null && pwd)"; then
         error "无法解析路径: $path"
@@ -322,7 +373,7 @@ execute_create() {
     shift 12
     local script_args=("$@")
 
-    log_time_start "创建任务 ${job_name}"
+    job_timer_start "创建任务 ${job_name}" "创建任务 ${job_name}"
 
     ensure_directories
 
@@ -368,19 +419,19 @@ execute_create() {
         launchctl_bootstrap "$plist_path" "$label" "$dry_run"
     fi
 
-    log_time_end "创建任务 ${job_name}"
+    job_timer_end "创建任务 ${job_name}" "创建任务 ${job_name}" "success"
 }
 
 execute_delete() {
     local job_name="$1" dry_run="$2"
-    log_time_start "删除任务 ${job_name}"
+    job_timer_start "删除任务 ${job_name}" "删除任务 ${job_name}"
     local label
     label="$(get_label "$job_name")"
     local plist_path
     plist_path="$(get_plist_path "$job_name")"
     if [[ ! -f "$plist_path" ]]; then
         warning "未找到任务文件: ${plist_path}"
-        log_time_end "删除任务 ${job_name}"
+        job_timer_end "删除任务 ${job_name}" "删除任务 ${job_name}" "warning"
         return
     fi
 
@@ -392,7 +443,7 @@ execute_delete() {
         rm -f "$plist_path"
         success "已删除 plist"
     fi
-    log_time_end "删除任务 ${job_name}"
+    job_timer_end "删除任务 ${job_name}" "删除任务 ${job_name}" "success"
 }
 
 execute_enable() {
@@ -518,9 +569,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-validate_job_name "$JOB_NAME"
-
 if [[ "$ACTION" == "create" ]]; then
+    validate_job_name "$JOB_NAME"
     if [[ -z "$TARGET_SCRIPT" ]]; then
         error "create 动作需要提供 --script"
         exit 1
@@ -550,21 +600,25 @@ if [[ "$ACTION" == "create" ]]; then
 fi
 
 if [[ "$ACTION" == "delete" ]]; then
+    validate_job_name "$JOB_NAME"
     execute_delete "$JOB_NAME" "$DRY_RUN"
     exit 0
 fi
 
 if [[ "$ACTION" == "enable" ]]; then
+    validate_job_name "$JOB_NAME"
     execute_enable "$JOB_NAME" "$DRY_RUN"
     exit 0
 fi
 
 if [[ "$ACTION" == "disable" ]]; then
+    validate_job_name "$JOB_NAME"
     execute_disable "$JOB_NAME" "$DRY_RUN"
     exit 0
 fi
 
 if [[ "$ACTION" == "status" ]]; then
+    validate_job_name "$JOB_NAME"
     show_status "$JOB_NAME"
     exit 0
 fi

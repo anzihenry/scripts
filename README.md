@@ -21,6 +21,9 @@
 │   └── colors.sh                 # 彩色日志 & 计时工具库
 ├── lint/
 │   └── lint_shell.sh             # Shell 脚本 lint & 格式化工具
+├── job/
+│   ├── scheduler.sh              # Launchd 定时任务管理工具
+│   └── README.md                 # 使用说明与示例
 ├── maintain/
 │   ├── macos_sys_usb_maker.sh    # macOS 安装器下载 & USB 启动盘制作
 │   ├── formulaes_casks_updater.sh# Homebrew 批量更新工具
@@ -85,6 +88,20 @@ chmod +x setup/*.sh maintain/*.sh lint/*.sh
 ```
 > 依赖 `shellcheck` 与 `shfmt`（可通过 Homebrew 安装）。
 
+### Launchd 定时任务工具
+
+```bash
+cd job
+./scheduler.sh list                                 # 查看当前以 com.biucing.scripts.job.* 命名的任务
+./scheduler.sh create \
+    --job-name daily-brew \
+    --script ../maintain/formulaes_casks_updater.sh \
+    --interval 720                                   # 每 12 小时执行脚本
+./scheduler.sh status --job-name daily-brew        # 查看任务加载状态
+./scheduler.sh delete --job-name daily-brew        # 卸载并移除任务
+```
+> 支持 `--dry-run` 预览 plist 内容、`--at HH:MM` 定时以及 `--force` 覆盖，日志默认写入 `~/Library/Logs/scripts-jobs/`。
+
 ### Homebrew 日常维护
 
 ```bash
@@ -132,6 +149,7 @@ cd maintain
 ```bash
 ./lint/lint_shell.sh            # 确保脚本通过 lint
 zsh -n setup/*.sh maintain/*.sh # 快速语法检查
+zsh -n job/*.sh                 # 校验 Launchd 定时任务工具
 ```
 
 > 如果变更涉及 `maintain/` 脚本，请额外执行 `bash -n maintain/*.sh`；若涉及长耗时任务，建议附带 `log_time_start/_end` 输出截图或日志片段。
