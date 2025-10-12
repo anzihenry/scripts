@@ -30,6 +30,7 @@ CASKS_DEV_TOOLS=(
     "sourcetree"
     "docker-desktop"
     "zulu@17"
+    "requestly"
 )
 
 CASKS_SOCIAL=(
