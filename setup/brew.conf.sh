@@ -18,6 +18,7 @@ FORMULAE_DEV_TOOLS=(
     "gh"
     "shellcheck"
     "shfmt"
+    "watchman"
 )
 
 # ------------------- Casks (图形界面应用) -------------------
