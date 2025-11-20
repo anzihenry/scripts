@@ -19,6 +19,7 @@ FORMULAE_DEV_TOOLS=(
     "shellcheck"
     "shfmt"
     "watchman"
+    "swiftly"
 )
 
 # ------------------- Casks (图形界面应用) -------------------
@@ -66,4 +67,5 @@ CASKS_PRO=(
 CASKS_AI=(
     "chatgpt"
     "lm-studio"
+    "qianwen"
 )
