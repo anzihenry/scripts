@@ -46,15 +46,19 @@ else
   get_installer_short_ver() { /usr/bin/defaults read "$1/Contents/Info" CFBundleShortVersionString 2>/dev/null || true; }
   get_installer_label() { basename "$1" .app; }
   detect_volume_installer_app() {
+    # zsh: 使用 (N) 避免无匹配时抛出 nomatch
+    setopt local_options nonomatch
     local vol="$1" a
-    for a in "$vol"/Install\ macOS*.app; do
+    for a in "$vol"/Install\ macOS*.app(N); do
       [ -d "$a" ] && { echo "$a"; return 0; }
     done
     return 1
   }
   find_installer_app() {
+    # zsh: 使用 (N) 避免无匹配时抛出 nomatch
+    setopt local_options nonomatch
     local WANT_VERSION="${1:-}" app found=""
-    for app in /Applications/Install\ macOS*.app; do
+    for app in /Applications/Install\ macOS*.app(N); do
       [ -d "$app" ] || continue
       if [ -n "$WANT_VERSION" ]; then
         local ver=""

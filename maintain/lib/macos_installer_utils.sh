@@ -24,7 +24,9 @@ get_installer_label() {
 detect_volume_installer_app() {
   local vol="$1"
   local candidate
-  for candidate in "$vol"/Install\ macOS*.app; do
+   # zsh: 使用 (N) 避免无匹配时抛出 nomatch
+   setopt local_options nonomatch
+   for candidate in "$vol"/Install\ macOS*.app(N); do
     [ -d "$candidate" ] && { echo "$candidate"; return 0; }
   done
   return 1
@@ -33,7 +35,9 @@ detect_volume_installer_app() {
 find_installer_app() {
   local want_version="${1:-}"
   local app found=""
-  for app in /Applications/Install\ macOS*.app; do
+   # zsh: 使用 (N) 避免无匹配时抛出 nomatch
+   setopt local_options nonomatch
+   for app in /Applications/Install\ macOS*.app(N); do
     [ -d "$app" ] || continue
     if [ -n "$want_version" ]; then
       local ver=""

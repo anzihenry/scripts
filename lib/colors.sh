@@ -136,7 +136,7 @@ log_time_start() {
 log_time_end() {
     local key="${1:-default}"
     local message="${2:-任务完成}"
-    local status="${3:-success}"
+    local outcome="${3:-success}"  # 避免 zsh 内置只读参数名 status
     local var="__COLOR_TIMER_$(__color_timer_key "$key")"
     local start=""
     eval "start=\${$var:-}"
@@ -152,7 +152,7 @@ log_time_end() {
     local formatted
     formatted="$(__color_format_duration "$duration")"
 
-    case "$status" in
+    case "$outcome" in
         success|ok)
             log_success "$message，耗时 $formatted"
             ;;
