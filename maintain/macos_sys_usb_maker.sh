@@ -6,8 +6,8 @@
 #   3) list                             列出可用的完整安装器版本
 # 示例：
 #   macos_sys_usb_maker.sh list
-#   macos_sys_usb_maker.sh download --version 14.6.1
-#   macos_sys_usb_maker.sh create --volume /Volumes/MyUSB --version 14.6 -y
+#   macos_sys_usb_maker.sh download --version 26.2
+#   macos_sys_usb_maker.sh create --volume /Volumes/Install\ macOS\ Tahoe/ --installer-path /Applications/Install\ macOS\ Tahoe.app --force
 
 set -e
 set -u
