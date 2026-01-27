@@ -67,5 +67,4 @@ CASKS_PRO=(
 CASKS_AI=(
     "chatgpt"
     "lm-studio"
-    "qianwen"
 )
