@@ -29,7 +29,6 @@ CASKS_DEV_TOOLS=(
     "xcodes-app"
     "github-copilot-for-xcode"
     "iterm2"
-    "sourcetree"
     "docker-desktop"
     "zulu@17"
     "requestly"
@@ -46,7 +45,6 @@ CASKS_DAILY=(
     "google-chrome"
     "iina"
     "transmission"
-    "hammerspoon"
     "the-unarchiver"
     "bilibili"
     "epic-games"
@@ -54,7 +52,6 @@ CASKS_DAILY=(
 
 CASKS_OFFICE=(
     "feishu"
-    "lark"
     "tencent-meeting"
 )
 
