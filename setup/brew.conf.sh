@@ -29,6 +29,8 @@ CASKS_DEV_TOOLS=(
     "xcodes-app"
     "github-copilot-for-xcode"
     "iterm2"
+    "itermai"
+    "itermbrowserplugin"
     "docker-desktop"
     "zulu@17"
     "requestly"
