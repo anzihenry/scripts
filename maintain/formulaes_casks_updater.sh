@@ -8,16 +8,13 @@ source "$SCRIPT_DIR/../lib/colors.sh"
 # ---------------------- 配置区域 ----------------------
 EXCLUDED_CASKS=(
     "microsoft-.*"
-    "adobe-.*"
     "android-studio"
     "visual-studio-code"
-    "rider"
     "docker-desktop"
     "iterm2"
     "google-chrome"
     "feishu"
     "lark"
-    "flutter"
 )
 
 EXCLUDE_PATTERN="^($(IFS="|"; echo "${EXCLUDED_CASKS[*]}"))$"
