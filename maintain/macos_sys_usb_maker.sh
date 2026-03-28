@@ -16,6 +16,15 @@ set -o pipefail
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+if [ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]; then
+  mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
+  MAINTAIN_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/macos-installer.log"
+else
+  MAINTAIN_LOG_FILE="macos-installer.log"
+fi
+
+exec > >(tee -a "$MAINTAIN_LOG_FILE") 2>&1
+
 # ==== 日志与颜色：集成 colors.sh ====
 case $- in *u*) __HAD_U=1;; *) __HAD_U=0;; esac
 set +u
@@ -95,6 +104,7 @@ usage() {
   list        列出可用完整安装器版本 (softwareupdate --list-full-installers)
   download    幂等：若指定版本安装器已在 /Applications 中则跳过；--force 可强制重新下载
   create      幂等：若目标卷已是同版本可启动安装器则跳过；不同版本需 --force 才覆盖（会抹掉分区）
+  日志        默认写入 ${MAINTAIN_LOG_FILE}
 示例:
   $SCRIPT_NAME list
   $SCRIPT_NAME download --version 14.6.1
@@ -307,6 +317,8 @@ main() {
     -v|--verbose) VERBOSE="true"; shift;;
   esac
   [ "$VERBOSE" = "true" ] && export DEBUG=true
+
+  log_info "日志文件位置: $MAINTAIN_LOG_FILE"
 
   case "${1:-}" in
     list) shift; sub_list "$@";;

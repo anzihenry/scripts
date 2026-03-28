@@ -119,6 +119,8 @@ print_setup_shell_help() {
 
 说明:
   初始化 zsh / oh-my-zsh / powerlevel10k / 常用插件 / 字体。
+  安装态日志默认写入 ~/Library/Logs/macos-scripts/setup-shell.log。
+  安装态下 .zshrc 备份默认写入 ~/.config/macos-scripts/backups/。
 
 参数:
   当前不接受额外参数。
@@ -159,6 +161,8 @@ print_setup_git_help() {
 
 说明:
   为任意 Git forge 配置 SSH 密钥、SSH config、公钥上传和连接测试。
+  安装态日志默认写入 ~/Library/Logs/macos-scripts/setup-git.log。
+  安装态下 SSH config 备份默认写入 ~/.config/macos-scripts/backups/。
 
 选项:
   -d, --domain <domain>         Git 平台域名，默认 github.com
@@ -243,6 +247,7 @@ print_maintain_installer_help() {
   list             列出可用完整安装器版本
   download         下载指定版本完整安装器
   create           制作 USB 启动盘
+  日志             默认写入 ~/Library/Logs/macos-scripts/macos-installer.log
 EOF
 }
 

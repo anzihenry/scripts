@@ -6,7 +6,7 @@ class MacosScripts < Formula
   head "https://github.com/anzihenry/scripts.git", branch: "main"
 
   def install
-    libexec.install "bin", "job", "lib", "lint", "maintain", "setup", "README.md", "LICENSE"
+    libexec.install "bin", "bootstrap", "job", "lib", "lint", "maintain", "setup", "README.md", "LICENSE"
     bin.install_symlink libexec/"bin/macos-scripts"
   end
 
@@ -25,7 +25,9 @@ class MacosScripts < Formula
       默认配置目录：
         ~/.config/macos-scripts
 
-      注意：全新 macOS 的首次 Homebrew bootstrap 仍需独立入口，不应依赖本 formula 自举。
+      全新 macOS 首次安装请使用独立 bootstrap 入口（正式发布示例）：
+        BOOTSTRAP_TAG=v0.1.0
+        curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh
     EOS
   end
 

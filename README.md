@@ -51,6 +51,34 @@ chmod +x bin/macos-scripts
 ./bin/macos-scripts --help
 ```
 
+## ⚡ 首次 Bootstrap
+
+如果这是台全新的 macOS，且系统里还没有 Homebrew，优先使用独立 bootstrap 入口：
+
+```bash
+BOOTSTRAP_TAG="v0.1.0"
+curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh
+```
+
+这个入口会依次完成：
+
+1. 检查并安装 Xcode CLI
+2. 安装 Homebrew
+3. 通过 tap 安装 `macos-scripts`
+4. 自动执行 `macos-scripts setup brew configure`
+
+常用选项：
+
+```bash
+BOOTSTRAP_TAG="v0.1.0"
+curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh -s -- --dry-run
+curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh -s -- --yes
+curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh -s -- --skip-configure
+```
+
+> bootstrap 日志默认写入 `~/Library/Logs/macos-scripts/bootstrap.log`。
+> 以上命令按正式发布口径固定到 tag。当前仓库尚未创建对应远端 tag 时，请先在本地执行 `zsh bootstrap/install.sh`，或先完成版本发布。
+
 ## 🧭 统一 CLI
 
 ```bash
@@ -73,6 +101,8 @@ chmod +x bin/macos-scripts
 
 仓库已经具备 Homebrew Formula 结构，推荐通过 tap 安装。
 
+如果系统尚未安装 Homebrew，请先使用上面的独立 bootstrap 入口，不要试图靠 formula 自举。
+
 ```bash
 # 添加 tap（仓库中包含 Formula/macos-scripts.rb）
 brew tap anzihenry/scripts https://github.com/anzihenry/scripts
@@ -84,7 +114,7 @@ brew install --HEAD anzihenry/scripts/macos-scripts
 macos-scripts --help
 ```
 
-> 说明：当前 Formula 是 head-only 形式，适合先打通 tap 安装链路；后续发布带 tag 的稳定版时，再补 stable `url` 与 `sha256`。
+> 说明：当前 Formula 仍是 head-only 形式；上面的 bootstrap 命令已经按正式发布口径固定到 tag，真正对外发布时需要先创建对应版本 tag，再补 stable `url` 与 `sha256`。
 
 安装后 Homebrew 会把 CLI 入口链接到 `bin/`，并把仓库脚本安装到 `libexec/`，从而保留当前相对路径结构。
 
@@ -148,14 +178,14 @@ cd job
 ./scheduler.sh status --job-name daily-brew        # 查看任务加载状态
 ./scheduler.sh delete --job-name daily-brew        # 卸载并移除任务
 ```
-> 支持 `--dry-run` 预览 plist 内容、`--at HH:MM` 定时以及 `--force` 覆盖，日志默认写入 `~/Library/Logs/scripts-jobs/`。
+> 支持 `--dry-run` 预览 plist 内容、`--at HH:MM` 定时以及 `--force` 覆盖，安装态默认把任务日志写入 `~/Library/Logs/macos-scripts/jobs/`。
 
 ### Homebrew 日常维护
 
 ```bash
 cd maintain
 ./formulaes_casks_updater.sh --dry-run  # 预览更新命令
-./formulaes_casks_updater.sh            # 更新所有 Formulae/Cask，失败项写入 maintain/brew_update_errors.log
+./formulaes_casks_updater.sh            # 更新所有 Formulae/Cask，安装态下失败项写入 ~/Library/Logs/macos-scripts/brew_update_errors.log
 ```
 
 ### macOS 安装器下载 & USB 启动盘制作
@@ -171,12 +201,13 @@ cd maintain
 # 制作 USB 启动盘（需要 sudo，支持 --force 覆盖、--yes 跳过交互）
 ./macos_sys_usb_maker.sh create --volume /Volumes/MyUSB --version 14.6 -y
 ```
-> 脚本为关键命令记录耗时，并使用锁避免并发冲突。
+> 脚本为关键命令记录耗时，并使用锁避免并发冲突；通过 `macos-scripts` 安装态运行时，日志默认写入 `~/Library/Logs/macos-scripts/macos-installer.log`。
 
 ## 🔧 自定义安装清单
 
 - 仓库内运行时，编辑 `setup/brew.conf.sh` 调整 `FORMULAE_*`、`CASKS_*` 数组即可。
 - Homebrew 安装态运行时，首次执行 `macos-scripts setup packages` 会自动把默认配置复制到 `~/.config/macos-scripts/brew.conf.sh`，后续编辑该文件即可。
+- `macos-scripts setup shell` 与 `macos-scripts setup git` 在安装态下会把备份文件写入 `~/.config/macos-scripts/backups/`，避免把运行产物散落到仓库或安装目录。
 - `macos-setup.sh` 会自动加载这些数组并通过新封装的 helper 执行安装。
 - 可在运行前通过设置环境变量 `BH_DRY_RUN=true` 做干跑测试（只输出将安装的项目，不实际执行）。
 
