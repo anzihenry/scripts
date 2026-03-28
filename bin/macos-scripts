@@ -25,6 +25,58 @@ run_bash_script() {
   bash "$REPO_ROOT/$relative_path" "$@"
 }
 
+usage_error() {
+  local message="$1"
+  local help_func="$2"
+
+  error "参数错误: $message"
+  echo
+  "$help_func"
+  return 1
+}
+
+command_error() {
+  local message="$1"
+  local help_func="$2"
+
+  error "$message"
+  echo
+  "$help_func"
+  return 1
+}
+
+is_help_arg() {
+  case "$1" in
+    help|-h|--help) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+has_help_flag() {
+  local arg
+  for arg in "$@"; do
+    is_help_arg "$arg" && return 0
+  done
+  return 1
+}
+
+has_help_flag_before_separator() {
+  local arg
+  for arg in "$@"; do
+    [[ "$arg" == "--" ]] && return 1
+    is_help_arg "$arg" && return 0
+  done
+  return 1
+}
+
+reject_extra_args() {
+  local help_func="$1"
+  shift
+
+  [[ $# -eq 0 ]] && return 0
+  usage_error "该命令不接受额外参数: $*" "$help_func"
+}
+
 print_main_help() {
   cat <<EOF
 macos-scripts v${MACOS_SCRIPTS_VERSION}
@@ -52,6 +104,89 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
 EOF
 }
 
+print_setup_shell_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts setup shell
+
+说明:
+  初始化 zsh / oh-my-zsh / powerlevel10k / 常用插件 / 字体。
+
+参数:
+  当前不接受额外参数。
+EOF
+}
+
+print_setup_brew_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts setup brew configure
+
+说明:
+  校准 Homebrew 镜像、shellenv 和当前 shell 环境。
+  该命令面向已具备 Homebrew 的系统，不承担新机首次 bootstrap 安装职责。
+
+参数:
+  当前不接受额外参数。
+EOF
+}
+
+print_setup_packages_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts setup packages
+
+说明:
+  按 setup/brew.conf.sh 批量安装 Formulae、Casks 和语言环境配置。
+
+参数:
+  当前不接受额外参数。
+EOF
+}
+
+print_setup_git_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts setup git [选项]
+
+说明:
+  为任意 Git forge 配置 SSH 密钥、SSH config、公钥上传和连接测试。
+
+选项:
+  -d, --domain <domain>         Git 平台域名，默认 github.com
+  -t, --type <personal|work>    密钥用途类型，默认 personal
+  --force                       强制覆盖现有密钥
+  --skip-upload                 跳过 GitHub 公钥上传
+  --debug                       显示调试信息
+  -h, --help                    显示帮助
+
+示例:
+  macos-scripts setup git --domain github.com --type personal
+  macos-scripts setup git --domain gitlab.company.com --type work --skip-upload
+EOF
+}
+
+print_setup_github_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts setup github [选项]
+
+说明:
+  GitHub 快捷入口，等价于：
+    macos-scripts setup git --domain github.com --type personal
+
+选项:
+  -t, --type <personal|work>    密钥用途类型，默认 personal
+  --force                       强制覆盖现有密钥
+  --skip-upload                 跳过 GitHub 公钥上传
+  --debug                       显示调试信息
+  -h, --help                    显示帮助
+
+说明:
+  如需自定义域名，请改用 `macos-scripts setup git --domain <domain>`。
+EOF
+}
+
 print_setup_help() {
   cat <<'EOF'
 用法:
@@ -70,6 +205,79 @@ print_setup_help() {
 EOF
 }
 
+print_maintain_brew_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts maintain brew [选项]
+
+说明:
+  更新 Homebrew 元数据、Formulae、Cask，并执行 cleanup。
+
+选项:
+  --dry-run         仅展示将执行的命令，不实际更新
+  --yes             跳过执行前确认
+  --force           包含默认排除的 Cask 一并升级
+  --skip-formulae   跳过 Formulae 更新
+  --skip-casks      跳过 Cask 更新
+  --skip-cleanup    跳过 brew cleanup
+  -h, --help        显示帮助
+EOF
+}
+
+print_maintain_installer_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts maintain installer list [--verbose]
+  macos-scripts maintain installer download --version <x.y[.z]> [--force] [--verbose]
+  macos-scripts maintain installer create --volume <path> [--installer-path <path>] [--version <x.y[.z]>] [-y|--yes] [--force] [--verbose]
+
+说明:
+  list             列出可用完整安装器版本
+  download         下载指定版本完整安装器
+  create           制作 USB 启动盘
+EOF
+}
+
+print_maintain_installer_list_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts maintain installer list [--verbose]
+
+选项:
+  --verbose, -v    显示调试信息
+  -h, --help       显示帮助
+EOF
+}
+
+print_maintain_installer_download_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts maintain installer download --version <x.y[.z]> [--force] [--verbose]
+
+选项:
+  --version <ver>  指定完整安装器版本，例如 14.6.1
+  --force, -f      若已存在则强制重新下载
+  --verbose, -v    显示调试信息
+  -h, --help       显示帮助
+EOF
+}
+
+print_maintain_installer_create_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts maintain installer create --volume <path> [--installer-path <path>] [--version <x.y[.z]>] [-y|--yes] [--force] [--verbose]
+
+选项:
+  --volume <path>          目标卷路径，例如 /Volumes/MyUSB
+  --installer-path <path>  指定安装器 .app 路径
+  --version <ver>          按版本自动匹配安装器
+  -y, --yes                跳过交互确认
+  --force, -f              覆盖卷上现有内容
+  --verbose, -v            显示调试信息
+  -h, --help               显示帮助
+EOF
+}
+
 print_maintain_help() {
   cat <<'EOF'
 用法:
@@ -82,6 +290,140 @@ print_maintain_help() {
 EOF
 }
 
+print_job_action_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts job list
+  macos-scripts job status --job-name <name>
+  macos-scripts job create --job-name <name> --script <path> [调度参数]
+  macos-scripts job enable --job-name <name>
+  macos-scripts job disable --job-name <name>
+  macos-scripts job delete --job-name <name>
+
+常用参数:
+  --job-name <名称>
+  --script <路径>
+  --interval <分钟>
+  --at <HH:MM>
+  --weekday <0-6>
+  --keepalive
+  --working-dir <路径>
+  --stdout <文件>
+  --stderr <文件>
+  --no-load
+  --disabled
+  --force
+  --dry-run
+  -h, --help
+EOF
+}
+
+print_job_list_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts job list
+
+说明:
+  列出当前用户下由 macos-scripts 管理的 launchd 任务。
+
+参数:
+  当前不接受额外参数。
+EOF
+}
+
+print_job_status_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts job status --job-name <name>
+
+说明:
+  查看指定任务的当前加载状态和 launchctl 输出。
+
+选项:
+  --job-name <name>   任务名称，仅支持字母、数字、点、下划线和短横
+  -h, --help          显示帮助
+EOF
+}
+
+print_job_create_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts job create --job-name <name> --script <path> [调度参数] [-- 脚本参数...]
+
+说明:
+  创建或更新 launchd 任务，并默认加载。
+
+必填选项:
+  --job-name <name>      任务名称，仅支持字母、数字、点、下划线和短横
+  --script <path>        目标脚本路径
+
+调度参数:
+  --interval <分钟>      循环执行间隔，正整数
+  --at <HH:MM>           每日执行时间，24 小时制
+  --weekday <0-6>        配合 --at 使用，0 表示周日
+
+执行选项:
+  --keepalive            异常退出后自动重启
+  --working-dir <path>   WorkingDirectory，默认仓库根目录
+  --stdout <file>        标准输出日志路径
+  --stderr <file>        标准错误日志路径
+  --no-load              创建后不立即加载
+  --disabled             创建时标记为 Disabled
+  --force                覆盖同名任务并备份旧文件
+  --dry-run              仅预览将执行的操作
+  -h, --help             显示帮助
+
+说明:
+  必须提供 --interval 或 --at 至少一个。
+  如需向目标脚本透传参数，请在参数列表末尾使用 -- 分隔。
+EOF
+}
+
+print_job_enable_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts job enable --job-name <name> [--dry-run]
+
+说明:
+  启用并加载指定任务。
+
+选项:
+  --job-name <name>   任务名称
+  --dry-run           仅预览将执行的操作
+  -h, --help          显示帮助
+EOF
+}
+
+print_job_disable_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts job disable --job-name <name> [--dry-run]
+
+说明:
+  禁用并卸载指定任务。
+
+选项:
+  --job-name <name>   任务名称
+  --dry-run           仅预览将执行的操作
+  -h, --help          显示帮助
+EOF
+}
+
+print_job_delete_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts job delete --job-name <name> [--dry-run]
+
+说明:
+  卸载并删除指定任务的 plist 文件。
+
+选项:
+  --job-name <name>   任务名称
+  --dry-run           仅预览将执行的操作
+  -h, --help          显示帮助
+EOF
+}
+
 print_job_help() {
   cat <<'EOF'
 用法:
@@ -89,6 +431,28 @@ print_job_help() {
 
 说明:
   该命令直接转发到 job/scheduler.sh。
+EOF
+}
+
+print_lint_check_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts lint check [路径 ...]
+
+说明:
+  对指定路径执行语法检查、shellcheck 和 shfmt 差异检查。
+  未提供路径时默认检查整个仓库。
+EOF
+}
+
+print_lint_fix_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts lint fix [路径 ...]
+
+说明:
+  对指定路径执行语法检查，并用 shfmt 自动修复格式。
+  未提供路径时默认检查整个仓库。
 EOF
 }
 
@@ -104,30 +468,389 @@ print_lint_help() {
 EOF
 }
 
+validate_setup_git_args() {
+  local -a args=("$@")
+  local index=1
+  local arg
+
+  while (( index <= $#args )); do
+    arg="${args[index]}"
+    case "$arg" in
+      -d|--domain|-t|--type)
+        (( index < $#args )) || {
+          usage_error "$arg 需要一个参数值" print_setup_git_help
+          return 1
+        }
+        (( index += 2 ))
+        ;;
+      --force|--skip-upload|--debug)
+        (( index++ ))
+        ;;
+      -h|--help|help)
+        return 0
+        ;;
+      *)
+        usage_error "setup git 不支持参数: $arg" print_setup_git_help
+        return 1
+        ;;
+    esac
+  done
+}
+
+validate_setup_github_args() {
+  local -a args=("$@")
+  local index=1
+  local arg
+
+  while (( index <= $#args )); do
+    arg="${args[index]}"
+    case "$arg" in
+      -t|--type)
+        (( index < $#args )) || {
+          usage_error "$arg 需要一个参数值" print_setup_github_help
+          return 1
+        }
+        (( index += 2 ))
+        ;;
+      --force|--skip-upload|--debug)
+        (( index++ ))
+        ;;
+      -d|--domain)
+        usage_error "setup github 固定使用 github.com；如需自定义域名请改用 'macos-scripts setup git --domain <domain>'" print_setup_github_help
+        return 1
+        ;;
+      -h|--help|help)
+        return 0
+        ;;
+      *)
+        usage_error "setup github 不支持参数: $arg" print_setup_github_help
+        return 1
+        ;;
+    esac
+  done
+}
+
+validate_maintain_brew_args() {
+  local -a args=("$@")
+  local arg
+
+  for arg in "${args[@]}"; do
+    case "$arg" in
+      --dry-run|--yes|-y|--force|--skip-formulae|--skip-casks|--skip-cleanup|-h|--help|help)
+        ;;
+      *)
+        usage_error "maintain brew 不支持参数: $arg" print_maintain_brew_help
+        return 1
+        ;;
+    esac
+  done
+}
+
+validate_installer_list_args() {
+  local -a args=("$@")
+  local arg
+
+  for arg in "${args[@]}"; do
+    case "$arg" in
+      --verbose|-v|-h|--help|help)
+        ;;
+      *)
+        usage_error "maintain installer list 不支持参数: $arg" print_maintain_installer_list_help
+        return 1
+        ;;
+    esac
+  done
+}
+
+validate_installer_download_args() {
+  local -a args=("$@")
+  local index=1
+  local arg
+
+  while (( index <= $#args )); do
+    arg="${args[index]}"
+    case "$arg" in
+      --version)
+        (( index < $#args )) || {
+          usage_error "--version 需要一个参数值" print_maintain_installer_download_help
+          return 1
+        }
+        (( index += 2 ))
+        ;;
+      --force|-f|--verbose|-v|-h|--help|help)
+        (( index++ ))
+        ;;
+      *)
+        usage_error "maintain installer download 不支持参数: $arg" print_maintain_installer_download_help
+        return 1
+        ;;
+    esac
+  done
+}
+
+validate_installer_create_args() {
+  local -a args=("$@")
+  local index=1
+  local arg
+
+  while (( index <= $#args )); do
+    arg="${args[index]}"
+    case "$arg" in
+      --volume|--installer-path|--version)
+        (( index < $#args )) || {
+          usage_error "$arg 需要一个参数值" print_maintain_installer_create_help
+          return 1
+        }
+        (( index += 2 ))
+        ;;
+      -y|--yes|--nointeraction|--force|-f|--verbose|-v|-h|--help|help)
+        (( index++ ))
+        ;;
+      *)
+        usage_error "maintain installer create 不支持参数: $arg" print_maintain_installer_create_help
+        return 1
+        ;;
+    esac
+  done
+}
+
+validate_job_name_value() {
+  local value="$1"
+  [[ -n "$value" ]] || return 1
+  [[ "$value" =~ ^[A-Za-z0-9._-]+$ ]]
+}
+
+validate_job_list_args() {
+  local -a args=("$@")
+  local arg
+
+  for arg in "${args[@]}"; do
+    case "$arg" in
+      -h|--help|help)
+        ;;
+      *)
+        usage_error "job list 不支持参数: $arg" print_job_list_help
+        return 1
+        ;;
+    esac
+  done
+}
+
+validate_job_name_action_args() {
+  local action="$1"
+  local help_func="$2"
+  local allow_dry_run="$3"
+  shift 3
+
+  local -a args=("$@")
+  local index=1
+  local arg
+  local job_name=""
+
+  while (( index <= $#args )); do
+    arg="${args[index]}"
+    case "$arg" in
+      --job-name)
+        (( index < $#args )) || {
+          usage_error "--job-name 需要一个参数值" "$help_func"
+          return 1
+        }
+        job_name="${args[index + 1]}"
+        (( index += 2 ))
+        ;;
+      --dry-run)
+        if [[ "$allow_dry_run" != "true" ]]; then
+          usage_error "job ${action} 不支持参数: --dry-run" "$help_func"
+          return 1
+        fi
+        (( index++ ))
+        ;;
+      -h|--help|help)
+        return 0
+        ;;
+      *)
+        usage_error "job ${action} 不支持参数: $arg" "$help_func"
+        return 1
+        ;;
+    esac
+  done
+
+  [[ -n "$job_name" ]] || {
+    usage_error "job ${action} 需要提供 --job-name" "$help_func"
+    return 1
+  }
+  validate_job_name_value "$job_name" || {
+    usage_error "--job-name 仅支持字母、数字、点、下划线和短横" "$help_func"
+    return 1
+  }
+}
+
+validate_job_create_args() {
+  local -a args=("$@")
+  local index=1
+  local arg
+  local job_name=""
+  local script_path=""
+  local interval=""
+  local at_time=""
+  local weekday=""
+
+  while (( index <= $#args )); do
+    arg="${args[index]}"
+    case "$arg" in
+      --job-name|--script|--interval|--at|--weekday|--working-dir|--stdout|--stderr)
+        (( index < $#args )) || {
+          usage_error "$arg 需要一个参数值" print_job_create_help
+          return 1
+        }
+        case "$arg" in
+          --job-name) job_name="${args[index + 1]}" ;;
+          --script) script_path="${args[index + 1]}" ;;
+          --interval) interval="${args[index + 1]}" ;;
+          --at) at_time="${args[index + 1]}" ;;
+          --weekday) weekday="${args[index + 1]}" ;;
+        esac
+        (( index += 2 ))
+        ;;
+      --keepalive|--no-load|--disabled|--force|--dry-run)
+        (( index++ ))
+        ;;
+      --)
+        break
+        ;;
+      -h|--help|help)
+        return 0
+        ;;
+      *)
+        usage_error "job create 不支持参数: $arg" print_job_create_help
+        return 1
+        ;;
+    esac
+  done
+
+  [[ -n "$job_name" ]] || {
+    usage_error "job create 需要提供 --job-name" print_job_create_help
+    return 1
+  }
+  validate_job_name_value "$job_name" || {
+    usage_error "--job-name 仅支持字母、数字、点、下划线和短横" print_job_create_help
+    return 1
+  }
+  [[ -n "$script_path" ]] || {
+    usage_error "job create 需要提供 --script" print_job_create_help
+    return 1
+  }
+  [[ -n "$interval" || -n "$at_time" ]] || {
+    usage_error "job create 需要提供 --interval 或 --at" print_job_create_help
+    return 1
+  }
+  [[ -z "$interval" || "$interval" =~ ^[0-9]+$ ]] || {
+    usage_error "--interval 需要正整数" print_job_create_help
+    return 1
+  }
+  [[ -z "$at_time" || "$at_time" =~ ^[0-2][0-9]:[0-5][0-9]$ ]] || {
+    usage_error "--at 格式必须为 HH:MM" print_job_create_help
+    return 1
+  }
+  [[ -z "$weekday" || "$weekday" =~ ^[0-6]$ ]] || {
+    usage_error "--weekday 取值范围为 0-6" print_job_create_help
+    return 1
+  }
+  [[ -z "$weekday" || -n "$at_time" ]] || {
+    usage_error "--weekday 需要配合 --at 使用" print_job_create_help
+    return 1
+  }
+}
+
+handle_help() {
+  local group="${1:-}"
+  local action="${2:-}"
+  local subaction="${3:-}"
+
+  case "$group" in
+    "") print_main_help ;;
+    setup)
+      case "$action" in
+        ""|help) print_setup_help ;;
+        shell) print_setup_shell_help ;;
+        brew) print_setup_brew_help ;;
+        packages) print_setup_packages_help ;;
+        git) print_setup_git_help ;;
+        github) print_setup_github_help ;;
+        *) command_error "未知的 setup 帮助主题: $action" print_setup_help ;;
+      esac
+      ;;
+    maintain)
+      case "$action" in
+        ""|help) print_maintain_help ;;
+        brew) print_maintain_brew_help ;;
+        installer)
+          case "$subaction" in
+            ""|help) print_maintain_installer_help ;;
+            list) print_maintain_installer_list_help ;;
+            download) print_maintain_installer_download_help ;;
+            create) print_maintain_installer_create_help ;;
+            *) command_error "未知的 maintain installer 帮助主题: $subaction" print_maintain_installer_help ;;
+          esac
+          ;;
+        *) command_error "未知的 maintain 帮助主题: $action" print_maintain_help ;;
+      esac
+      ;;
+    job)
+      case "$action" in
+        ""|help) print_job_help ;;
+        list) print_job_list_help ;;
+        status) print_job_status_help ;;
+        create) print_job_create_help ;;
+        enable) print_job_enable_help ;;
+        disable) print_job_disable_help ;;
+        delete) print_job_delete_help ;;
+        *) command_error "未知的 job 帮助主题: $action" print_job_help ;;
+      esac
+      ;;
+    lint)
+      case "$action" in
+        ""|help) print_lint_help ;;
+        check) print_lint_check_help ;;
+        fix) print_lint_fix_help ;;
+        *) command_error "未知的 lint 帮助主题: $action" print_lint_help ;;
+      esac
+      ;;
+    *)
+      command_error "未知的帮助主题: $group" print_main_help
+      ;;
+  esac
+}
+
 handle_setup_brew() {
   local action="${1:-configure}"
   shift || true
 
   case "$action" in
     configure)
+      has_help_flag "$@" && { print_setup_brew_help; return 0; }
+      reject_extra_args print_setup_brew_help "$@" || return 1
       run_zsh_script "setup/homebrew-setup.sh" "$@"
       ;;
     help|-h|--help)
-      print_setup_help
+      print_setup_brew_help
       ;;
     *)
-      error "未知的 setup brew 子命令: $action"
-      print_setup_help
-      return 1
+      command_error "未知的 setup brew 子命令: $action" print_setup_brew_help
       ;;
   esac
 }
 
 handle_setup_git() {
+  has_help_flag "$@" && { print_setup_git_help; return 0; }
+  validate_setup_git_args "$@" || return 1
   run_bash_script "setup/git_forge_ssh_setup.sh" "$@"
 }
 
 handle_setup_github() {
+  has_help_flag "$@" && { print_setup_github_help; return 0; }
+  validate_setup_github_args "$@" || return 1
+
   local has_domain="false"
   local has_type="false"
   local arg
@@ -153,12 +876,16 @@ handle_setup() {
 
   case "$action" in
     shell)
+      has_help_flag "$@" && { print_setup_shell_help; return 0; }
+      reject_extra_args print_setup_shell_help "$@" || return 1
       run_zsh_script "setup/ohmyzsh-setup.sh" "$@"
       ;;
     brew)
       handle_setup_brew "$@"
       ;;
     packages)
+      has_help_flag "$@" && { print_setup_packages_help; return 0; }
+      reject_extra_args print_setup_packages_help "$@" || return 1
       run_zsh_script "setup/macos-setup.sh" "$@"
       ;;
     git)
@@ -171,9 +898,7 @@ handle_setup() {
       print_setup_help
       ;;
     *)
-      error "未知的 setup 子命令: $action"
-      print_setup_help
-      return 1
+      command_error "未知的 setup 子命令: $action" print_setup_help
       ;;
   esac
 }
@@ -183,16 +908,26 @@ handle_maintain_installer() {
   shift || true
 
   case "$action" in
-    list|download|create)
-      run_zsh_script "maintain/macos_sys_usb_maker.sh" "$action" "$@"
+    list)
+      has_help_flag "$@" && { print_maintain_installer_list_help; return 0; }
+      validate_installer_list_args "$@" || return 1
+      run_zsh_script "maintain/macos_sys_usb_maker.sh" list "$@"
+      ;;
+    download)
+      has_help_flag "$@" && { print_maintain_installer_download_help; return 0; }
+      validate_installer_download_args "$@" || return 1
+      run_zsh_script "maintain/macos_sys_usb_maker.sh" download "$@"
+      ;;
+    create)
+      has_help_flag "$@" && { print_maintain_installer_create_help; return 0; }
+      validate_installer_create_args "$@" || return 1
+      run_zsh_script "maintain/macos_sys_usb_maker.sh" create "$@"
       ;;
     help|-h|--help)
-      print_maintain_help
+      print_maintain_installer_help
       ;;
     *)
-      error "未知的 maintain installer 子命令: $action"
-      print_maintain_help
-      return 1
+      command_error "未知的 maintain installer 子命令: $action" print_maintain_installer_help
       ;;
   esac
 }
@@ -203,6 +938,8 @@ handle_maintain() {
 
   case "$action" in
     brew)
+      has_help_flag "$@" && { print_maintain_brew_help; return 0; }
+      validate_maintain_brew_args "$@" || return 1
       run_zsh_script "maintain/formulaes_casks_updater.sh" "$@"
       ;;
     installer)
@@ -212,9 +949,7 @@ handle_maintain() {
       print_maintain_help
       ;;
     *)
-      error "未知的 maintain 子命令: $action"
-      print_maintain_help
-      return 1
+      command_error "未知的 maintain 子命令: $action" print_maintain_help
       ;;
   esac
 }
@@ -224,16 +959,41 @@ handle_job() {
   shift || true
 
   case "$action" in
-    list|create|status|enable|disable|delete)
-      run_zsh_script "job/scheduler.sh" "$action" "$@"
+    list)
+      has_help_flag "$@" && { print_job_list_help; return 0; }
+      validate_job_list_args "$@" || return 1
+      run_zsh_script "job/scheduler.sh" list "$@"
+      ;;
+    status)
+      has_help_flag "$@" && { print_job_status_help; return 0; }
+      validate_job_name_action_args status print_job_status_help false "$@" || return 1
+      run_zsh_script "job/scheduler.sh" status "$@"
+      ;;
+    create)
+      has_help_flag_before_separator "$@" && { print_job_create_help; return 0; }
+      validate_job_create_args "$@" || return 1
+      run_zsh_script "job/scheduler.sh" create "$@"
+      ;;
+    enable)
+      has_help_flag "$@" && { print_job_enable_help; return 0; }
+      validate_job_name_action_args enable print_job_enable_help true "$@" || return 1
+      run_zsh_script "job/scheduler.sh" enable "$@"
+      ;;
+    disable)
+      has_help_flag "$@" && { print_job_disable_help; return 0; }
+      validate_job_name_action_args disable print_job_disable_help true "$@" || return 1
+      run_zsh_script "job/scheduler.sh" disable "$@"
+      ;;
+    delete)
+      has_help_flag "$@" && { print_job_delete_help; return 0; }
+      validate_job_name_action_args delete print_job_delete_help true "$@" || return 1
+      run_zsh_script "job/scheduler.sh" delete "$@"
       ;;
     help|-h|--help)
       print_job_help
       ;;
     *)
-      error "未知的 job 子命令: $action"
-      print_job_help
-      return 1
+      command_error "未知的 job 子命令: $action" print_job_help
       ;;
   esac
 }
@@ -244,10 +1004,12 @@ handle_lint() {
   case "$action" in
     check)
       shift || true
+      has_help_flag "$@" && { print_lint_check_help; return 0; }
       run_zsh_script "lint/lint_shell.sh" "$@"
       ;;
     fix)
       shift || true
+      has_help_flag "$@" && { print_lint_fix_help; return 0; }
       run_zsh_script "lint/lint_shell.sh" --fix "$@"
       ;;
     help|-h|--help)
@@ -277,15 +1039,13 @@ main() {
       handle_lint "$@"
       ;;
     help|-h|--help)
-      print_main_help
+      handle_help "$@"
       ;;
     version|--version|-v)
       printf 'macos-scripts v%s\n' "$MACOS_SCRIPTS_VERSION"
       ;;
     *)
-      error "未知命令: $command"
-      print_main_help
-      return 1
+      command_error "未知命令: $command" print_main_help
       ;;
   esac
 }
