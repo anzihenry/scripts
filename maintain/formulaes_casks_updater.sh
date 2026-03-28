@@ -19,7 +19,12 @@ typeset -ga EXCLUDED_CASKS=(
     "lark"
 )
 
-ERROR_LOG="$SCRIPT_DIR/brew_update_errors.log"
+if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
+    mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
+    ERROR_LOG="$MACOS_SCRIPTS_LOG_DIR/brew_update_errors.log"
+else
+    ERROR_LOG="$SCRIPT_DIR/brew_update_errors.log"
+fi
 
 DRY_RUN="false"
 ASSUME_YES="false"
@@ -46,7 +51,8 @@ usage() {
     -h, --help        显示帮助
 
 说明:
-    失败的 Cask 会追加记录到 maintain/brew_update_errors.log。
+    失败的 Cask 会追加记录到 brew_update_errors.log。
+    若通过 macos-scripts 安装态运行，默认写入 ~/Library/Logs/macos-scripts/。
 EOF
 }
 

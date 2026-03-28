@@ -69,6 +69,35 @@ chmod +x bin/macos-scripts
 
 > 当前 `bin/macos-scripts` 是统一入口，现有 `setup/`、`maintain/`、`job/`、`lint/` 脚本继续作为内部执行器保留。
 
+## 🍺 Homebrew 安装
+
+仓库已经具备 Homebrew Formula 结构，推荐通过 tap 安装。
+
+```bash
+# 添加 tap（仓库中包含 Formula/macos-scripts.rb）
+brew tap anzihenry/scripts https://github.com/anzihenry/scripts
+
+# 安装当前 HEAD 版本
+brew install --HEAD anzihenry/scripts/macos-scripts
+
+# 验证
+macos-scripts --help
+```
+
+> 说明：当前 Formula 是 head-only 形式，适合先打通 tap 安装链路；后续发布带 tag 的稳定版时，再补 stable `url` 与 `sha256`。
+
+安装后 Homebrew 会把 CLI 入口链接到 `bin/`，并把仓库脚本安装到 `libexec/`，从而保留当前相对路径结构。
+
+CLI 安装后默认使用这些目录：
+
+```bash
+MACOS_SCRIPTS_LOG_DIR="$HOME/Library/Logs/macos-scripts"
+MACOS_SCRIPTS_CONFIG_DIR="$HOME/.config/macos-scripts"
+```
+
+例如 `macos-scripts maintain brew` 的错误日志默认会写入 `~/Library/Logs/macos-scripts/brew_update_errors.log`。
+`macos-scripts job create` 的默认任务日志会写入 `~/Library/Logs/macos-scripts/jobs/`。
+
 ## ️💻 四步搭建开发环境
 
 1. **终端美化** – 安装 Oh My Zsh、Powerlevel10k、字体等：
@@ -146,7 +175,8 @@ cd maintain
 
 ## 🔧 自定义安装清单
 
-- 编辑 `setup/brew.conf.sh` 调整 `FORMULAE_*`、`CASKS_*` 数组即可。
+- 仓库内运行时，编辑 `setup/brew.conf.sh` 调整 `FORMULAE_*`、`CASKS_*` 数组即可。
+- Homebrew 安装态运行时，首次执行 `macos-scripts setup packages` 会自动把默认配置复制到 `~/.config/macos-scripts/brew.conf.sh`，后续编辑该文件即可。
 - `macos-setup.sh` 会自动加载这些数组并通过新封装的 helper 执行安装。
 - 可在运行前通过设置环境变量 `BH_DRY_RUN=true` 做干跑测试（只输出将安装的项目，不实际执行）。
 

@@ -2,7 +2,14 @@
 # filepath: setup/homebrew-setup.sh
 
 # ===== 初始化配置 =====
-exec > >(tee -a setup.log) 2>&1  # 启用日志记录
+if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
+    mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
+    SETUP_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/homebrew-setup.log"
+else
+    SETUP_LOG_FILE="setup.log"
+fi
+
+exec > >(tee -a "$SETUP_LOG_FILE") 2>&1  # 启用日志记录
 set -e                            # 错误立即退出
 set -o pipefail                   # 管道错误捕获
 
@@ -188,6 +195,7 @@ main() {
     install_homebrew
     
     print_header "安装完成!"
+    info "日志文件位置: $SETUP_LOG_FILE"
     print_shell_refresh_notice
 }
 

@@ -63,7 +63,11 @@ job_timer_end() {
 
 JOB_LABEL_PREFIX="com.biucing.scripts.job"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
-LOG_BASE_DIR="${HOME}/Library/Logs/scripts-jobs"
+if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
+    LOG_BASE_DIR="${MACOS_SCRIPTS_LOG_DIR}/jobs"
+else
+    LOG_BASE_DIR="${HOME}/Library/Logs/scripts-jobs"
+fi
 
 print_usage() {
     cat <<'EOF'

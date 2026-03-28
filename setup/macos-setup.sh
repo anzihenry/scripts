@@ -2,7 +2,14 @@
 # filepath: setup/macos-setup.sh
 
 # ===== 初始化配置 =====
-exec > >(tee -a setup.log) 2>&1  # 启用日志记录
+if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
+    mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
+    SETUP_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/macos-setup.log"
+else
+    SETUP_LOG_FILE="setup.log"
+fi
+
+exec > >(tee -a "$SETUP_LOG_FILE") 2>&1  # 启用日志记录
 set -e                            # 错误立即退出
 set -o pipefail                   # 管道错误捕获
 
@@ -13,7 +20,25 @@ source "$SCRIPT_DIR/lib/brew_helpers.sh"
 
 # ===== 配置文件路径 =====
 CONFIG_DIR=$(cd "$(dirname "$0")"; pwd)  # 脚本所在目录
-BREW_CONFIG_FILE="${CONFIG_DIR}/brew.conf.sh"
+DEFAULT_BREW_CONFIG_FILE="${CONFIG_DIR}/brew.conf.sh"
+
+if [[ -n "${MACOS_SCRIPTS_CONFIG_DIR:-}" ]]; then
+    mkdir -p "$MACOS_SCRIPTS_CONFIG_DIR"
+    BREW_CONFIG_FILE="${MACOS_SCRIPTS_CONFIG_DIR}/brew.conf.sh"
+else
+    BREW_CONFIG_FILE="$DEFAULT_BREW_CONFIG_FILE"
+fi
+
+ensure_brew_config_file() {
+    if [[ "$BREW_CONFIG_FILE" == "$DEFAULT_BREW_CONFIG_FILE" ]]; then
+        return 0
+    fi
+
+    if [[ ! -f "$BREW_CONFIG_FILE" ]]; then
+        cp "$DEFAULT_BREW_CONFIG_FILE" "$BREW_CONFIG_FILE"
+        info "已初始化用户配置文件: $BREW_CONFIG_FILE"
+    fi
+}
 
 # ===== 通用工具函数 =====
 # 幂等地更新 shell 配置文件
@@ -42,6 +67,8 @@ update_shell_config() {
 # ===== 预检模块 =====
 precheck() {
     print_header "系统环境预检"
+
+    ensure_brew_config_file
 
     [[ ! -f $BREW_CONFIG_FILE ]] && log_fatal "缺失 Homebrew 配置文件: $BREW_CONFIG_FILE"
 
@@ -296,6 +323,8 @@ main() {
     info "1. ${BOLD}完全重启终端${NC} 或执行 $(highlight 'source ~/.zshrc') 来刷新环境。"
     info "2. 检查新的配置文件位置："
     info "   - $(highlight "$BREW_CONFIG_FILE")"
+    info "3. 日志文件位置："
+    info "   - $(highlight "$SETUP_LOG_FILE")"
 }
 
 # 启动主流程
