@@ -83,10 +83,10 @@ chmod +x setup/*.sh maintain/*.sh lint/*.sh
 ### Shell 脚本 Lint & 格式化
 
 ```bash
-./lint/lint_shell.sh           # 仅检查
+./lint/lint_shell.sh           # 仅检查（先按 shebang 做语法检查）
 ./lint/lint_shell.sh --fix     # 自动使用 shfmt 格式化
 ```
-> 依赖 `shellcheck` 与 `shfmt`（可通过 Homebrew 安装）。
+> 依赖 `shellcheck` 与 `shfmt`（可通过 Homebrew 安装）。zsh 脚本当前会执行 `zsh -n` 语法检查；bash/sh 脚本会额外执行 shellcheck 与 shfmt。
 
 ### Launchd 定时任务工具
 
@@ -106,7 +106,8 @@ cd job
 
 ```bash
 cd maintain
-./formulaes_casks_updater.sh   # 更新所有 Formulae/Cask，失败项写入 brew_update_errors.log
+./formulaes_casks_updater.sh --dry-run  # 预览更新命令
+./formulaes_casks_updater.sh            # 更新所有 Formulae/Cask，失败项写入 maintain/brew_update_errors.log
 ```
 
 ### macOS 安装器下载 & USB 启动盘制作
@@ -133,7 +134,7 @@ cd maintain
 ## 🧪 运行验证
 
 - 所有核心脚本均可通过 `zsh -n path/to/script.sh` 做语法检查。
-- `lint/lint_shell.sh` 用于持续保持脚本风格与质量。
+- `lint/lint_shell.sh` 会先按 shebang 执行语法检查，再对 bash/sh 脚本执行 shellcheck 与 shfmt。
 - `lib/colors.sh` 的 `log_time_start/log_time_end` 可嵌入到自定义脚本中，统计关键步骤耗时。
 
 ## 🤝 贡献指南
@@ -148,11 +149,11 @@ cd maintain
 
 ```bash
 ./lint/lint_shell.sh            # 确保脚本通过 lint
-zsh -n setup/*.sh maintain/*.sh # 快速语法检查
-zsh -n job/*.sh                 # 校验 Launchd 定时任务工具
+zsh -n setup/*.sh maintain/*.sh job/*.sh lint/*.sh
+bash -n lib/colors.sh setup/git_forge_ssh_setup.sh
 ```
 
-> 如果变更涉及 `maintain/` 脚本，请额外执行 `bash -n maintain/*.sh`；若涉及长耗时任务，建议附带 `log_time_start/_end` 输出截图或日志片段。
+> 若涉及长耗时任务，建议附带 `log_time_start/_end` 输出截图或日志片段。
 
 ## 📜 许可证
 
