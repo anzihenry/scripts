@@ -236,16 +236,6 @@ EOF
     mkdir -p $HOME/Coding/go/{src,bin,pkg}
 }
 
-config_flutter() {
-    print_header "配置 Flutter 环境"
-    local flutter_config_content=$(cat <<'EOF'
-export PUB_HOSTED_URL="https://mirrors.cloud.tencent.com/dart-pub"
-export FLUTTER_STORAGE_BASE_URL="https://mirrors.cloud.tencent.com/flutter"
-EOF
-)
-    update_shell_config "Flutter Env" "$flutter_config_content"
-}
-
 config_android_and_java() {
     print_header "配置 Android 和 Java 环境"
     local android_java_config_content=$(cat <<'EOF'
@@ -294,7 +284,6 @@ main() {
     install_python
     install_ruby
     install_go
-    config_flutter
     config_android_and_java
     
     # 安装核心软件
