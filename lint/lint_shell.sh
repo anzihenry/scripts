@@ -52,7 +52,7 @@ collect_shell_files() {
   local base="$1"
   while IFS= read -r file; do
     FILES+=("$file")
-  done < <(find "$base" -type f -name '*.sh' -not -path '*/.git/*' -not -path '*/vendor/*')
+  done < <(find "$base" -type f \( -name '*.sh' -o -path '*/bin/*' \) -not -path '*/.git/*' -not -path '*/vendor/*')
 }
 
 detect_shell() {
@@ -122,7 +122,7 @@ for target in "${TARGETS[@]}"; do
   if [[ -d "$target" ]]; then
     collect_shell_files "$target"
   elif [[ -f "$target" ]]; then
-    [[ "$target" == *.sh ]] && FILES+=("$target")
+    FILES+=("$target")
   else
     printf '警告: 未找到目标 %s，已跳过\n' "$target" >&2
   fi

@@ -1,0 +1,293 @@
+#!/bin/zsh
+# filepath: bin/macos-scripts
+
+set -e
+set -u
+set -o pipefail
+
+MACOS_SCRIPTS_VERSION="0.1.0"
+
+SCRIPT_PATH="${0:P}"
+BIN_DIR="${SCRIPT_PATH:h}"
+REPO_ROOT="${MACOS_SCRIPTS_ROOT:-${BIN_DIR:h}}"
+
+source "$REPO_ROOT/lib/colors.sh"
+
+run_zsh_script() {
+  local relative_path="$1"
+  shift
+  zsh "$REPO_ROOT/$relative_path" "$@"
+}
+
+run_bash_script() {
+  local relative_path="$1"
+  shift
+  bash "$REPO_ROOT/$relative_path" "$@"
+}
+
+print_main_help() {
+  cat <<EOF
+macos-scripts v${MACOS_SCRIPTS_VERSION}
+
+用法:
+  macos-scripts <命令> [子命令] [参数]
+
+一级命令:
+  setup       初始化与配置开发环境
+  maintain    日常维护工具
+  job         launchd 定时任务管理
+  lint        Shell 脚本检查与格式化
+  help        显示帮助
+  version     显示版本
+
+示例:
+  macos-scripts setup shell
+  macos-scripts setup brew configure
+  macos-scripts setup git --domain github.com --type personal
+  macos-scripts setup github --force
+  macos-scripts maintain brew --dry-run
+  macos-scripts maintain installer list
+  macos-scripts job list
+  macos-scripts lint check setup
+EOF
+}
+
+print_setup_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts setup shell
+  macos-scripts setup brew configure
+  macos-scripts setup packages
+  macos-scripts setup git [参数]
+  macos-scripts setup github [参数]
+
+说明:
+  shell            安装和配置 zsh / oh-my-zsh / p10k / 字体
+  brew configure   校准 Homebrew 镜像、shellenv 与当前环境
+  packages         按 brew.conf 批量安装软件与语言环境
+  git              配置任意 Git forge 的 SSH 密钥与连接
+  github           GitHub 快捷入口，等价于 setup git --domain github.com
+EOF
+}
+
+print_maintain_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts maintain brew [参数]
+  macos-scripts maintain installer <list|download|create> [参数]
+
+说明:
+  brew             更新 Homebrew / Formulae / Cask / cleanup
+  installer        管理 macOS 完整安装器和 USB 启动盘
+EOF
+}
+
+print_job_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts job <list|create|status|enable|disable|delete> [参数]
+
+说明:
+  该命令直接转发到 job/scheduler.sh。
+EOF
+}
+
+print_lint_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts lint check [路径 ...]
+  macos-scripts lint fix [路径 ...]
+
+说明:
+  check            执行语法检查、shellcheck 与 shfmt 差异检查
+  fix              执行语法检查并用 shfmt 自动修复格式
+EOF
+}
+
+handle_setup_brew() {
+  local action="${1:-configure}"
+  shift || true
+
+  case "$action" in
+    configure)
+      run_zsh_script "setup/homebrew-setup.sh" "$@"
+      ;;
+    help|-h|--help)
+      print_setup_help
+      ;;
+    *)
+      error "未知的 setup brew 子命令: $action"
+      print_setup_help
+      return 1
+      ;;
+  esac
+}
+
+handle_setup_git() {
+  run_bash_script "setup/git_forge_ssh_setup.sh" "$@"
+}
+
+handle_setup_github() {
+  local has_domain="false"
+  local has_type="false"
+  local arg
+
+  for arg in "$@"; do
+    case "$arg" in
+      -d|--domain) has_domain="true" ;;
+      -t|--type) has_type="true" ;;
+    esac
+  done
+
+  local -a forwarded_args=()
+  [[ "$has_domain" == "false" ]] && forwarded_args+=(--domain github.com)
+  [[ "$has_type" == "false" ]] && forwarded_args+=(--type personal)
+  forwarded_args+=("$@")
+
+  handle_setup_git "${forwarded_args[@]}"
+}
+
+handle_setup() {
+  local action="${1:-help}"
+  shift || true
+
+  case "$action" in
+    shell)
+      run_zsh_script "setup/ohmyzsh-setup.sh" "$@"
+      ;;
+    brew)
+      handle_setup_brew "$@"
+      ;;
+    packages)
+      run_zsh_script "setup/macos-setup.sh" "$@"
+      ;;
+    git)
+      handle_setup_git "$@"
+      ;;
+    github)
+      handle_setup_github "$@"
+      ;;
+    help|-h|--help)
+      print_setup_help
+      ;;
+    *)
+      error "未知的 setup 子命令: $action"
+      print_setup_help
+      return 1
+      ;;
+  esac
+}
+
+handle_maintain_installer() {
+  local action="${1:-help}"
+  shift || true
+
+  case "$action" in
+    list|download|create)
+      run_zsh_script "maintain/macos_sys_usb_maker.sh" "$action" "$@"
+      ;;
+    help|-h|--help)
+      print_maintain_help
+      ;;
+    *)
+      error "未知的 maintain installer 子命令: $action"
+      print_maintain_help
+      return 1
+      ;;
+  esac
+}
+
+handle_maintain() {
+  local action="${1:-help}"
+  shift || true
+
+  case "$action" in
+    brew)
+      run_zsh_script "maintain/formulaes_casks_updater.sh" "$@"
+      ;;
+    installer)
+      handle_maintain_installer "$@"
+      ;;
+    help|-h|--help)
+      print_maintain_help
+      ;;
+    *)
+      error "未知的 maintain 子命令: $action"
+      print_maintain_help
+      return 1
+      ;;
+  esac
+}
+
+handle_job() {
+  local action="${1:-help}"
+  shift || true
+
+  case "$action" in
+    list|create|status|enable|disable|delete)
+      run_zsh_script "job/scheduler.sh" "$action" "$@"
+      ;;
+    help|-h|--help)
+      print_job_help
+      ;;
+    *)
+      error "未知的 job 子命令: $action"
+      print_job_help
+      return 1
+      ;;
+  esac
+}
+
+handle_lint() {
+  local action="${1:-check}"
+
+  case "$action" in
+    check)
+      shift || true
+      run_zsh_script "lint/lint_shell.sh" "$@"
+      ;;
+    fix)
+      shift || true
+      run_zsh_script "lint/lint_shell.sh" --fix "$@"
+      ;;
+    help|-h|--help)
+      print_lint_help
+      ;;
+    *)
+      run_zsh_script "lint/lint_shell.sh" "$@"
+      ;;
+  esac
+}
+
+main() {
+  local command="${1:-help}"
+  shift || true
+
+  case "$command" in
+    setup)
+      handle_setup "$@"
+      ;;
+    maintain)
+      handle_maintain "$@"
+      ;;
+    job)
+      handle_job "$@"
+      ;;
+    lint)
+      handle_lint "$@"
+      ;;
+    help|-h|--help)
+      print_main_help
+      ;;
+    version|--version|-v)
+      printf 'macos-scripts v%s\n' "$MACOS_SCRIPTS_VERSION"
+      ;;
+    *)
+      error "未知命令: $command"
+      print_main_help
+      return 1
+      ;;
+  esac
+}
+
+main "$@"

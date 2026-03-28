@@ -46,9 +46,28 @@
 git clone https://github.com/anzihenry/scripts.git
 cd scripts
 
-# 授权脚本可执行（按需操作）
-chmod +x setup/*.sh maintain/*.sh lint/*.sh
+# 统一 CLI 入口
+chmod +x bin/macos-scripts
+./bin/macos-scripts --help
 ```
+
+## 🧭 统一 CLI
+
+```bash
+./bin/macos-scripts setup shell
+./bin/macos-scripts setup brew configure
+./bin/macos-scripts setup packages
+./bin/macos-scripts setup git --domain gitlab.company.com --type work
+./bin/macos-scripts setup github --force
+
+./bin/macos-scripts maintain brew --dry-run
+./bin/macos-scripts maintain installer list
+
+./bin/macos-scripts job list
+./bin/macos-scripts lint check
+```
+
+> 当前 `bin/macos-scripts` 是统一入口，现有 `setup/`、`maintain/`、`job/`、`lint/` 脚本继续作为内部执行器保留。
 
 ## ️💻 四步搭建开发环境
 
