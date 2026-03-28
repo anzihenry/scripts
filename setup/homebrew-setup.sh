@@ -11,6 +11,74 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
 source "$SCRIPT_DIR/lib/brew_helpers.sh"
 
+get_default_brew_prefix() {
+    if [[ "$(uname -m)" == "arm64" ]]; then
+        printf '%s' "/opt/homebrew"
+    else
+        printf '%s' "/usr/local"
+    fi
+}
+
+resolve_brew_bin() {
+    if command -v brew &>/dev/null; then
+        command -v brew
+        return 0
+    fi
+
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+        printf '%s' "/opt/homebrew/bin/brew"
+        return 0
+    fi
+
+    if [[ -x /usr/local/bin/brew ]]; then
+        printf '%s' "/usr/local/bin/brew"
+        return 0
+    fi
+
+    return 1
+}
+
+activate_brew_for_script() {
+    local brew_bin="$1"
+    local brew_prefix
+    brew_prefix="$("$brew_bin" --prefix)"
+
+    export PATH="${brew_prefix}/bin:${brew_prefix}/sbin:$PATH"
+    eval "$("$brew_bin" shellenv)"
+}
+
+update_homebrew_shell_config() {
+    local brew_prefix="$1"
+    local rc_file="$HOME/.zshrc"
+    local start_marker="# >>> Homebrew Basic (managed by homebrew-setup) >>>"
+    local end_marker="# <<< Homebrew Basic (managed by homebrew-setup) <<<"
+
+    touch "$rc_file"
+
+    if grep -Fq "$start_marker" "$rc_file"; then
+        sed -i '' "\\|$start_marker|,\\|$end_marker|d" "$rc_file"
+    fi
+
+    {
+        echo ""
+        echo "$start_marker"
+        echo "export PATH=\"${brew_prefix}/bin:${brew_prefix}/sbin:\$PATH\""
+        echo "eval \"\$(${brew_prefix}/bin/brew shellenv)\""
+        echo "$end_marker"
+    } >> "$rc_file"
+
+    success "已更新 ~/.zshrc 中的 Homebrew 配置"
+}
+
+print_shell_refresh_notice() {
+    print_header "环境刷新提示"
+    warning "当前脚本运行在子 shell 中，无法直接刷新你已经打开的 terminal 会话。"
+    info "安装完成后，请执行以下任一命令使 Homebrew 在当前 terminal 生效："
+    print_code "source ~/.zshrc"
+    print_code "exec zsh"
+    info "如果当前 terminal 仍未生效，直接完全重启 terminal 即可。"
+}
+
 # ===== 预检模块 =====
 precheck() {
     print_header "系统环境预检"
@@ -71,16 +139,12 @@ install_xcode_cli() {
 install_homebrew() {
     print_header "安装 Homebrew"
 
-    if ! command -v brew &>/dev/null; then
+    local brew_prefix
+    local brew_bin=""
+    brew_prefix="$(get_default_brew_prefix)"
+
+    if ! brew_bin="$(resolve_brew_bin)"; then
         warning "正在尝试官方源安装..."
-        
-        # 获取架构信息
-        local BREW_PREFIX
-        if [[ $(uname -m) == "arm64" ]]; then
-            BREW_PREFIX="/opt/homebrew"
-        else
-            BREW_PREFIX="/usr/local"
-        fi
 
         # 临时取消错误中断以处理安装失败
         set +e
@@ -97,30 +161,24 @@ install_homebrew() {
             }
         fi
 
-        # 基础环境配置
-        if ! grep -q "# Homebrew Basic" ~/.zshrc; then
-            success "正在向 ~/.zshrc 添加 Homebrew 配置..."
-            {
-                echo ""
-                echo "# Homebrew Basic (Added by script)"
-                echo "export PATH=\"${BREW_PREFIX}/bin:${BREW_PREFIX}/sbin:\$PATH\""
-                echo "eval \"\$(${BREW_PREFIX}/bin/brew shellenv)\""
-            } >> ~/.zshrc
-        else
-            warning "检测到已存在 Homebrew 配置，跳过添加。"
-        fi
+        brew_bin="${brew_prefix}/bin/brew"
+        [[ -x "$brew_bin" ]] || log_fatal "Homebrew 安装后未找到 brew 可执行文件: $brew_bin"
 
-        # 立即生效配置
-        source ~/.zshrc
-        eval "$(${BREW_PREFIX}/bin/brew shellenv)"
+        activate_brew_for_script "$brew_bin"
+        update_homebrew_shell_config "$brew_prefix"
+    else
+        brew_prefix="$("$brew_bin" --prefix)"
+        activate_brew_for_script "$brew_bin"
+        update_homebrew_shell_config "$brew_prefix"
+        info "检测到已安装 Homebrew，已校准当前脚本环境与 ~/.zshrc 配置"
     fi
 
     # 验证安装
-    if ! command -v brew &>/dev/null || ! brew --version &>/dev/null; then
+    if ! brew_bin="$(resolve_brew_bin)" || ! "$brew_bin" --version &>/dev/null; then
         log_fatal "Homebrew 安装验证失败，请检查 ~/.zshrc 配置或重新运行脚本。"
     fi
 
-    success "Homebrew 安装完成 (版本: $(brew --version | head -n1))"
+    success "Homebrew 安装完成 (版本: $($brew_bin --version | head -n1))"
 }
 
 # ===== 主执行流程 =====
@@ -130,8 +188,7 @@ main() {
     install_homebrew
     
     print_header "安装完成!"
-    info "建议后续操作:"
-    info "1. 执行 $(highlight 'source ~/.zshrc') 刷新环境"
+    print_shell_refresh_notice
 }
 
 # 启动主流程
