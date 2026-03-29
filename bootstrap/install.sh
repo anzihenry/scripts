@@ -30,6 +30,35 @@ else
   log_time_end() { :; }
 fi
 
+if [[ -f "$REPO_ROOT/setup/lib/homebrew_config.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/setup/lib/homebrew_config.sh"
+else
+  resolve_homebrew_bin() {
+    if command -v brew >/dev/null 2>&1; then
+      command -v brew
+      return 0
+    fi
+
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+      printf '%s' "/opt/homebrew/bin/brew"
+      return 0
+    fi
+
+    if [[ -x /usr/local/bin/brew ]]; then
+      printf '%s' "/usr/local/bin/brew"
+      return 0
+    fi
+
+    return 1
+  }
+
+  activate_homebrew_environment() {
+    local brew_bin="$1"
+    eval "$($brew_bin shellenv)"
+  }
+fi
+
 REPO_SLUG="anzihenry/scripts"
 TAP_NAME="anzihenry/scripts"
 DEFAULT_TAP_REMOTE_URL="https://github.com/$REPO_SLUG"
@@ -129,30 +158,6 @@ require_command() {
   }
 }
 
-resolve_brew_bin() {
-  if command -v brew >/dev/null 2>&1; then
-    command -v brew
-    return 0
-  fi
-
-  if [[ -x /opt/homebrew/bin/brew ]]; then
-    printf '%s' "/opt/homebrew/bin/brew"
-    return 0
-  fi
-
-  if [[ -x /usr/local/bin/brew ]]; then
-    printf '%s' "/usr/local/bin/brew"
-    return 0
-  fi
-
-  return 1
-}
-
-activate_brew_for_current_shell() {
-  local brew_bin="$1"
-  eval "$($brew_bin shellenv)"
-}
-
 precheck() {
   print_header "Bootstrap 预检"
 
@@ -210,8 +215,8 @@ install_homebrew_if_needed() {
   print_header "步骤 2：安装 Homebrew"
 
   local brew_bin=""
-  if brew_bin="$(resolve_brew_bin)"; then
-    activate_brew_for_current_shell "$brew_bin"
+  if brew_bin="$(resolve_homebrew_bin)"; then
+    activate_homebrew_environment "$brew_bin"
     success "检测到现有 Homebrew: $($brew_bin --version | head -n1)"
     return 0
   fi
@@ -234,11 +239,11 @@ install_homebrew_if_needed() {
     /bin/bash -c "$(curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh)"
   fi
 
-  brew_bin="$(resolve_brew_bin)" || {
+  brew_bin="$(resolve_homebrew_bin)" || {
     error "Homebrew 安装后仍未找到 brew 可执行文件"
     exit 1
   }
-  activate_brew_for_current_shell "$brew_bin"
+  activate_homebrew_environment "$brew_bin"
 
   success "Homebrew 安装完成: $($brew_bin --version | head -n1)"
 }
@@ -247,7 +252,7 @@ install_macos_scripts() {
   print_header "步骤 3：安装 macos-scripts"
 
   local brew_bin
-  brew_bin="$(resolve_brew_bin)" || {
+  brew_bin="$(resolve_homebrew_bin)" || {
     if [[ "$DRY_RUN" == "true" ]]; then
       info "[dry-run] 假定 Homebrew 已在上一步安装完成，继续预演 tap/install 流程"
       print_code "brew tap $TAP_NAME https://github.com/$REPO_SLUG"
@@ -258,7 +263,7 @@ install_macos_scripts() {
     error "未找到 brew，可用性校验失败"
     exit 1
   }
-  activate_brew_for_current_shell "$brew_bin"
+  activate_homebrew_environment "$brew_bin"
 
   local -a tap_command=(brew tap "$TAP_NAME" "$TAP_REMOTE_URL")
   if [[ "$TAP_REMOTE_URL" != "$DEFAULT_TAP_REMOTE_URL" ]]; then
