@@ -139,7 +139,7 @@ macos-scripts --help
 brew install --HEAD anzihenry/scripts/macos-scripts
 ```
 
-> 当前 stable Formula 将固定到 `v0.2.0` 源码归档；bootstrap 默认也会安装 stable 版本。
+> 当前 stable Formula 已固定到 `v0.2.0` 源码归档；bootstrap 默认也会安装 stable 版本。
 
 安装后 Homebrew 会把 CLI 入口链接到 `bin/`，并把仓库脚本安装到 `libexec/`，从而保留当前相对路径结构。
 
