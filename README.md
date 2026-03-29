@@ -126,14 +126,20 @@ curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}
 # 添加 tap（仓库中包含 Formula/macos-scripts.rb）
 brew tap anzihenry/scripts https://github.com/anzihenry/scripts
 
-# 安装当前 HEAD 版本
-brew install --HEAD anzihenry/scripts/macos-scripts
+# 安装稳定版
+brew install anzihenry/scripts/macos-scripts
 
 # 验证
 macos-scripts --help
 ```
 
-> 说明：当前 Formula 仍是 head-only 形式；上面的 bootstrap 命令已经按正式发布口径固定到 tag，真正对外发布时需要先创建对应版本 tag，再补 stable `url` 与 `sha256`。
+如需安装开发中的最新版本，可选：
+
+```bash
+brew install --HEAD anzihenry/scripts/macos-scripts
+```
+
+> 当前 stable Formula 已固定到 `v0.1.0` 源码归档；bootstrap 默认也会安装 stable 版本。
 
 安装后 Homebrew 会把 CLI 入口链接到 `bin/`，并把仓库脚本安装到 `libexec/`，从而保留当前相对路径结构。
 

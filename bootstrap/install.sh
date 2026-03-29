@@ -32,8 +32,11 @@ fi
 
 REPO_SLUG="anzihenry/scripts"
 TAP_NAME="anzihenry/scripts"
+DEFAULT_TAP_REMOTE_URL="https://github.com/$REPO_SLUG"
+TAP_REMOTE_URL="${TAP_REMOTE_URL:-$DEFAULT_TAP_REMOTE_URL}"
 FORMULA_NAME="macos-scripts"
 BOOTSTRAP_RELEASE_TAG="${BOOTSTRAP_RELEASE_TAG:-v0.1.0}"
+FORMULA_STABLE_VERSION="${FORMULA_STABLE_VERSION:-0.1.0}"
 
 YES="false"
 DRY_RUN="false"
@@ -47,6 +50,8 @@ usage() {
 说明:
   独立完成首次 bootstrap：安装 Homebrew、tap 安装 macos-scripts，
   并默认执行 'macos-scripts setup brew configure' 进入统一 CLI 链路。
+  默认安装 stable 版本；如需开发版，可后续手动执行 brew install --HEAD。
+  如需本地联调，可通过环境变量 TAP_REMOTE_URL 覆盖 tap 源。
 
 选项:
   --dry-run         仅打印将执行的步骤，不实际执行
@@ -246,7 +251,7 @@ install_macos_scripts() {
     if [[ "$DRY_RUN" == "true" ]]; then
       info "[dry-run] 假定 Homebrew 已在上一步安装完成，继续预演 tap/install 流程"
       print_code "brew tap $TAP_NAME https://github.com/$REPO_SLUG"
-      print_code "brew install --HEAD $TAP_NAME/$FORMULA_NAME"
+      print_code "brew install $TAP_NAME/$FORMULA_NAME"
       info "[dry-run] 将验证 macos-scripts CLI 可用性"
       return 0
     fi
@@ -255,18 +260,23 @@ install_macos_scripts() {
   }
   activate_brew_for_current_shell "$brew_bin"
 
-  run_command "添加 tap: $TAP_NAME" brew tap "$TAP_NAME" "https://github.com/$REPO_SLUG"
+  local -a tap_command=(brew tap "$TAP_NAME" "$TAP_REMOTE_URL")
+  if [[ "$TAP_REMOTE_URL" != "$DEFAULT_TAP_REMOTE_URL" ]]; then
+    tap_command=(brew tap --custom-remote "$TAP_NAME" "$TAP_REMOTE_URL")
+  fi
+
+  run_command "添加 tap: $TAP_NAME" "${tap_command[@]}"
 
   if brew list --formula "$FORMULA_NAME" >/dev/null 2>&1; then
     if [[ "$DRY_RUN" == "true" ]]; then
-      info "[dry-run] 检测到已安装 $FORMULA_NAME，将执行 upgrade --fetch-HEAD"
-      print_code "brew upgrade --fetch-HEAD $TAP_NAME/$FORMULA_NAME"
+      info "[dry-run] 检测到已安装 $FORMULA_NAME，将执行 stable upgrade"
+      print_code "brew upgrade $TAP_NAME/$FORMULA_NAME"
     else
-      info "检测到已安装 $FORMULA_NAME，尝试升级到最新 HEAD"
-      brew upgrade --fetch-HEAD "$TAP_NAME/$FORMULA_NAME" || info "当前已是最新版本或无需升级"
+      info "检测到已安装 $FORMULA_NAME，尝试升级到 stable $FORMULA_STABLE_VERSION"
+      brew upgrade "$TAP_NAME/$FORMULA_NAME" || info "当前已是最新版本或无需升级"
     fi
   else
-    run_command "安装 formula: $TAP_NAME/$FORMULA_NAME" brew install --HEAD "$TAP_NAME/$FORMULA_NAME"
+    run_command "安装 stable formula: $TAP_NAME/$FORMULA_NAME@$FORMULA_STABLE_VERSION" brew install "$TAP_NAME/$FORMULA_NAME"
   fi
 
   if [[ "$DRY_RUN" == "true" ]]; then
