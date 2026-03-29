@@ -90,12 +90,31 @@ curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}
 
 ./bin/macos-scripts maintain brew --dry-run
 ./bin/macos-scripts maintain installer list
+./bin/macos-scripts release verify v0.1.0
+./bin/macos-scripts release publish v0.1.0 --yes
 
 ./bin/macos-scripts job list
 ./bin/macos-scripts lint check
 ```
 
 > 当前 `bin/macos-scripts` 是统一入口，现有 `setup/`、`maintain/`、`job/`、`lint/` 脚本继续作为内部执行器保留。
+
+## 🚢 Release 发布
+
+对于 GitHub Release，优先使用统一 CLI，而不是直接调用底层脚本：
+
+```bash
+./bin/macos-scripts release verify v0.1.0
+./bin/macos-scripts release publish v0.1.0 --yes
+```
+
+说明：
+
+- `release verify <tag>` 只检查 tag、`gh` 登录状态和现有 release 状态
+- `release publish <tag>` 会按幂等语义创建或更新 release
+- `<tag>` 支持传 `0.1.0` 或 `v0.1.0`，CLI 会自动规范化为 `v0.1.0`
+- 默认自动使用 `releases/<tag>-release-notes.md` 作为 release notes
+- 如需自定义文案文件，可追加 `--notes-file <path>`
 
 ## 🍺 Homebrew 安装
 

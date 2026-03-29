@@ -95,6 +95,7 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
 一级命令:
   setup       初始化与配置开发环境
   maintain    日常维护工具
+  release     GitHub Release 发布辅助
   job         launchd 定时任务管理
   lint        Shell 脚本检查与格式化
   help        显示帮助
@@ -107,6 +108,8 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
   macos-scripts setup github --force
   macos-scripts maintain brew --dry-run
   macos-scripts maintain installer list
+  macos-scripts release verify v0.1.0
+  macos-scripts release publish v0.1.0 --yes
   macos-scripts job list
   macos-scripts lint check setup
 EOF
@@ -300,6 +303,62 @@ print_maintain_help() {
 说明:
   brew             更新 Homebrew / Formulae / Cask / cleanup
   installer        管理 macOS 完整安装器和 USB 启动盘
+EOF
+}
+
+print_release_publish_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts release publish <tag> [选项]
+
+说明:
+  创建或更新 GitHub Release。
+  默认自动使用 releases/<tag>-release-notes.md 作为 notes 文件。
+
+位置参数:
+  <tag>                    Git tag，例如 0.1.0 或 v0.1.0
+
+选项:
+  --notes-file <path>      自定义 Release note 文件路径
+  --target <branch>        Release target，默认 main
+  --title <title>          Release 标题，默认与 tag 相同
+  --repo <owner/name>      GitHub 仓库，默认 anzihenry/scripts
+  --yes                    跳过交互确认
+  --dry-run                仅打印将执行的动作
+  -h, --help               显示帮助
+EOF
+}
+
+print_release_verify_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts release verify <tag> [选项]
+
+说明:
+  仅检查 tag、gh 登录状态和现有 Release 状态。
+  默认自动使用 releases/<tag>-release-notes.md 作为 notes 文件。
+
+位置参数:
+  <tag>                    Git tag，例如 0.1.0 或 v0.1.0
+
+选项:
+  --notes-file <path>      自定义 Release note 文件路径
+  --target <branch>        Release target，默认 main
+  --title <title>          Release 标题，默认与 tag 相同
+  --repo <owner/name>      GitHub 仓库，默认 anzihenry/scripts
+  -h, --help               显示帮助
+EOF
+}
+
+print_release_help() {
+  cat <<'EOF'
+用法:
+  macos-scripts release publish <tag> [参数]
+  macos-scripts release verify <tag> [参数]
+
+说明:
+  publish          创建或更新 GitHub Release
+  verify           仅检查 tag、gh 和现有 Release 状态
 EOF
 }
 
@@ -775,6 +834,111 @@ validate_job_create_args() {
   }
 }
 
+infer_release_notes_file() {
+  local tag="$1"
+  printf 'releases/%s-release-notes.md' "$tag"
+}
+
+normalize_release_tag() {
+  local raw_tag="$1"
+
+  if [[ "$raw_tag" == v* ]]; then
+    printf '%s' "$raw_tag"
+    return 0
+  fi
+
+  if [[ "$raw_tag" == V* ]]; then
+    printf 'v%s' "${raw_tag#V}"
+    return 0
+  fi
+
+  if [[ "$raw_tag" =~ '^[0-9]+([.][0-9]+){1,2}([.-][0-9A-Za-z.-]+)?$' ]]; then
+    printf 'v%s' "$raw_tag"
+    return 0
+  fi
+
+  printf '%s' "$raw_tag"
+}
+
+validate_release_publish_args() {
+  local -a args=("$@")
+  local index=1
+  local arg
+  local tag=""
+
+  while (( index <= $#args )); do
+    arg="${args[index]}"
+    if [[ -z "$tag" && "$arg" != -* ]]; then
+      tag="$arg"
+      (( index++ ))
+      continue
+    fi
+
+    case "$arg" in
+      --notes-file|--target|--title|--repo)
+        (( index < $#args )) || {
+          usage_error "$arg 需要一个参数值" print_release_publish_help
+          return 1
+        }
+        (( index += 2 ))
+        ;;
+      --yes|-y|--dry-run)
+        (( index++ ))
+        ;;
+      -h|--help|help)
+        return 0
+        ;;
+      *)
+        usage_error "release publish 不支持参数: $arg" print_release_publish_help
+        return 1
+        ;;
+    esac
+  done
+
+  [[ -n "$tag" ]] || {
+    usage_error "release publish 需要提供版本 tag，例如 0.1.0 或 v0.1.0" print_release_publish_help
+    return 1
+  }
+}
+
+validate_release_verify_args() {
+  local -a args=("$@")
+  local index=1
+  local arg
+  local tag=""
+
+  while (( index <= $#args )); do
+    arg="${args[index]}"
+    if [[ -z "$tag" && "$arg" != -* ]]; then
+      tag="$arg"
+      (( index++ ))
+      continue
+    fi
+
+    case "$arg" in
+      --notes-file|--target|--title|--repo)
+        (( index < $#args )) || {
+          usage_error "$arg 需要一个参数值" print_release_verify_help
+          return 1
+        }
+        (( index += 2 ))
+        ;;
+      -h|--help|help)
+        return 0
+        ;;
+      *)
+        usage_error "release verify 不支持参数: $arg" print_release_verify_help
+        return 1
+        ;;
+    esac
+  done
+
+  [[ -n "$tag" ]] || {
+    usage_error "release verify 需要提供版本 tag，例如 0.1.0 或 v0.1.0" print_release_verify_help
+    return 1
+  }
+}
+
 handle_help() {
   local group="${1:-}"
   local action="${2:-}"
@@ -807,6 +971,14 @@ handle_help() {
           esac
           ;;
         *) command_error "未知的 maintain 帮助主题: $action" print_maintain_help ;;
+      esac
+      ;;
+    release)
+      case "$action" in
+        ""|help) print_release_help ;;
+        publish) print_release_publish_help ;;
+        verify) print_release_verify_help ;;
+        *) command_error "未知的 release 帮助主题: $action" print_release_help ;;
       esac
       ;;
     job)
@@ -967,6 +1139,90 @@ handle_maintain() {
   esac
 }
 
+handle_release_publish() {
+  has_help_flag "$@" && { print_release_publish_help; return 0; }
+  validate_release_publish_args "$@" || return 1
+
+  local tag
+  tag="$(normalize_release_tag "$1")"
+  shift || true
+
+  local notes_file=""
+  local -a forwarded_args=(--tag "$tag" --update-existing)
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --notes-file)
+        notes_file="$2"
+        forwarded_args+=("$1" "$2")
+        shift 2
+        ;;
+      *)
+        forwarded_args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$notes_file" ]]; then
+    forwarded_args+=(--notes-file "$(infer_release_notes_file "$tag")")
+  fi
+
+  run_bash_script "maintain/github_release_publish.sh" "${forwarded_args[@]}"
+}
+
+handle_release_verify() {
+  has_help_flag "$@" && { print_release_verify_help; return 0; }
+  validate_release_verify_args "$@" || return 1
+
+  local tag
+  tag="$(normalize_release_tag "$1")"
+  shift || true
+
+  local notes_file=""
+  local -a forwarded_args=(--tag "$tag" --verify-only)
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --notes-file)
+        notes_file="$2"
+        forwarded_args+=("$1" "$2")
+        shift 2
+        ;;
+      *)
+        forwarded_args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$notes_file" ]]; then
+    forwarded_args+=(--notes-file "$(infer_release_notes_file "$tag")")
+  fi
+
+  run_bash_script "maintain/github_release_publish.sh" "${forwarded_args[@]}"
+}
+
+handle_release() {
+  local action="${1:-help}"
+  shift || true
+
+  case "$action" in
+    publish)
+      handle_release_publish "$@"
+      ;;
+    verify)
+      handle_release_verify "$@"
+      ;;
+    help|-h|--help)
+      print_release_help
+      ;;
+    *)
+      command_error "未知的 release 子命令: $action" print_release_help
+      ;;
+  esac
+}
+
 handle_job() {
   local action="${1:-help}"
   shift || true
@@ -1044,6 +1300,9 @@ main() {
       ;;
     maintain)
       handle_maintain "$@"
+      ;;
+    release)
+      handle_release "$@"
       ;;
     job)
       handle_job "$@"
