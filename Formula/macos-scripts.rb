@@ -2,8 +2,8 @@ class MacosScripts < Formula
   desc "Unified macOS automation CLI for setup, maintenance, jobs, and lint"
   homepage "https://github.com/anzihenry/scripts"
   url "https://github.com/anzihenry/scripts/archive/refs/tags/v0.2.0.tar.gz"
+  # Homebrew infers the stable version from the tag URL.
   sha256 "7453ae80a68dfb66b7314784bb76559fb5f4a7db77e7ad1f6b3adf557e8a412a"
-  version "0.2.0"
   license "MIT"
 
   head "https://github.com/anzihenry/scripts.git", branch: "main"
