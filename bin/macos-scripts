@@ -5,7 +5,7 @@ set -e
 set -u
 set -o pipefail
 
-MACOS_SCRIPTS_VERSION="0.1.0"
+MACOS_SCRIPTS_VERSION="0.2.0"
 
 SCRIPT_PATH="${0:P}"
 BIN_DIR="${SCRIPT_PATH:h}"
@@ -108,8 +108,8 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
   macos-scripts setup github --force
   macos-scripts maintain brew --dry-run
   macos-scripts maintain installer list
-  macos-scripts release verify v0.1.0
-  macos-scripts release publish v0.1.0 --yes
+  macos-scripts release verify v0.2.0
+  macos-scripts release publish v0.2.0 --yes
   macos-scripts job list
   macos-scripts lint check setup
 EOF
@@ -317,7 +317,7 @@ print_release_publish_help() {
   默认自动使用 releases/<tag>-release-notes.md 作为 notes 文件。
 
 位置参数:
-  <tag>                    Git tag，例如 0.1.0 或 v0.1.0
+  <tag>                    Git tag，例如 0.2.0 或 v0.2.0
 
 选项:
   --notes-file <path>      自定义 Release note 文件路径
@@ -340,7 +340,7 @@ print_release_verify_help() {
   默认自动使用 releases/<tag>-release-notes.md 作为 notes 文件。
 
 位置参数:
-  <tag>                    Git tag，例如 0.1.0 或 v0.1.0
+  <tag>                    Git tag，例如 0.2.0 或 v0.2.0
 
 选项:
   --notes-file <path>      自定义 Release note 文件路径
@@ -897,7 +897,7 @@ validate_release_publish_args() {
   done
 
   [[ -n "$tag" ]] || {
-    usage_error "release publish 需要提供版本 tag，例如 0.1.0 或 v0.1.0" print_release_publish_help
+    usage_error "release publish 需要提供版本 tag，例如 0.2.0 或 v0.2.0" print_release_publish_help
     return 1
   }
 }
@@ -935,7 +935,7 @@ validate_release_verify_args() {
   done
 
   [[ -n "$tag" ]] || {
-    usage_error "release verify 需要提供版本 tag，例如 0.1.0 或 v0.1.0" print_release_verify_help
+    usage_error "release verify 需要提供版本 tag，例如 0.2.0 或 v0.2.0" print_release_verify_help
     return 1
   }
 }

@@ -56,7 +56,7 @@ chmod +x bin/macos-scripts
 如果这是台全新的 macOS，且系统里还没有 Homebrew，优先使用独立 bootstrap 入口：
 
 ```bash
-BOOTSTRAP_TAG="v0.1.0"
+BOOTSTRAP_TAG="v0.2.0"
 curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh
 ```
 
@@ -70,7 +70,7 @@ curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}
 常用选项：
 
 ```bash
-BOOTSTRAP_TAG="v0.1.0"
+BOOTSTRAP_TAG="v0.2.0"
 curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh -s -- --dry-run
 curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh -s -- --yes
 curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh -s -- --skip-configure
@@ -90,8 +90,8 @@ curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}
 
 ./bin/macos-scripts maintain brew --dry-run
 ./bin/macos-scripts maintain installer list
-./bin/macos-scripts release verify v0.1.0
-./bin/macos-scripts release publish v0.1.0 --yes
+./bin/macos-scripts release verify v0.2.0
+./bin/macos-scripts release publish v0.2.0 --yes
 
 ./bin/macos-scripts job list
 ./bin/macos-scripts lint check
@@ -104,15 +104,15 @@ curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}
 对于 GitHub Release，优先使用统一 CLI，而不是直接调用底层脚本：
 
 ```bash
-./bin/macos-scripts release verify v0.1.0
-./bin/macos-scripts release publish v0.1.0 --yes
+./bin/macos-scripts release verify v0.2.0
+./bin/macos-scripts release publish v0.2.0 --yes
 ```
 
 说明：
 
 - `release verify <tag>` 只检查 tag、`gh` 登录状态和现有 release 状态
 - `release publish <tag>` 会按幂等语义创建或更新 release
-- `<tag>` 支持传 `0.1.0` 或 `v0.1.0`，CLI 会自动规范化为 `v0.1.0`
+- `<tag>` 支持传 `0.2.0` 或 `v0.2.0`，CLI 会自动规范化为 `v0.2.0`
 - 默认自动使用 `releases/<tag>-release-notes.md` 作为 release notes
 - 如需自定义文案文件，可追加 `--notes-file <path>`
 
@@ -139,7 +139,7 @@ macos-scripts --help
 brew install --HEAD anzihenry/scripts/macos-scripts
 ```
 
-> 当前 stable Formula 已固定到 `v0.1.0` 源码归档；bootstrap 默认也会安装 stable 版本。
+> 当前 stable Formula 将固定到 `v0.2.0` 源码归档；bootstrap 默认也会安装 stable 版本。
 
 安装后 Homebrew 会把 CLI 入口链接到 `bin/`，并把仓库脚本安装到 `libexec/`，从而保留当前相对路径结构。
 

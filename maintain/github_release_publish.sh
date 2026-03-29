@@ -29,7 +29,7 @@ VERIFY_ONLY="false"
 UPDATE_EXISTING="false"
 
 usage() {
-  cat <<EOF
+  cat << EOF
 用法:
   maintain/github_release_publish.sh --tag <vX.Y.Z> --notes-file <path> [选项]
 
@@ -37,7 +37,7 @@ usage() {
   使用 gh CLI 非交互创建或更新 GitHub Release，避免依赖 VS Code UI。
 
 必填参数:
-  --tag <tag>               Git tag，例如 v0.1.0
+  --tag <tag>               Git tag，例如 v0.2.0
   --notes-file <path>       Release note 文件路径
 
 可选参数:
@@ -52,13 +52,13 @@ usage() {
 
 示例:
   bash maintain/github_release_publish.sh \
-    --tag v0.1.0 \
-    --notes-file releases/v0.1.0-release-notes.md \
+    --tag v0.2.0 \
+    --notes-file releases/v0.2.0-release-notes.md \
     --yes
 
   bash maintain/github_release_publish.sh \
-    --tag v0.1.0 \
-    --notes-file releases/v0.1.0-release-notes.md \
+    --tag v0.2.0 \
+    --notes-file releases/v0.2.0-release-notes.md \
     --verify-only
 EOF
 }
@@ -100,7 +100,7 @@ parse_args() {
         REPO_SLUG="${2:-}"
         shift 2
         ;;
-      --yes|-y)
+      --yes | -y)
         YES="true"
         shift
         ;;
@@ -116,7 +116,7 @@ parse_args() {
         UPDATE_EXISTING="true"
         shift
         ;;
-      -h|--help|help)
+      -h | --help | help)
         usage
         exit 0
         ;;
@@ -132,7 +132,7 @@ parse_args() {
 
 require_command() {
   local cmd="$1"
-  command -v "$cmd" >/dev/null 2>&1 || {
+  command -v "$cmd" > /dev/null 2>&1 || {
     error "缺少依赖: $cmd"
     exit 1
   }
@@ -172,7 +172,7 @@ check_prerequisites() {
     TITLE="$TAG"
   fi
 
-  git -C "$REPO_ROOT" rev-parse "$TAG" >/dev/null 2>&1 || {
+  git -C "$REPO_ROOT" rev-parse "$TAG" > /dev/null 2>&1 || {
     error "本地不存在 tag: $TAG"
     exit 1
   }
@@ -182,7 +182,7 @@ check_prerequisites() {
     exit 1
   }
 
-  GH_PAGER=cat gh auth status >/dev/null 2>&1 || {
+  env GH_PAGER=cat gh auth status > /dev/null 2>&1 || {
     error "gh 未登录，请先执行 gh auth login"
     exit 1
   }
@@ -196,13 +196,13 @@ check_prerequisites() {
 }
 
 release_exists() {
-  GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" >/dev/null 2>&1
+  env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" > /dev/null 2>&1
 }
 
 print_release_state() {
   if release_exists; then
     local release_url
-    release_url="$(GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" --jq '.html_url')"
+    release_url="$(env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" --jq '.html_url')"
     success "GitHub Release 已存在: $release_url"
     return 0
   fi
@@ -255,7 +255,7 @@ verify_release() {
   fi
 
   local release_url
-  release_url="$(GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" --jq '.html_url')"
+  release_url="$(env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" --jq '.html_url')"
   success "Release 已就绪: $release_url"
 }
 
