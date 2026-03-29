@@ -133,14 +133,15 @@ EOF
 print_setup_brew_help() {
   cat <<'EOF'
 用法:
-  macos-scripts setup brew configure
+  macos-scripts setup brew configure [--dry-run]
 
 说明:
-  校准 Homebrew 镜像、shellenv 和当前 shell 环境。
-  该命令面向已具备 Homebrew 的系统，不承担新机首次 bootstrap 安装职责。
+  仅校准 Homebrew 镜像、shellenv 和当前 shell 环境。
+  该命令面向已具备 Homebrew 的系统，不承担新机首次安装职责；
+  若系统尚未安装 Homebrew，请先运行 bootstrap/install.sh。
 
 参数:
-  当前不接受额外参数。
+  --dry-run        仅预演将执行的配置动作，不修改 ~/.zshrc 或 Homebrew 仓库
 EOF
 }
 
@@ -213,7 +214,7 @@ print_setup_help() {
 
 说明:
   shell            安装和配置 zsh / oh-my-zsh / p10k / 字体
-  brew configure   校准 Homebrew 镜像、shellenv 与当前环境
+  brew configure   仅校准 Homebrew 镜像、shellenv 与当前环境
   packages         按 brew.conf 批量安装软件与语言环境
   git              配置任意 Git forge 的 SSH 密钥与连接
   github           GitHub 快捷入口，等价于 setup git --domain github.com
@@ -1014,7 +1015,20 @@ handle_setup_brew() {
   case "$action" in
     configure)
       has_help_flag "$@" && { print_setup_brew_help; return 0; }
-      reject_extra_args print_setup_brew_help "$@" || return 1
+      case "$#" in
+        0)
+          ;;
+        1)
+          [[ "$1" == "--dry-run" ]] || {
+            usage_error "setup brew configure 不支持参数: $1" print_setup_brew_help
+            return 1
+          }
+          ;;
+        *)
+          usage_error "setup brew configure 不支持参数: $*" print_setup_brew_help
+          return 1
+          ;;
+      esac
       run_zsh_script "setup/homebrew-setup.sh" "$@"
       ;;
     help|-h|--help)

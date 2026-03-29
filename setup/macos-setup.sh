@@ -17,6 +17,7 @@ set -o pipefail                   # 管道错误捕获
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
 source "$SCRIPT_DIR/lib/brew_helpers.sh"
+source "$SCRIPT_DIR/lib/homebrew_config.sh"
 
 # ===== 配置文件路径 =====
 CONFIG_DIR=$(cd "$(dirname "$0")"; pwd)  # 脚本所在目录
@@ -116,39 +117,11 @@ install_xcode_cli() {
 
 # ===== Homebrew 配置 =====
 configure_homebrew() {
-    print_header "配置 Homebrew 镜像"
+    print_header "校准 Homebrew 配置"
 
-    local brew_config_content=$(cat <<'EOF'
-export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
-export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
-export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
-export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
-EOF
-)
-    update_shell_config "Homebrew Mirror" "$brew_config_content"
-    eval "$brew_config_content" # 立即在当前会话生效
-
-    warning "正在切换仓库远程地址..."
-    git -C "$(brew --repo)" remote set-url origin "$HOMEBREW_BREW_GIT_REMOTE"
-    
-    local core_repo_path="$(brew --repo)/Library/Taps/homebrew/homebrew-core"
-    if [ ! -d "$core_repo_path" ]; then
-        warning "初始化 homebrew-core 仓库..."
-        mkdir -p "$(dirname "$core_repo_path")"
-        git clone "$HOMEBREW_CORE_GIT_REMOTE" "$core_repo_path"
-    fi
-    git -C "$core_repo_path" remote set-url origin "$HOMEBREW_CORE_GIT_REMOTE"
-    
-    warning "正在同步仓库配置 (带重试)..."
-    local retry_count=3
-    for ((i=1; i<=retry_count; i++)); do
-        if brew update-reset -q; then
-            success "Homebrew 镜像配置完成"
-            return 0
-        fi
-        [[ $i -lt $retry_count ]] && warning "第 ${i} 次同步失败，10秒后重试..." && sleep 10
-    done
-    log_fatal "同步失败，已达最大重试次数"
+    local brew_bin
+    brew_bin="$(resolve_homebrew_bin)" || log_fatal "brew 未安装，请先安装 Homebrew"
+    configure_homebrew_environment "$brew_bin"
 }
 
 # ===== 核心软件安装 =====

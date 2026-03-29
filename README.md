@@ -162,11 +162,12 @@ MACOS_SCRIPTS_CONFIG_DIR="$HOME/.config/macos-scripts"
     ```
     > 完成后请根据提示设置终端字体，并重启终端。
 
-2. **安装 Homebrew（含镜像配置）**：
+2. **校准 Homebrew（镜像 + shellenv）**：
     ```bash
     ./homebrew-setup.sh
     ```
-    > 安装过程中会自动检测 Xcode CLI、网络与磁盘空间；多次重试后仍失败会给出明确提示。
+    > 该步骤只负责配置/修复已有 Homebrew；如果是全新机器，请先使用上面的 bootstrap 入口完成首次安装。
+    > 如需非破坏性预演，可执行 `./bin/macos-scripts setup brew configure --dry-run`。
 
 3. **批量安装开发工具 / GUI 应用**：
     ```bash
