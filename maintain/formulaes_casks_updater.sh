@@ -21,12 +21,7 @@ typeset -ga EXCLUDED_CASKS=(
     "lark"
 )
 
-if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
-    mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
-    ERROR_LOG="$MACOS_SCRIPTS_LOG_DIR/brew_update_errors.log"
-else
-    ERROR_LOG="$SCRIPT_DIR/brew_update_errors.log"
-fi
+ERROR_LOG="$(prepare_log_file_path "brew_update_errors.log" "$SCRIPT_DIR/brew_update_errors.log")"
 
 DRY_RUN="false"
 ASSUME_YES="false"

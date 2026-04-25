@@ -13,7 +13,7 @@
 - 文件/目录：整个工作区的 Shell、文档与辅助脚本；目录级规则由对应 `*.instructions.md` 细化。
 - 关键约束：
 	- macOS 版本：支持 Sonoma (14) 及以上，避免依赖 GNU-only 工具。
-	- Shell 类型：`setup/` 使用 `zsh`，`maintain/` 使用系统 `bash` (3.x)；其余按既有 shebang。
+	- Shell 类型：`setup/` 使用 `zsh`；`maintain/` 当前以既有 shebang 为准（仓库内核心脚本目前为 `zsh`）；其余按既有 shebang。
 	- 权限：默认拒绝 `sudo`，如需使用须在日志中明确提示风险与确认步骤。
 
 ## 代码风格要求
@@ -45,6 +45,7 @@
 ## 验证与交付
 - 提醒执行 `zsh -n path/to/script.sh` 或 `bash -n path/to/script.sh` 进行语法检查。
 - 默认运行 `./lint/lint_shell.sh`（可附 `--fix`）。
+- 涉及 CLI 或参数分发改动时，补跑 `./tests/smoke_cli.sh`。
 - 在 PR/总结中列出验证命令与结果，保持与 `AGENTS.md` 要求一致。
 
 ## 推荐 Prompt

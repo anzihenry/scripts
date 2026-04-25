@@ -6,19 +6,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
-  mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
-  RELEASE_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/github-release-publish.log"
-else
-  RELEASE_LOG_FILE="$SCRIPT_DIR/github-release-publish.log"
-fi
-
-exec > >(tee -a "$RELEASE_LOG_FILE") 2>&1
-
 # shellcheck disable=SC1091
 source "$REPO_ROOT/lib/colors.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/lib/utils.sh"
+
+RELEASE_LOG_FILE="$(prepare_log_file_path "github-release-publish.log" "$SCRIPT_DIR/github-release-publish.log")"
+enable_log_capture "$RELEASE_LOG_FILE"
 
 REPO_SLUG="anzihenry/scripts"
 TAG=""

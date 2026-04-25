@@ -53,29 +53,7 @@ update_managed_zsh_config() {
     local config_content="$3"
     local dry_run="${4:-false}"
     local rc_file="$HOME/.zshrc"
-    local start_marker="# >>> ${section_name} (managed by ${manager_name}) >>>"
-    local end_marker="# <<< ${section_name} (managed by ${manager_name}) <<<"
-
-    if [[ "$dry_run" == "true" ]]; then
-        info "[dry-run] 将更新 $rc_file 中的 ${section_name} 配置块"
-        print_code "$start_marker"
-        printf '%s\n' "$config_content"
-        print_code "$end_marker"
-        return 0
-    fi
-
-    touch "$rc_file"
-
-    if grep -Fq "$start_marker" "$rc_file"; then
-        sed -i '' "\\|$start_marker|,\\|$end_marker|d" "$rc_file"
-    fi
-
-    {
-        echo ""
-        echo "$start_marker"
-        echo "$config_content"
-        echo "$end_marker"
-    } >> "$rc_file"
+    write_managed_block "$rc_file" "$section_name" "$manager_name" "$config_content" "$dry_run"
 }
 
 get_homebrew_mirror_config() {

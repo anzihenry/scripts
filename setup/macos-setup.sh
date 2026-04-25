@@ -1,23 +1,24 @@
 #!/bin/zsh
 # filepath: setup/macos-setup.sh
 
-# ===== 初始化配置 =====
-if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
-    mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
-    SETUP_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/macos-setup.log"
-else
-    SETUP_LOG_FILE="setup.log"
-fi
-
-exec > >(tee -a "$SETUP_LOG_FILE") 2>&1  # 启用日志记录
 set -e                            # 错误立即退出
 set -o pipefail                   # 管道错误捕获
 
-# 引入工具库（自动加载 colors.sh 并提供 fallback）
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# 引入工具库（提供运行时 helper 与日志 fallback）
 source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/lib/brew_helpers.sh"
+source "$SCRIPT_DIR/lib/config_writer.sh"
 source "$SCRIPT_DIR/lib/homebrew_config.sh"
+source "$SCRIPT_DIR/lib/setup_shell_config.sh"
+source "$SCRIPT_DIR/lib/setup_runtime.sh"
+source "$SCRIPT_DIR/lib/setup_lang_env.sh"
+source "$SCRIPT_DIR/lib/setup_postcheck.sh"
+
+# ===== 初始化配置 =====
+SETUP_LOG_FILE="$(prepare_log_file_path "macos-setup.log" "$SCRIPT_DIR/setup.log")"
+enable_log_capture "$SETUP_LOG_FILE"
 
 # ===== 配置文件路径 =====
 CONFIG_DIR=$(cd "$(dirname "$0")"; pwd)  # 脚本所在目录
@@ -29,227 +30,6 @@ if [[ -n "${MACOS_SCRIPTS_CONFIG_DIR:-}" ]]; then
 else
     BREW_CONFIG_FILE="$DEFAULT_BREW_CONFIG_FILE"
 fi
-
-ensure_brew_config_file() {
-    if [[ "$BREW_CONFIG_FILE" == "$DEFAULT_BREW_CONFIG_FILE" ]]; then
-        return 0
-    fi
-
-    if [[ ! -f "$BREW_CONFIG_FILE" ]]; then
-        cp "$DEFAULT_BREW_CONFIG_FILE" "$BREW_CONFIG_FILE"
-        info "已初始化用户配置文件: $BREW_CONFIG_FILE"
-    fi
-}
-
-# ===== 通用工具函数 =====
-# 幂等地更新 shell 配置文件
-update_shell_config() {
-    local section_name="$1"
-    local config_content="$2"
-    local rc_file="$HOME/.zshrc"
-    local start_marker="# >>> ${section_name} (managed by macos-setup) >>>"
-    local end_marker="# <<< ${section_name} (managed by macos-setup) <<<"
-
-    # 如果存在旧块，先删除
-    if grep -q "$start_marker" "$rc_file"; then
-        sed -i '' "/$start_marker/,/$end_marker/d" "$rc_file"
-    fi
-
-    # 追加新块
-    {
-        echo ""
-        echo "$start_marker"
-        echo "$config_content"
-        echo "$end_marker"
-    } >> "$rc_file"
-    success "${section_name} 环境配置已更新"
-}
-
-# ===== 预检模块 =====
-precheck() {
-    print_header "系统环境预检"
-
-    ensure_brew_config_file
-
-    [[ ! -f $BREW_CONFIG_FILE ]] && log_fatal "缺失 Homebrew 配置文件: $BREW_CONFIG_FILE"
-
-    local os_version=$(sw_vers -productVersion)
-    local major_version=$(echo $os_version | awk -F. '{print $1}')
-    local minor_version=$(echo $os_version | awk -F. '{print $2}')
-    local version_code=$(( major_version * 100 + minor_version ))
-    
-    [[ $version_code -lt 1015 ]] && log_fatal "需要 macOS Catalina (10.15) 或更高版本，当前版本：$os_version"
-
-    local free_space=$(df -g / | tail -1 | awk '{print $4}')
-    [[ $free_space -lt 15 ]] && log_fatal "磁盘空间不足15GB (剩余: ${free_space}GB)"
-
-    if ! curl -sIm3 --retry 2 --connect-timeout 30 https://mirrors.ustc.edu.cn >/dev/null; then
-        if ! ping -c2 223.5.5.5 &>/dev/null; then
-            log_fatal "中科大源异常，网络连接失败，请检查网络设置"
-        fi
-    fi
-
-    ! command -v brew &>/dev/null && log_fatal "brew 未安装，请先安装 Homebrew"
-    success "系统环境预检通过"
-}
-
-# ===== Homebrew 配置 =====
-configure_homebrew() {
-    print_header "校准 Homebrew 配置"
-
-    local brew_bin
-    brew_bin="$(resolve_homebrew_bin)" || log_fatal "brew 未安装，请先安装 Homebrew"
-    configure_homebrew_environment "$brew_bin"
-}
-
-# ===== 核心软件安装 =====
-install_core_software() {
-    print_header "安装核心开发工具"
-
-    # 加载配置文件中的所有数组
-    source "$BREW_CONFIG_FILE"
-
-    bh_reset_summary
-
-    local install_failed=false
-
-    # 合并所有 Formulae 和 Casks 数组
-    local all_formulae=(${(F)FORMULAE_@})
-    local all_casks=(${(F)CASKS_@})
-
-    if [[ ${#all_formulae[@]} -gt 0 ]]; then
-        log_time_start "brew_formulae" "安装 ${#all_formulae[@]} 个 Homebrew Formulae"
-        if bh_install_packages --formulae --retries 2 --label "Homebrew Formulae" "${all_formulae[@]}"; then
-            log_time_end "brew_formulae" "Formulae 安装" "success"
-        else
-            install_failed=true
-            log_time_end "brew_formulae" "Formulae 安装" "warn"
-        fi
-    else
-        info "未在配置中检测到 Formulae 项"
-    fi
-
-    if [[ ${#all_casks[@]} -gt 0 ]]; then
-        log_time_start "brew_casks" "安装 ${#all_casks[@]} 个 Homebrew Casks"
-        if bh_install_packages --cask --retries 2 --label "Homebrew Casks" "${all_casks[@]}"; then
-            log_time_end "brew_casks" "Cask 安装" "success"
-        else
-            install_failed=true
-            log_time_end "brew_casks" "Cask 安装" "warn"
-        fi
-    else
-        info "未在配置中检测到 Cask 项"
-    fi
-
-    bh_print_summary "核心软件安装报告"
-
-    if [[ "$install_failed" == "true" ]]; then
-        warning "部分 Homebrew 包安装失败，请查看上方失败列表并手动处理。"
-    else
-        success "核心软件安装完成"
-    fi
-}
-
-# ===== 各语言环境配置 =====
-install_node() {
-    print_header "配置 Node.js 环境"
-    brew list nvm &>/dev/null || brew install nvm
-    mkdir -p ~/.nvm
-    
-    local nvm_config_content=$(cat <<'EOF'
-export NVM_DIR="$HOME/.nvm"
-[ -s "$(brew --prefix)/opt/nvm/nvm.sh" ] && \. "$(brew --prefix)/opt/nvm/nvm.sh"
-[ -s "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm"
-EOF
-)
-    update_shell_config "NVM" "$nvm_config_content"
-    eval "$nvm_config_content"
-
-    nvm install --lts --latest-npm
-    npm config set registry https://registry.npmmirror.com
-}
-
-install_python() {
-    print_header "配置 Python 环境"
-    brew list python &>/dev/null || brew install python
-    
-    local python_config_content='export PATH="$(brew --prefix python)/libexec/bin:$PATH"'
-    update_shell_config "Python Env" "$python_config_content"
-    
-    mkdir -p ~/.pip
-    cat > ~/.pip/pip.conf <<EOF
-[global]
-index-url = https://mirrors.ustc.edu.cn/pypi/simple
-trusted-host = mirrors.ustc.edu.cn
-EOF
-}
-
-install_ruby() {
-    print_header "配置 Ruby 环境"
-    brew list ruby &>/dev/null || brew install ruby
-    
-    local ruby_config_content=$(cat <<'EOF'
-export PATH="$(brew --prefix ruby)/bin:$PATH"
-export LDFLAGS="-L$(brew --prefix ruby)/lib"
-export CPPFLAGS="-I$(brew --prefix ruby)/include"
-EOF
-)
-    update_shell_config "Ruby Env" "$ruby_config_content"
-    
-    gem sources --add https://mirrors.ustc.edu.cn/rubygems/ --remove https://rubygems.org/ > /dev/null
-}
-
-install_go() {
-    print_header "配置 Go 环境"
-    brew list go &>/dev/null || brew install go
-    
-    local go_config_content=$(cat <<'EOF'
-export GOPATH="$HOME/Coding/go"
-export PATH="$GOPATH/bin:$PATH"
-export GOPROXY="https://goproxy.cn,direct"
-EOF
-)
-    update_shell_config "Go Env" "$go_config_content"
-    
-    mkdir -p $HOME/Coding/go/{src,bin,pkg}
-}
-
-config_android_and_java() {
-    print_header "配置 Android 和 Java 环境"
-    local android_java_config_content=$(cat <<'EOF'
-export JAVA_HOME="/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home"
-export ANDROID_HOME="$HOME/Library/Android/sdk"
-export PATH="$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools"
-EOF
-)
-    update_shell_config "Android & Java Env" "$android_java_config_content"
-}
-
-# ===== 安装后验证 =====
-post_verification() {
-    print_header "安装后验证"
-    source ~/.zshrc # 确保加载所有新配置
-    
-    local has_warning=false
-    local critical_cmds=(git brew node npm ruby go python pip python3 pip3)
-    for cmd in "${critical_cmds[@]}"; do
-        if ! command -v $cmd &>/dev/null; then
-            warning "命令缺失: $cmd"
-            has_warning=true
-        fi
-    done
-
-    [[ -z "$(go env GOPROXY)" ]] && warning "GOPROXY 未正确配置" && has_warning=true
-    [[ "$(npm config get registry)" != "https://registry.npmmirror.com/" ]] && warning "NPM 镜像源未配置" && has_warning=true
-    [[ -z "$(gem sources -l | grep ustc)" ]] && warning "Ruby 镜像源未配置" && has_warning=true
-    [[ "$(pip config get global.index-url)" != "https://mirrors.ustc.edu.cn/pypi/simple" ]] && warning "pip 镜像源未配置" && has_warning=true
-
-    if [[ "$has_warning" == "false" ]]; then
-        success "基础环境验证通过"
-    else
-        error "部分环境验证失败，请检查日志"
-    fi
-}
 
 # ===== 主执行流程 =====
 main() {
@@ -268,14 +48,8 @@ main() {
     install_core_software
     
     post_verification
-    
-    print_header "🎉 配置完成!"
-    info "建议后续操作:"
-    info "1. ${BOLD}完全重启终端${NC} 或执行 $(highlight 'source ~/.zshrc') 来刷新环境。"
-    info "2. 检查新的配置文件位置："
-    info "   - $(highlight "$BREW_CONFIG_FILE")"
-    info "3. 日志文件位置："
-    info "   - $(highlight "$SETUP_LOG_FILE")"
+
+    print_setup_completion
 }
 
 # 启动主流程

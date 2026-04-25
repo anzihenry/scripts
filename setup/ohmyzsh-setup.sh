@@ -1,22 +1,12 @@
 #!/bin/zsh
 # filepath: setup/ohmyzsh-setup.sh
 
-# ===== 初始化配置 =====
-if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
-    mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
-    SETUP_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/setup-shell.log"
-else
-    SETUP_LOG_FILE="setup-shell.log"
-fi
-
 if [[ -n "${MACOS_SCRIPTS_CONFIG_DIR:-}" ]]; then
     ZSHRC_BACKUP_DIR="$MACOS_SCRIPTS_CONFIG_DIR/backups"
     mkdir -p "$ZSHRC_BACKUP_DIR"
 else
     ZSHRC_BACKUP_DIR="$HOME"
 fi
-
-exec > >(tee -a "$SETUP_LOG_FILE") 2>&1
 
 # 启用错误中断和显示执行命令
 set -e
@@ -25,6 +15,10 @@ set -o pipefail
 # 引入工具库（自动加载 colors.sh 并提供 fallback）
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/utils.sh"
+
+# ===== 初始化配置 =====
+SETUP_LOG_FILE="$(prepare_log_file_path "setup-shell.log" "$SCRIPT_DIR/setup-shell.log")"
+enable_log_capture "$SETUP_LOG_FILE"
 
 # ===== Oh My Zsh 安装 =====
 install_oh_my_zsh() {

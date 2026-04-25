@@ -9,7 +9,7 @@
 - **国内网络加速**：自动配置 Homebrew、npm、pip、gem 等镜像，提高下载成功率与速度。
 - **模块化组件**：所有功能按需调用，可单独运行 `homebrew-setup.sh`、`macos_sys_usb_maker.sh` 等完成特定工作。
 - **统一日志与耗时统计**：`lib/colors.sh` 提供丰富的彩色日志 API 与计时器，执行过程可视化、一目了然。
-- **结构化配置 & 辅助库**：`brew.conf.sh` 管理安装清单，`setup/lib/brew_helpers.sh`、`maintain/lib/macos_installer_utils.sh` 等复用工具帮助保持代码整洁可测。
+- **结构化配置 & 辅助库**：`brew.conf.sh` 管理安装清单，`setup/lib/`、`maintain/lib/`、`bin/lib/` 中的辅助模块帮助保持代码整洁可测。
 
 ## 📂 目录结构
 
@@ -18,12 +18,22 @@
 ├── README.md
 ├── LICENSE
 ├── lib/
-│   └── colors.sh                 # 彩色日志 & 计时工具库
+│   ├── colors.sh                 # 彩色日志 & 计时工具库
+│   └── utils.sh                  # 运行时辅助、依赖检查与通用 helper
+├── docs/
+│   └── refactor/                 # 渐进式重构阶段文档与基线记录
+├── tests/
+│   └── smoke_cli.sh              # 最小 CLI smoke tests
 ├── lint/
 │   └── lint_shell.sh             # Shell 脚本 lint & 格式化工具
 ├── job/
 │   ├── scheduler.sh              # Launchd 定时任务管理工具
 │   └── README.md                 # 使用说明与示例
+├── bin/
+│   ├── macos-scripts             # 统一 CLI 入口
+│   └── lib/
+│       ├── help.sh               # CLI 帮助文案模块
+│       └── validators.sh         # CLI 参数校验模块
 ├── maintain/
 │   ├── macos_sys_usb_maker.sh    # macOS 安装器下载 & USB 启动盘制作
 │   ├── formulaes_casks_updater.sh# Homebrew 批量更新工具
@@ -32,11 +42,17 @@
 └── setup/
      ├── brew.conf.sh              # Homebrew 安装清单（Formulae & Casks）
      ├── macos-setup.sh            # [步骤3] 批量安装开发工具 & GUI 应用
-     ├── homebrew-setup.sh         # [步骤2] 安装 Homebrew 并配置镜像
+     ├── homebrew-setup.sh         # [步骤2] 校准 Homebrew 镜像与 shellenv
      ├── ohmyzsh-setup.sh          # [步骤1] 终端环境与主题
      ├── git_forge_ssh_setup.sh    # [可选] Git 平台 SSH 密钥自动化
      └── lib/
-          └── brew_helpers.sh       # Homebrew 安装/重试/汇总辅助函数
+          ├── brew_helpers.sh       # Homebrew 安装/重试/汇总辅助函数
+          ├── config_writer.sh      # 受管理配置写入 helper
+          ├── homebrew_config.sh    # Homebrew 环境与镜像配置
+          ├── setup_runtime.sh      # setup 运行时、预检与安装编排 helper
+          ├── setup_lang_env.sh     # 各语言环境配置 helper
+          ├── setup_shell_config.sh # .zshrc 受管理配置块 helper
+          └── setup_postcheck.sh    # 安装后验证与总结输出
 ```
 
 ## 🚀 快速开始
@@ -98,6 +114,7 @@ curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}
 ```
 
 > 当前 `bin/macos-scripts` 是统一入口，现有 `setup/`、`maintain/`、`job/`、`lint/` 脚本继续作为内部执行器保留。
+> 入口本身已拆分为 `bin/macos-scripts` + `bin/lib/*.sh`，帮助文案与参数校验逻辑不再和分发逻辑混在同一个文件里。
 
 ## 🚢 Release 发布
 
@@ -237,11 +254,26 @@ cd maintain
 - `macos-setup.sh` 会自动加载这些数组并通过新封装的 helper 执行安装。
 - 可在运行前通过设置环境变量 `BH_DRY_RUN=true` 做干跑测试（只输出将安装的项目，不实际执行）。
 
+## 🧱 当前模块结构
+
+- `bin/lib/`：统一 CLI 的帮助文案与参数校验模块
+- `setup/lib/`：setup 运行时、配置写入、语言环境、安装后校验模块
+- `lib/utils.sh`：日志路径解析、运行时 helper、依赖检查
+- `tests/smoke_cli.sh`：最小 CLI 回归护栏
+- `docs/refactor/`：重构基线、阶段说明与验证记录
+
 ## 🧪 运行验证
 
 - 所有核心脚本均可通过 `zsh -n path/to/script.sh` 做语法检查。
 - `lint/lint_shell.sh` 会先按 shebang 执行语法检查，再对 bash/sh 脚本执行 shellcheck 与 shfmt。
 - `lib/colors.sh` 的 `log_time_start/log_time_end` 可嵌入到自定义脚本中，统计关键步骤耗时。
+- 推荐在重构或修改 CLI 后额外运行：
+
+```bash
+./tests/smoke_cli.sh
+```
+
+> `smoke_cli.sh` 会使用临时目录覆盖 `MACOS_SCRIPTS_LOG_DIR` 与 `MACOS_SCRIPTS_CONFIG_DIR`，避免污染真实用户配置和日志目录。
 
 ## 🤝 贡献指南
 
@@ -255,6 +287,7 @@ cd maintain
 
 ```bash
 ./lint/lint_shell.sh            # 确保脚本通过 lint
+./tests/smoke_cli.sh            # 运行最小 CLI 回归护栏
 zsh -n setup/*.sh maintain/*.sh job/*.sh lint/*.sh
 bash -n lib/colors.sh setup/git_forge_ssh_setup.sh
 ```

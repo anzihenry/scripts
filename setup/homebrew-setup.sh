@@ -1,23 +1,20 @@
 #!/bin/zsh
 # filepath: setup/homebrew-setup.sh
 
-# ===== 初始化配置 =====
-if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
-    mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
-    SETUP_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/homebrew-setup.log"
-else
-    SETUP_LOG_FILE="setup.log"
-fi
-
-exec > >(tee -a "$SETUP_LOG_FILE") 2>&1  # 启用日志记录
 set -e                            # 错误立即退出
 set -o pipefail                   # 管道错误捕获
 
-# 引入颜色库
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# 引入颜色库
 source "$SCRIPT_DIR/../lib/colors.sh"
+source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/lib/brew_helpers.sh"
 source "$SCRIPT_DIR/lib/homebrew_config.sh"
+
+# ===== 初始化配置 =====
+SETUP_LOG_FILE="$(prepare_log_file_path "homebrew-setup.log" "$SCRIPT_DIR/setup.log")"
+enable_log_capture "$SETUP_LOG_FILE"
 
 BREW_BIN=""
 DRY_RUN="false"
@@ -71,26 +68,10 @@ print_shell_refresh_notice() {
 precheck() {
     print_header "Homebrew 配置预检"
 
-    if ! bh_require_commands curl git; then
-        log_fatal "缺少必要命令，请确保 curl 与 git 已安装"
-    fi
-
-    # 系统版本检查 (macOS 10.15+)
-    local os_version=$(sw_vers -productVersion)
-    local major_version=$(echo $os_version | awk -F. '{print $1}')
-    local minor_version=$(echo $os_version | awk -F. '{print $2}')
-    local version_code=$(( major_version * 100 + minor_version ))
-    
-    if [[ $version_code -lt 1015 ]]; then
-        log_fatal "需要 macOS Catalina (10.15) 或更高版本，当前版本：$os_version"
-    fi
-
-    # 网络连通性检查
-    if ! curl -sIm3 --retry 2 --connect-timeout 30 https://mirrors.ustc.edu.cn >/dev/null; then
-        if ! ping -c2 223.5.5.5 &>/dev/null; then
-            log_fatal "中科大源异常，网络连接失败，请检查网络设置"
-        fi
-    fi
+    require_commands curl git
+    require_macos_min_version "1015" "需要 macOS Catalina (10.15) 或更高版本"
+    check_network_reachability "https://mirrors.ustc.edu.cn" "223.5.5.5" || \
+        log_fatal "中科大源异常，网络连接失败，请检查网络设置"
 
     if ! BREW_BIN="$(resolve_homebrew_bin)"; then
         log_fatal "未检测到 Homebrew。请先使用 bootstrap/install.sh 完成首次安装，再执行 setup brew configure。"

@@ -3,13 +3,6 @@
 
 set -euo pipefail
 
-if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
-  mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
-  SETUP_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/setup-git.log"
-else
-  SETUP_LOG_FILE="setup-git.log"
-fi
-
 if [[ -n "${MACOS_SCRIPTS_CONFIG_DIR:-}" ]]; then
   SSH_BACKUP_DIR="$MACOS_SCRIPTS_CONFIG_DIR/backups"
   mkdir -p "$SSH_BACKUP_DIR"
@@ -17,12 +10,15 @@ else
   SSH_BACKUP_DIR=""
 fi
 
-exec > >(tee -a "$SETUP_LOG_FILE") 2>&1
-
 # 引入颜色库
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/colors.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/utils.sh"
+
+SETUP_LOG_FILE="$(prepare_log_file_path "setup-git.log" "$SCRIPT_DIR/setup-git.log")"
+enable_log_capture "$SETUP_LOG_FILE"
 
 # ========== 工具函数 ==========
 sanitize_domain() {

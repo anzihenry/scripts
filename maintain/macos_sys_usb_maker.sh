@@ -16,18 +16,12 @@ set -o pipefail
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-if [ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]; then
-  mkdir -p "$MACOS_SCRIPTS_LOG_DIR"
-  MAINTAIN_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/macos-installer.log"
-else
-  MAINTAIN_LOG_FILE="macos-installer.log"
-fi
-
-exec > >(tee -a "$MAINTAIN_LOG_FILE") 2>&1
-
 # ==== 日志与颜色：集成 utils.sh（自动加载 colors.sh 并提供 fallback）====
 # shellcheck disable=SC1090
 source "$SCRIPT_DIR/../lib/utils.sh"
+
+MAINTAIN_LOG_FILE="$(prepare_log_file_path "macos-installer.log" "$SCRIPT_DIR/macos-installer.log")"
+enable_log_capture "$MAINTAIN_LOG_FILE"
 
 if [ -f "$SCRIPT_DIR/lib/macos_installer_utils.sh" ]; then
   # shellcheck disable=SC1090
