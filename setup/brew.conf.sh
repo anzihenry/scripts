@@ -20,6 +20,11 @@ FORMULAE_DEV_TOOLS=(
     "shfmt"
     "watchman"
     "swiftly"
+    "swiftlint"
+    "xcbeautify"
+    "xcodegen"
+    "xcode-build-server"
+    "ios-deploy"
 )
 
 # ------------------- Casks (图形界面应用) -------------------
@@ -40,7 +45,6 @@ CASKS_SOCIAL=(
     "wechat"
     "whatsapp"
     "telegram"
-    "discord"
 )
 
 CASKS_DAILY=(
