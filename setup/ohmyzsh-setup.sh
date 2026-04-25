@@ -22,33 +22,9 @@ exec > >(tee -a "$SETUP_LOG_FILE") 2>&1
 set -e
 set -o pipefail
 
-# 引入颜色库
+# 引入工具库（自动加载 colors.sh 并提供 fallback）
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/../lib/colors.sh"
-
-# ===== Xcode CLI 工具安装 =====
-install_xcode_cli() {
-    print_header "步骤 0: 检查/安装 Xcode 命令行工具"
-    
-    if ! xcode-select -p &>/dev/null; then
-        warning "正在安装 Xcode CLI 工具... 请在弹出的窗口中完成安装。"
-        xcode-select --install
-        
-        # 使用固定的轮询间隔等待安装完成
-        local wait_count=0
-        local max_wait=60 # 最多等待 60 * 5 = 300 秒
-        until xcode-select -p &>/dev/null; do
-            info "等待 Xcode CLI 安装完成... (${wait_count}/${max_wait})"
-            sleep 5
-            ((wait_count++))
-            [[ $wait_count -gt $max_wait ]] && log_fatal "安装超时，请手动执行: xcode-select --install"
-        done
-        
-        # 验证编译器存在
-        [[ -f /usr/bin/clang ]] || log_fatal "CLI 工具安装不完整"
-    fi
-    success "Xcode 命令行工具就绪"
-}
+source "$SCRIPT_DIR/../lib/utils.sh"
 
 # ===== Oh My Zsh 安装 =====
 install_oh_my_zsh() {
@@ -228,7 +204,7 @@ final_instructions() {
 
 # ===== 主执行流程 =====
 main() {
-    install_xcode_cli
+    ensure_xcode_cli_installed
     install_oh_my_zsh
     install_p10k_theme
     install_plugins

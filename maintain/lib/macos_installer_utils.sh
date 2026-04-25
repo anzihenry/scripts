@@ -2,11 +2,8 @@
 # macOS 安装器相关的辅助函数集合。
 # 这些函数被 macos_sys_usb_maker.sh 等脚本复用，便于测试与维护。
 
-if ! typeset -f log_debug >/dev/null 2>&1; then
-  log_debug()  { [ "${DEBUG:-false}" = "true" ] && echo "[DEBUG] $*" >&2 || true; }
-  log_warn()   { echo "[WARN] $*" >&2; }
-  log_error()  { echo "[ERROR] $*" >&2; }
-fi
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "$0")" && pwd)/../../lib/utils.sh"
 
 sanitize_key() {
   echo "$1" | sed 's#[^A-Za-z0-9]#_#g'

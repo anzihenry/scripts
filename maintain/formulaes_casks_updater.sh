@@ -7,6 +7,8 @@ set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/utils.sh"
 
 typeset -ga EXCLUDED_CASKS=(
     "microsoft-.*"
@@ -54,11 +56,6 @@ usage() {
     失败的 Cask 会追加记录到 brew_update_errors.log。
     若通过 macos-scripts 安装态运行，默认写入 ~/Library/Logs/macos-scripts/。
 EOF
-}
-
-require_command() {
-    local cmd="$1"
-    command -v "$cmd" >/dev/null 2>&1 || log_fatal "缺少命令: $cmd"
 }
 
 append_error_log() {

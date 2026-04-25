@@ -25,26 +25,9 @@ fi
 
 exec > >(tee -a "$MAINTAIN_LOG_FILE") 2>&1
 
-# ==== 日志与颜色：集成 colors.sh ====
-case $- in *u*) __HAD_U=1;; *) __HAD_U=0;; esac
-set +u
-if [ -f "$SCRIPT_DIR/../lib/colors.sh" ]; then
-  # shellcheck disable=SC1090
-  source "$SCRIPT_DIR/../lib/colors.sh"
-else
-  log_info()   { echo "[INFO] $*" >&2; }
-  log_warn()   { echo "[WARN] $*" >&2; }
-  log_error()  { echo "[ERROR] $*" >&2; }
-  log_debug()  { [ "${DEBUG:-false}" = "true" ] && echo "[DEBUG] $*" >&2 || true; }
-  log_success(){ echo "[SUCCESS] $*" >&2; }
-  log_fatal()  { echo "[FATAL] $*" >&2; exit 1; }
-  print_header(){ echo "==== $1 ===="; }
-  print_step() { echo "[$1/$2] $3"; }
-  highlight()  { echo "$*"; }
-  warning()    { log_warn "$@"; }
-  success()    { log_success "$@"; }
-fi
-[ $__HAD_U -eq 1 ] && set -u
+# ==== 日志与颜色：集成 utils.sh（自动加载 colors.sh 并提供 fallback）====
+# shellcheck disable=SC1090
+source "$SCRIPT_DIR/../lib/utils.sh"
 
 if [ -f "$SCRIPT_DIR/lib/macos_installer_utils.sh" ]; then
   # shellcheck disable=SC1090
@@ -112,10 +95,6 @@ usage() {
 EOF
 }
 
-need_cmd() {
-  command -v "$1" >/dev/null 2>&1 || die "缺少命令: $1"
-}
-
 LOCK_DIR=""
 acquire_lock() {
   local key="$(sanitize_key "$1")"
@@ -130,7 +109,7 @@ acquire_lock() {
 
 # ------------------- 子命令：list -------------------
 sub_list() {
-  need_cmd softwareupdate
+  require_command softwareupdate
 
   print_header "列出可用的 macOS 完整安装器"
   log_info "系统: $(sw_vers -productName) $(sw_vers -productVersion)"
@@ -151,7 +130,7 @@ sub_list() {
 # ------------------- 子命令：download -------------------
 # 幂等策略：存在目标版本即跳过；--force 强制重下
 sub_download() {
-  need_cmd softwareupdate
+  require_command softwareupdate
 
   local VERSION=""
   local FORCE="no"
@@ -235,8 +214,8 @@ sub_create() {
     warning "目标卷不在 /Volumes 下，确保这是一个可抹写的可移动介质。"
   fi
 
-  need_cmd sudo
-  need_cmd diskutil
+  require_command sudo
+  require_command diskutil
 
   print_step 2 6 "解析安装器路径与版本"
   if [ -z "$INSTALLER_PATH" ]; then

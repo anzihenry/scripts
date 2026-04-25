@@ -1,6 +1,9 @@
 #!/bin/zsh
 # filepath: setup/lib/homebrew_config.sh
 
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "$0")" && pwd)/../../lib/utils.sh"
+
 homebrew_config_run() {
     local dry_run="${1:-false}"
     local description="$2"

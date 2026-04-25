@@ -13,9 +13,9 @@ exec > >(tee -a "$SETUP_LOG_FILE") 2>&1  # 启用日志记录
 set -e                            # 错误立即退出
 set -o pipefail                   # 管道错误捕获
 
-# 引入颜色库
+# 引入工具库（自动加载 colors.sh 并提供 fallback）
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/../lib/colors.sh"
+source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/lib/brew_helpers.sh"
 source "$SCRIPT_DIR/lib/homebrew_config.sh"
 
@@ -91,28 +91,6 @@ precheck() {
 
     ! command -v brew &>/dev/null && log_fatal "brew 未安装，请先安装 Homebrew"
     success "系统环境预检通过"
-}
-
-# ===== Xcode CLI 工具安装 =====
-install_xcode_cli() {
-    print_header "安装 Xcode 命令行工具"
-    
-    if ! xcode-select -p &>/dev/null; then
-        warning "正在安装 Xcode CLI 工具... 请在弹出的窗口中完成安装。"
-        xcode-select --install
-        
-        local wait_count=0
-        local max_wait=60 # 最多等待 60 * 5 = 300 秒
-        until xcode-select -p &>/dev/null; do
-            info "等待 Xcode CLI 安装完成... (${wait_count}/${max_wait})"
-            sleep 5
-            ((wait_count++))
-            [[ $wait_count -gt $max_wait ]] && log_fatal "安装超时，请手动执行: xcode-select --install"
-        done
-        
-        [[ -f /usr/bin/clang ]] || log_fatal "CLI 工具安装不完整"
-    fi
-    success "Xcode 命令行工具就绪"
 }
 
 # ===== Homebrew 配置 =====
@@ -276,7 +254,7 @@ post_verification() {
 # ===== 主执行流程 =====
 main() {
     precheck
-    install_xcode_cli
+    ensure_xcode_cli_installed
     configure_homebrew
     
     # 安装各语言环境

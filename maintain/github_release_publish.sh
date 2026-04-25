@@ -17,6 +17,8 @@ exec > >(tee -a "$RELEASE_LOG_FILE") 2>&1
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/lib/colors.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/lib/utils.sh"
 
 REPO_SLUG="anzihenry/scripts"
 TAG=""
@@ -128,14 +130,6 @@ parse_args() {
         ;;
     esac
   done
-}
-
-require_command() {
-  local cmd="$1"
-  command -v "$cmd" > /dev/null 2>&1 || {
-    error "缺少依赖: $cmd"
-    exit 1
-  }
 }
 
 resolve_notes_file() {

@@ -2,19 +2,9 @@
 # Homebrew 安装辅助函数库
 # 提供批量安装、重试、失败收集与日志汇总能力，便于在各脚本中复用。
 
-# ===== 日志函数兜底 =====
-if ! typeset -f log_info >/dev/null 2>&1; then
-  log_info()   { echo "[INFO] $*" >&2; }
-  log_warn()   { echo "[WARN] $*" >&2; }
-  log_error()  { echo "[ERROR] $*" >&2; }
-  log_debug()  { [ "${DEBUG:-false}" = "true" ] && echo "[DEBUG] $*" >&2 || true; }
-  log_success(){ echo "[SUCCESS] $*" >&2; }
-  log_fatal()  { echo "[FATAL] $*" >&2; exit 1; }
-  print_header(){ echo "==== $1 ===="; }
-  print_table_row() { printf '%-20s : %s\n' "$1" "$2"; }
-  success()    { log_success "$@"; }
-  warning()    { log_warn "$@"; }
-fi
+# ===== 日志函数兜底（由 lib/utils.sh 统一提供）=====
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "$0")" && pwd)/../../lib/utils.sh"
 
 # ===== 全局状态 =====
 : "${BH_DEFAULT_RETRIES:=2}"

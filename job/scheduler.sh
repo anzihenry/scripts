@@ -9,9 +9,8 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-set +u
-source "${SCRIPT_DIR}/../lib/colors.sh"
-set -u
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/../lib/utils.sh"
 
 typeset -gA JOB_TIMERS
 
@@ -99,14 +98,6 @@ print_usage() {
 
 注意: 在 `--` 之后的参数会原样传递给目标脚本。
 EOF
-}
-
-require_command() {
-    local cmd="$1"
-    if ! command -v "$cmd" >/dev/null 2>&1; then
-        error "缺少依赖: ${cmd}，请手动安装或检查 PATH"
-        exit 1
-    fi
 }
 
 xml_escape() {

@@ -15,20 +15,8 @@ BOOTSTRAP_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/bootstrap.log"
 
 exec > >(tee -a "$BOOTSTRAP_LOG_FILE") 2>&1
 
-if [[ -f "$REPO_ROOT/lib/colors.sh" ]]; then
-  # shellcheck disable=SC1091
-  source "$REPO_ROOT/lib/colors.sh"
-else
-  info() { printf 'INFO: %s\n' "$*"; }
-  success() { printf 'SUCCESS: %s\n' "$*"; }
-  warning() { printf 'WARN: %s\n' "$*"; }
-  error() { printf 'ERROR: %s\n' "$*" >&2; }
-  print_header() { printf '\n==== %s ====\n' "$1"; }
-  print_code() { printf '  %s\n' "$1"; }
-  highlight() { printf '%s' "$*"; }
-  log_time_start() { :; }
-  log_time_end() { :; }
-fi
+# shellcheck disable=SC1091
+source "$REPO_ROOT/lib/utils.sh"
 
 if [[ -f "$REPO_ROOT/setup/lib/homebrew_config.sh" ]]; then
   # shellcheck disable=SC1091
@@ -150,14 +138,6 @@ parse_args() {
   done
 }
 
-require_command() {
-  local cmd="$1"
-  command -v "$cmd" >/dev/null 2>&1 || {
-    error "缺少必要命令: $cmd"
-    exit 1
-  }
-}
-
 precheck() {
   print_header "Bootstrap 预检"
 
@@ -178,37 +158,6 @@ precheck() {
   info "系统版本: $(sw_vers -productName) $os_version"
   info "芯片架构: $(uname -m)"
   info "日志文件位置: $BOOTSTRAP_LOG_FILE"
-}
-
-ensure_xcode_cli() {
-  print_header "步骤 1：检查 Xcode CLI"
-
-  if xcode-select -p >/dev/null 2>&1; then
-    success "Xcode 命令行工具已就绪"
-    return 0
-  fi
-
-  if [[ "$DRY_RUN" == "true" ]]; then
-    info "[dry-run] 将执行 xcode-select --install，并等待安装完成"
-    return 0
-  fi
-
-  warning "未检测到 Xcode CLI，准备调用 xcode-select --install"
-  xcode-select --install || true
-
-  local wait_count=0
-  local max_wait=120
-  until xcode-select -p >/dev/null 2>&1; do
-    info "等待 Xcode CLI 安装完成... (${wait_count}/${max_wait})"
-    sleep 5
-    ((wait_count++))
-    if [[ "$wait_count" -gt "$max_wait" ]]; then
-      error "Xcode CLI 安装超时，请先手动完成安装后重试。"
-      exit 1
-    fi
-  done
-
-  success "Xcode 命令行工具已安装"
 }
 
 install_homebrew_if_needed() {
@@ -345,7 +294,7 @@ main() {
     exit 0
   fi
 
-  ensure_xcode_cli
+  ensure_xcode_cli_installed --timeout 120
   install_homebrew_if_needed
   install_macos_scripts
   run_post_install_configuration
