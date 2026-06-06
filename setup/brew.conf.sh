@@ -5,26 +5,33 @@
 
 # ------------------- Formulae (命令行工具) -------------------
 FORMULAE_DEV_TOOLS=(
-    "cmake"
-    "cmake-docs"
-    "ninja"
-    "ncdu"
-    "pipx"
-    "protobuf"
-    "tmux"
-    "jq"
-    "mactop"
-    "uv"
-    "gh"
-    "shellcheck"
-    "shfmt"
-    "watchman"
-    "swiftly"
-    "swiftlint"
-    "xcbeautify"
-    "xcodegen"
-    "xcode-build-server"
-    "ios-deploy"
+    buf
+    cmake
+    cmake-docs
+    gh
+    golangci-lint
+    gradle
+    ios-deploy
+    jq
+    lazygit
+    mactop
+    ncdu
+    ninja
+    nvm
+    pipx
+    protobuf
+    python@3.13
+    ruby
+    shellcheck
+    shfmt
+    swiftlint
+    swiftly
+    tmux
+    uv
+    watchman
+    xcbeautify
+    xcode-build-server
+    xcodegen
 )
 
 # ------------------- Casks (图形界面应用) -------------------
@@ -32,7 +39,6 @@ CASKS_DEV_TOOLS=(
     "visual-studio-code"
     "android-studio"
     "xcodes-app"
-    "github-copilot-for-xcode"
     "iterm2"
     "itermai"
     "itermbrowserplugin"
@@ -69,5 +75,6 @@ CASKS_PRO=(
 
 CASKS_AI=(
     "chatgpt"
+    "codex-app"
     "lm-studio"
 )
