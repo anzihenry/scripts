@@ -20,7 +20,7 @@ FORMULAE_DEV_TOOLS=(
     nvm
     pipx
     protobuf
-    python@3.13
+    python
     ruby
     shellcheck
     shfmt
