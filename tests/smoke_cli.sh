@@ -95,6 +95,36 @@ main() {
     "setup github 固定使用 github.com" \
     zsh bin/macos-scripts setup github --domain example.com
 
+  run_expect_success_contains \
+    "Job list" \
+    "列出当前用户的脚本任务" \
+    zsh bin/macos-scripts job list
+
+  run_expect_success_contains \
+    "Job disable dry-run" \
+    "将执行: launchctl disable" \
+    zsh bin/macos-scripts job disable --job-name smoke-refactor --dry-run
+
+  run_expect_success_contains \
+    "Job create dry-run forwards args" \
+    "创建任务 smoke-refactor，耗时" \
+    zsh bin/macos-scripts job create --job-name smoke-refactor --script ./lint/lint_shell.sh --interval 5 --dry-run -- --demo value
+
+  run_expect_failure_contains \
+    "Job create missing script" \
+    "job create 需要提供 --script" \
+    zsh bin/macos-scripts job create --job-name smoke-refactor --interval 5 --dry-run
+
+  run_expect_failure_contains \
+    "Job create invalid interval" \
+    "--interval 需要正整数" \
+    zsh bin/macos-scripts job create --job-name smoke-refactor --script ./lint/lint_shell.sh --interval abc --dry-run
+
+  run_expect_failure_contains \
+    "Job create rejects stray args before separator" \
+    "job create 不支持参数: name" \
+    zsh bin/macos-scripts job create --job-name bad name --script ./lint/lint_shell.sh --interval 5 --dry-run
+
   printf '\nSmoke tests passed: %d\n' "$PASS_COUNT"
 }
 

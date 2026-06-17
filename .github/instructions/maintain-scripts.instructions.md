@@ -51,6 +51,7 @@ description: "维护脚本规范"
 
 ## 验证与交付
 - 语法检查：按 shebang 使用 `zsh -n` 或 `bash -n`。
+- 快速护栏：`./tests/syntax_guard.sh`。
 - Lint：`./lint/lint_shell.sh`。
 - 手动测试：按脚本用途提供示例命令（例如 `./maintain/formulaes_casks_updater.sh --dry-run`）。
 

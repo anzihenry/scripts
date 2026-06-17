@@ -265,11 +265,13 @@ cd maintain
 ## 🧪 运行验证
 
 - 所有核心脚本均可通过 `zsh -n path/to/script.sh` 做语法检查。
+- `tests/syntax_guard.sh` 会根据 shebang 自动执行 `zsh -n` / `bash -n`，提供一层不依赖 `shellcheck` 与 `shfmt` 的快速语法护栏。
 - `lint/lint_shell.sh` 会先按 shebang 执行语法检查，再对 bash/sh 脚本执行 shellcheck 与 shfmt。
 - `lib/colors.sh` 的 `log_time_start/log_time_end` 可嵌入到自定义脚本中，统计关键步骤耗时。
 - 推荐在重构或修改 CLI 后额外运行：
 
 ```bash
+./tests/syntax_guard.sh
 ./tests/smoke_cli.sh
 ```
 
@@ -286,6 +288,7 @@ cd maintain
 - 运行以下校验命令，确认脚本质量：
 
 ```bash
+./tests/syntax_guard.sh         # 快速做 shebang 级语法回归检查
 ./lint/lint_shell.sh            # 确保脚本通过 lint
 ./tests/smoke_cli.sh            # 运行最小 CLI 回归护栏
 zsh -n setup/*.sh maintain/*.sh job/*.sh lint/*.sh

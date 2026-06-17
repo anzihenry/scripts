@@ -54,6 +54,7 @@ description: "Shell 脚本通用规范"
 
 ## 验证与交付
 - 语法检查：根据 shebang 运行 `zsh -n <script>` 或 `bash -n <script>`。
+- 快速护栏：优先运行 `./tests/syntax_guard.sh`，统一覆盖仓库内 shebang 级语法检查。
 - Lint：使用 `./lint/lint_shell.sh`（必要时追加 `--fix`）。
 - 其他：根据脚本职能补充手动验证或回归步骤。
 

@@ -8,9 +8,22 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+JOB_LIB_DIR="${SCRIPT_DIR}/lib"
 
 # shellcheck disable=SC1091
+source "${SCRIPT_DIR}/../lib/colors.sh"
+# shellcheck disable=SC1091
 source "${SCRIPT_DIR}/../lib/utils.sh"
+# shellcheck disable=SC1091
+source "${JOB_LIB_DIR}/job_paths.sh"
+# shellcheck disable=SC1091
+source "${JOB_LIB_DIR}/job_plist.sh"
+# shellcheck disable=SC1091
+source "${JOB_LIB_DIR}/job_launchctl.sh"
+# shellcheck disable=SC1091
+source "${JOB_LIB_DIR}/job_args.sh"
+# shellcheck disable=SC1091
+source "${JOB_LIB_DIR}/job_dispatch.sh"
 
 typeset -gA JOB_TIMERS
 
@@ -60,14 +73,6 @@ job_timer_end() {
     unset "JOB_TIMERS[$key]"
 }
 
-JOB_LABEL_PREFIX="com.biucing.scripts.job"
-LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
-if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
-    LOG_BASE_DIR="${MACOS_SCRIPTS_LOG_DIR}/jobs"
-else
-    LOG_BASE_DIR="${HOME}/Library/Logs/scripts-jobs"
-fi
-
 print_usage() {
     cat <<'EOF'
 用法: scheduler.sh <action> [参数] [-- 脚本参数...]
@@ -100,61 +105,6 @@ print_usage() {
 EOF
 }
 
-xml_escape() {
-    local input="${1:-}"
-    local escaped="$input"
-    local replacements=(
-        '&' '&amp;'
-        '<' '&lt;'
-        '>' '&gt;'
-        '"' '&quot;'
-        "'" '&apos;'
-    )
-    local index original replacement
-    for ((index = 1; index <= ${#replacements[@]}; index += 2)); do
-        original="${replacements[index]}"
-        replacement="${replacements[index + 1]}"
-        escaped="${escaped//$original/$replacement}"
-    done
-    printf "%s" "$escaped"
-}
-
-resolve_path() {
-    local path="$1"
-    if [[ "$path" == /* ]]; then
-        printf "%s" "$path"
-        return
-    fi
-    local dir_part="${path:h}"
-    local base_part="${path:t}"
-    local resolved_dir
-    if ! resolved_dir="$(cd "$PWD" && cd "$dir_part" 2>/dev/null && pwd)"; then
-        error "无法解析路径: $path"
-        exit 1
-    fi
-    printf "%s/%s" "$resolved_dir" "$base_part"
-}
-
-resolve_directory() {
-    local path="$1"
-    local resolved="$(resolve_path "$path")"
-    if [[ ! -d "$resolved" ]]; then
-        error "目录不存在: $resolved"
-        exit 1
-    fi
-    printf "%s" "$resolved"
-}
-
-get_plist_path() {
-    local job_name="$1"
-    printf "%s/%s.%s.plist" "$LAUNCH_AGENTS_DIR" "$JOB_LABEL_PREFIX" "$job_name"
-}
-
-get_label() {
-    local job_name="$1"
-    printf "%s.%s" "$JOB_LABEL_PREFIX" "$job_name"
-}
-
 validate_job_name() {
     local job_name="$1"
     if [[ -z "$job_name" ]]; then
@@ -179,198 +129,6 @@ validate_script() {
     fi
 }
 
-ensure_directories() {
-    mkdir -p "$LAUNCH_AGENTS_DIR"
-    mkdir -p "$LOG_BASE_DIR"
-}
-
-compose_program_arguments() {
-    local script_path="$1"
-    shift
-    local args=("$script_path" "$@")
-    local xml="    <key>ProgramArguments</key>\n    <array>\n"
-    local arg
-    for arg in "${args[@]}"; do
-        xml+="      <string>$(xml_escape "$arg")</string>\n"
-    done
-    xml+="    </array>\n"
-    printf "%s" "$xml"
-}
-
-compose_schedule_block() {
-    local interval_minutes="$1"
-    local at_time="$2"
-    local weekday="$3"
-    local xml=""
-    if [[ -n "$interval_minutes" ]]; then
-        local seconds=$((interval_minutes * 60))
-        if (( seconds <= 0 )); then
-            error "--interval 必须为正整数"
-            exit 1
-        fi
-        xml+="    <key>StartInterval</key>\n    <integer>${seconds}</integer>\n"
-    fi
-    if [[ -n "$at_time" ]]; then
-        if [[ ! "$at_time" =~ ^[0-2][0-9]:[0-5][0-9]$ ]]; then
-            error "--at 格式必须为 HH:MM"
-            exit 1
-        fi
-        local hour="${at_time%%:*}"
-        local minute="${at_time##*:}"
-        xml+="    <key>StartCalendarInterval</key>\n    <dict>\n      <key>Hour</key>\n      <integer>${hour#0}</integer>\n      <key>Minute</key>\n      <integer>${minute#0}</integer>\n"
-        if [[ -n "$weekday" ]]; then
-            if ! [[ "$weekday" =~ ^[0-6]$ ]]; then
-                error "--weekday 取值范围 0-6"
-                exit 1
-            fi
-            xml+="      <key>Weekday</key>\n      <integer>${weekday}</integer>\n"
-        fi
-        xml+="    </dict>\n"
-    fi
-    if [[ -z "$xml" ]]; then
-        error "需要指定 --interval 或 --at"
-        exit 1
-    fi
-    printf "%s" "$xml"
-}
-
-compose_plist() {
-    local label="$1"
-    local working_dir="$2"
-    local stdout_path="$3"
-    local stderr_path="$4"
-    local keepalive="$5"
-    local disabled="$6"
-    local schedule_block="$7"
-    local program_block="$8"
-
-    local xml_header="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n    <key>Label</key>\n    <string>${label}</string>\n"
-
-    local xml_footer="</dict>\n</plist>\n"
-
-    local xml_body="${program_block}    <key>WorkingDirectory</key>\n    <string>$(xml_escape "$working_dir")</string>\n    <key>StandardOutPath</key>\n    <string>$(xml_escape "$stdout_path")</string>\n    <key>StandardErrorPath</key>\n    <string>$(xml_escape "$stderr_path")</string>\n    <key>RunAtLoad</key>\n    <true/>\n"
-
-    if [[ "$keepalive" == "1" ]]; then
-        xml_body+="    <key>KeepAlive</key>\n    <true/>\n"
-    fi
-
-    xml_body+="$schedule_block"
-
-    if [[ "$disabled" == "1" ]]; then
-        xml_body+="    <key>Disabled</key>\n    <true/>\n"
-    fi
-
-    printf "%s%s%s" "$xml_header" "$xml_body" "$xml_footer"
-}
-
-backup_existing_plist() {
-    local plist_path="$1"
-    local backup_dir="${plist_path}.bak"
-    local timestamp="$(date +%Y%m%d_%H%M%S)"
-    mkdir -p "$backup_dir"
-    local backup_path="${backup_dir}/$(basename "$plist_path").${timestamp}"
-    cp "$plist_path" "$backup_path"
-    info "已备份旧版本: ${backup_path}"
-}
-
-write_plist_file() {
-    local plist_path="$1"
-    local plist_content="$2"
-    printf "%s" "$plist_content" > "$plist_path"
-    plutil -lint "$plist_path" >/dev/null
-}
-
-launchctl_bootstrap() {
-    local plist_path="$1"
-    local label="$2"
-    local dry_run="$3"
-    local current_session="gui/$(id -u)"
-
-    if [[ "$dry_run" == "1" ]]; then
-        info "(dry-run) 将执行: launchctl bootout ${current_session}/${label} (忽略不存在的错误)"
-        info "(dry-run) 将执行: launchctl bootstrap ${current_session} ${plist_path}"
-        info "(dry-run) 将执行: launchctl enable ${current_session}/${label}"
-        return
-    fi
-
-    if launchctl print "${current_session}/${label}" >/dev/null 2>&1; then
-        info "卸载已存在的任务 ${label}"
-        launchctl bootout "${current_session}/${label}" >/dev/null 2>&1 || true
-    fi
-    info "加载新任务 ${label}"
-    launchctl bootstrap "${current_session}" "$plist_path"
-    info "启用任务 ${label}"
-    launchctl enable "${current_session}/${label}"
-}
-
-launchctl_bootout() {
-    local label="$1"
-    local dry_run="$2"
-    local current_session="gui/$(id -u)"
-    if [[ "$dry_run" == "1" ]]; then
-        info "(dry-run) 将执行: launchctl bootout ${current_session}/${label}"
-        return
-    fi
-    if launchctl print "${current_session}/${label}" >/dev/null 2>&1; then
-        info "卸载任务 ${label}"
-        launchctl bootout "${current_session}/${label}"
-    else
-        warning "未检测到正在运行的任务"
-    fi
-}
-
-launchctl_disable() {
-    local label="$1"
-    local dry_run="$2"
-    local current_session="gui/$(id -u)"
-    if [[ "$dry_run" == "1" ]]; then
-        info "(dry-run) 将执行: launchctl disable ${current_session}/${label}"
-        return
-    fi
-    launchctl disable "${current_session}/${label}" || warning "禁用命令返回非零"
-}
-
-show_status() {
-    local job_name="$1"
-    local label
-    label="$(get_label "$job_name")"
-    local current_session="gui/$(id -u)"
-    info "查看任务 ${label} 状态..."
-    if launchctl print "${current_session}/${label}" >/dev/null 2>&1; then
-        launchctl print "${current_session}/${label}" | sed 's/^/    /'
-        success "任务处于已加载状态"
-    else
-        warning "任务未加载，可使用 enable 或 create --no-load false 重新加载"
-    fi
-}
-
-list_jobs() {
-    info "列出当前用户的脚本任务..."
-    local count=0
-    for plist in "$LAUNCH_AGENTS_DIR"/${JOB_LABEL_PREFIX}.*.plist(N); do
-        [[ -f "$plist" ]] || continue
-        local job_name
-        job_name="${plist##*.job.}"
-        job_name="${job_name%.plist}"
-        printf "  - %s (%s)\n" "$job_name" "$plist"
-        ((count++))
-    done
-    if (( count == 0 )); then
-        warning "未找到任何 ${JOB_LABEL_PREFIX} 前缀的任务"
-    fi
-}
-
-sanitize_log_path() {
-    local path="$1"
-    if [[ -z "$path" ]]; then
-        printf "%s" "$path"
-        return
-    fi
-    local dir="$(dirname "$path")"
-    mkdir -p "$dir"
-    printf "%s" "$path"
-}
-
 execute_create() {
     local job_name="$1" script_path="$2" interval="$3" at_time="$4" weekday="$5"
     local keepalive_flag="$6" working_dir="$7" stdout_path="$8" stderr_path="$9" disabled_flag="${10}" no_load_flag="${11}" dry_run="${12}"
@@ -379,7 +137,7 @@ execute_create() {
 
     job_timer_start "创建任务 ${job_name}" "创建任务 ${job_name}"
 
-    ensure_directories
+    ensure_job_directories
 
     local label
     label="$(get_label "$job_name")"
@@ -487,151 +245,6 @@ shift || true
 require_command launchctl
 require_command plutil
 
-JOB_NAME=""
-TARGET_SCRIPT=""
-INTERVAL=""
-AT_TIME=""
-WEEKDAY=""
-KEEPALIVE=0
-WORKING_DIR="$REPO_ROOT"
-STDOUT_PATH=""
-STDERR_PATH=""
-DRY_RUN=0
-NO_LOAD=0
-DISABLED=0
-NO_FORCE=1
-EXTRA_ARGS=()
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --job-name)
-            JOB_NAME="$2"
-            shift 2
-            ;;
-        --script)
-            TARGET_SCRIPT="$2"
-            shift 2
-            ;;
-        --interval)
-            INTERVAL="$2"
-            shift 2
-            ;;
-        --at)
-            AT_TIME="$2"
-            shift 2
-            ;;
-        --weekday)
-            WEEKDAY="$2"
-            shift 2
-            ;;
-        --keepalive)
-            KEEPALIVE=1
-            shift
-            ;;
-        --working-dir)
-            WORKING_DIR="$2"
-            shift 2
-            ;;
-        --stdout)
-            STDOUT_PATH="$2"
-            shift 2
-            ;;
-        --stderr)
-            STDERR_PATH="$2"
-            shift 2
-            ;;
-        --no-load)
-            NO_LOAD=1
-            shift
-            ;;
-        --disabled)
-            DISABLED=1
-            shift
-            ;;
-        --dry-run)
-            DRY_RUN=1
-            shift
-            ;;
-        --force)
-            NO_FORCE=0
-            shift
-            ;;
-        --help|-h)
-            print_usage
-            exit 0
-            ;;
-        --)
-            shift
-            EXTRA_ARGS=("$@")
-            break
-            ;;
-        *)
-            error "未识别的参数: $1"
-            print_usage
-            exit 1
-            ;;
-    esac
-done
-
-if [[ "$ACTION" == "create" ]]; then
-    validate_job_name "$JOB_NAME"
-    if [[ -z "$TARGET_SCRIPT" ]]; then
-        error "create 动作需要提供 --script"
-        exit 1
-    fi
-    if [[ -n "$INTERVAL" && ! "$INTERVAL" =~ ^[0-9]+$ ]]; then
-        error "--interval 需要正整数"
-        exit 1
-    fi
-    TARGET_SCRIPT="$(resolve_path "$TARGET_SCRIPT")"
-    validate_script "$TARGET_SCRIPT"
-
-    WORKING_DIR="$(resolve_directory "$WORKING_DIR")"
-
-    if [[ -z "$STDOUT_PATH" ]]; then
-        STDOUT_PATH="${LOG_BASE_DIR}/${JOB_NAME}.out.log"
-    else
-        STDOUT_PATH="$(sanitize_log_path "$STDOUT_PATH")"
-    fi
-    if [[ -z "$STDERR_PATH" ]]; then
-        STDERR_PATH="${LOG_BASE_DIR}/${JOB_NAME}.err.log"
-    else
-        STDERR_PATH="$(sanitize_log_path "$STDERR_PATH")"
-    fi
-
-    execute_create "$JOB_NAME" "$TARGET_SCRIPT" "$INTERVAL" "$AT_TIME" "$WEEKDAY" "$KEEPALIVE" "$WORKING_DIR" "$STDOUT_PATH" "$STDERR_PATH" "$DISABLED" "$NO_LOAD" "$DRY_RUN" "${EXTRA_ARGS[@]}"
-    exit 0
-fi
-
-if [[ "$ACTION" == "delete" ]]; then
-    validate_job_name "$JOB_NAME"
-    execute_delete "$JOB_NAME" "$DRY_RUN"
-    exit 0
-fi
-
-if [[ "$ACTION" == "enable" ]]; then
-    validate_job_name "$JOB_NAME"
-    execute_enable "$JOB_NAME" "$DRY_RUN"
-    exit 0
-fi
-
-if [[ "$ACTION" == "disable" ]]; then
-    validate_job_name "$JOB_NAME"
-    execute_disable "$JOB_NAME" "$DRY_RUN"
-    exit 0
-fi
-
-if [[ "$ACTION" == "status" ]]; then
-    validate_job_name "$JOB_NAME"
-    show_status "$JOB_NAME"
-    exit 0
-fi
-
-if [[ "$ACTION" == "list" ]]; then
-    list_jobs
-    exit 0
-fi
-
-error "未知动作: ${ACTION}"
-print_usage
-exit 1
+init_scheduler_args
+parse_scheduler_args "$@"
+dispatch_scheduler_action

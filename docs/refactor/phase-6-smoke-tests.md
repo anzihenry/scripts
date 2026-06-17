@@ -13,8 +13,14 @@
 ## 入口
 
 ```bash
+./tests/syntax_guard.sh
 ./tests/smoke_cli.sh
 ```
+
+其中：
+
+- `syntax_guard.sh`：按 shebang 执行 `zsh -n` / `bash -n`，不依赖 `shellcheck` / `shfmt`
+- `smoke_cli.sh`：覆盖统一 CLI 的关键成功/失败路径
 
 ## 当前覆盖项
 
@@ -23,6 +29,12 @@
 3. `macos-scripts maintain brew --dry-run`
 4. `macos-scripts release verify` 缺少 tag 的失败提示
 5. `macos-scripts setup github --domain example.com` 的参数校验失败提示
+6. `macos-scripts job list`
+7. `macos-scripts job disable --job-name ... --dry-run`
+8. `macos-scripts job create --job-name ... --script ... --interval ... --dry-run -- ...`
+9. `macos-scripts job create --job-name ... --interval ... --dry-run` 缺少 `--script` 的失败提示
+10. `macos-scripts job create --job-name ... --script ... --interval abc --dry-run` 的参数校验失败提示
+11. `macos-scripts job create --job-name bad name ...` 对分隔符前游离参数的失败提示
 
 ## 设计原则
 

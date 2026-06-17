@@ -52,6 +52,7 @@ description: "macOS 初始化脚本规范"
 
 ## 验证与交付
 - 语法检查：`zsh -n setup/<script>.sh`。
+- 快速护栏：`./tests/syntax_guard.sh`。
 - Lint：通过 `./lint/lint_shell.sh`。
 - 手动验证：视脚本功能补充，例如验证 Homebrew 是否安装成功、配置文件是否追加正确。
 

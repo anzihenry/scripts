@@ -43,6 +43,7 @@ description: "Launchd 定时任务脚本规范"
 
 ## 验证与交付
 - 语法检查：`zsh -n job/<script>.sh`。
+- 快速护栏：`./tests/syntax_guard.sh`。
 - Lint：`./lint/lint_shell.sh`。
 - 手动验证：建议创建带 `--dry-run` 的示例命令，提示如何查看任务状态与日志。
 
