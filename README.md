@@ -261,6 +261,7 @@ cd maintain
 - `lib/utils.sh`：日志路径解析、运行时 helper、依赖检查
 - `tests/smoke_cli.sh`：最小 CLI 回归护栏
 - `docs/refactor/`：重构基线、阶段说明与验证记录
+- `docs/refactor/backlog-triage-template.md`：后续 backlog 归类、排序与验收模板
 
 ## 🧪 运行验证
 
