@@ -1,20 +1,6 @@
 #!/bin/bash
 # filepath: maintain/lib/release_publish_flow.sh
 
-run_release_command() {
-  local description="$1"
-  shift
-
-  if [[ "$DRY_RUN" == "true" ]]; then
-    info "[dry-run] $description"
-    print_code "$*"
-    return 0
-  fi
-
-  info "$description"
-  "$@"
-}
-
 release_exists() {
   env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" > /dev/null 2>&1
 }
@@ -51,13 +37,13 @@ create_or_update_release() {
       exit 1
     fi
 
-    run_release_command "更新 GitHub Release: $TAG" \
+    run_logged_command "更新 GitHub Release: $TAG" \
       gh release edit "$TAG" \
       --repo "$REPO_SLUG" \
       --title "$TITLE" \
       --notes-file "$NOTES_FILE"
   else
-    run_release_command "创建 GitHub Release: $TAG" \
+    run_logged_command "创建 GitHub Release: $TAG" \
       gh release create "$TAG" \
       --repo "$REPO_SLUG" \
       --title "$TITLE" \

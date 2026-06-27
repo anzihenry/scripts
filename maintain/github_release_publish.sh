@@ -15,6 +15,8 @@ source "$SCRIPT_DIR/lib/release_publish_context.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/release_publish_args.sh"
 # shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/command_runtime.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/release_publish_flow.sh"
 
 usage() {

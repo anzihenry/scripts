@@ -12,6 +12,25 @@ acquire_installer_lock() {
   fi
 }
 
+sub_list() {
+  require_command softwareupdate
+
+  print_header "列出可用的 macOS 完整安装器"
+  log_info "系统: $(sw_vers -productName) $(sw_vers -productVersion)"
+  log_info "softwareupdate 版本: $(softwareupdate --version 2>/dev/null || echo 'unknown')"
+
+  print_step 1 1 "查询可用的完整安装器..."
+  log_time_start "list_full_installers" "softwareupdate 查询完整安装器"
+  if ! softwareupdate --list-full-installers; then
+    log_time_end "list_full_installers" "softwareupdate 列表查询" "error"
+    log_error "softwareupdate 列表查询失败"
+    exit 1
+  fi
+  log_time_end "list_full_installers" "softwareupdate 列表查询"
+
+  success "列表获取完成"
+}
+
 resolve_existing_installer_for_download() {
   find_installer_app "$DOWNLOAD_VERSION" || true
 }
@@ -30,6 +49,37 @@ verify_downloaded_installer() {
   else
     warning "未自动定位到安装器，但下载命令已成功返回。请在 /Applications 中手动确认 'Install macOS *.app'"
   fi
+}
+
+sub_download() {
+  require_command softwareupdate
+
+  parse_download_args "$@"
+
+  acquire_installer_lock "download_${DOWNLOAD_VERSION}"
+
+  print_header "下载 macOS 安装器"
+  print_step 1 3 "检查已有安装器..."
+  local existing=""
+  existing="$(resolve_existing_installer_for_download)"
+  if should_skip_installer_download "$existing"; then
+    success "已存在版本 ${DOWNLOAD_VERSION} 的安装器：$existing，跳过下载（使用 --force 可强制重下）。"
+    return 0
+  fi
+  [ -n "$existing" ] && warning "检测到已存在安装器: $existing，将按 --force 重新下载。"
+
+  print_step 2 3 "开始下载 macOS 安装器版本: $(highlight "$DOWNLOAD_VERSION")"
+  log_info "目标目录: /Applications (将生成 Install macOS *.app)"
+  log_time_start "download_${DOWNLOAD_VERSION}" "softwareupdate 下载 ${DOWNLOAD_VERSION}"
+  if ! softwareupdate --fetch-full-installer --full-installer-version "${DOWNLOAD_VERSION}"; then
+    log_time_end "download_${DOWNLOAD_VERSION}" "macOS 安装器下载" "error"
+    log_error "下载失败，请检查版本号是否有效、网络是否可用，或先执行 '$SCRIPT_NAME list' 查看可用版本。"
+    exit 1
+  fi
+  log_time_end "download_${DOWNLOAD_VERSION}" "macOS 安装器下载"
+
+  print_step 3 3 "校验下载结果..."
+  verify_downloaded_installer
 }
 
 validate_create_target_volume() {
@@ -82,6 +132,54 @@ ensure_create_target_is_ready() {
   fi
 
   return 0
+}
+
+run_createinstallmedia() {
+  log_info "需要管理员权限，可能会提示输入密码。"
+  log_time_start "createinstallmedia_${CREATE_VOLUME}" "写入安装器至 $CREATE_VOLUME"
+  if ! sudo "$CREATEINSTALLMEDIA_PATH" --volume "$CREATE_VOLUME" --nointeraction; then
+    log_time_end "createinstallmedia_${CREATE_VOLUME}" "createinstallmedia 执行" "error"
+    log_error "createinstallmedia 执行失败。请检查 USB 是否可写、容量是否足够（建议 ≥ 16GB），或查看系统日志。"
+    exit 1
+  fi
+  log_time_end "createinstallmedia_${CREATE_VOLUME}" "createinstallmedia 执行"
+}
+
+print_create_completion() {
+  success "USB 启动盘制作完成: $CREATE_VOLUME（应被重命名为：$CREATE_APP_LABEL）"
+  log_info "使用方法："
+  log_info "- Apple Silicon: 关机后按住电源键进入启动选项，选择该 U 盘"
+  log_info "- Intel Mac: 开机时按住 Option 键选择启动盘"
+}
+
+sub_create() {
+  parse_create_args "$@"
+
+  print_header "制作 macOS USB 启动盘"
+  print_step 1 6 "校验参数与环境"
+
+  validate_create_target_volume
+
+  require_command sudo
+  require_command diskutil
+
+  print_step 2 6 "解析安装器路径与版本"
+  resolve_create_installer_path
+  prepare_createinstallmedia_context
+
+  print_step 3 6 "幂等性检查"
+  ensure_create_target_is_ready || return 0
+
+  acquire_installer_lock "create_$(sanitize_key "$CREATE_VOLUME")"
+
+  print_step 4 6 "确认将抹掉目标卷数据"
+  confirm_create_target_wipe
+
+  print_step 5 6 "执行 createinstallmedia"
+  run_createinstallmedia
+
+  print_step 6 6 "收尾与提示"
+  print_create_completion
 }
 
 confirm_create_target_wipe() {

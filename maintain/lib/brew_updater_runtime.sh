@@ -1,18 +1,6 @@
 #!/bin/zsh
 # filepath: maintain/lib/brew_updater_runtime.sh
 
-command_preview() {
-    printf '%s' "${(q-)@}"
-}
-
-run_command() {
-    if [[ "$DRY_RUN" == "true" ]]; then
-        print_code "$(command_preview "$@")"
-        return 0
-    fi
-    "$@"
-}
-
 confirm_run() {
     [[ "$DRY_RUN" == "true" || "$ASSUME_YES" == "true" ]] && return 0
 
@@ -22,14 +10,67 @@ confirm_run() {
     fi
 }
 
+announce_brew_updater_context() {
+    print_header "Homebrew 维护工具"
+    info "错误日志位置: $ERROR_LOG"
+    if [[ "$FORCE_CASKS" == "true" ]]; then
+        warning "已启用 --force，将包含默认排除的 Cask"
+    fi
+}
+
+run_homebrew_update() {
+    print_header "步骤 1：更新 Homebrew 元数据"
+    run_timed_command_or_fail \
+        "brew_update" \
+        "执行 brew update" \
+        "brew update 完成" \
+        "brew update 失败" \
+        "brew update 执行失败" \
+        brew update
+}
+
+run_formulae_upgrade() {
+    print_header "步骤 2：更新 Formulae"
+    run_timed_command_or_fail \
+        "brew_upgrade_formulae" \
+        "执行 brew upgrade" \
+        "Formulae 更新完成" \
+        "Formulae 更新失败" \
+        "brew upgrade 执行失败" \
+        brew upgrade
+}
+
 run_cleanup() {
     print_header "步骤 4：清理缓存"
-    log_time_start "brew_cleanup" "执行 brew cleanup"
-    if ! run_command brew cleanup; then
-        log_time_end "brew_cleanup" "brew cleanup 失败" "error"
-        log_fatal "brew cleanup 执行失败"
+    run_timed_command_or_fail \
+        "brew_cleanup" \
+        "执行 brew cleanup" \
+        "brew cleanup 完成" \
+        "brew cleanup 失败" \
+        "brew cleanup 执行失败" \
+        brew cleanup
+}
+
+run_brew_updater_workflow() {
+    run_homebrew_update
+
+    if [[ "$SKIP_FORMULAE" == "true" ]]; then
+        warning "已跳过 Formulae 更新"
+    else
+        run_formulae_upgrade
     fi
-    log_time_end "brew_cleanup" "brew cleanup 完成"
+
+    if [[ "$SKIP_CASKS" == "true" ]]; then
+        warning "已跳过 Cask 更新"
+    else
+        run_cask_upgrades
+    fi
+
+    if [[ "$SKIP_CLEANUP" == "true" ]]; then
+        warning "已跳过缓存清理"
+    else
+        run_cleanup
+    fi
 }
 
 print_summary() {
