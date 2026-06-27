@@ -124,6 +124,7 @@ ensure_create_target_is_ready() {
 
     if [ "$CREATE_FORCE" != "yes" ]; then
       die "目标卷包含不同版本的安装器（$vol_ver）。使用 --force 覆盖，或更换目标卷。"
+      return 1
     fi
 
     warning "将按 --force 覆盖卷上现有内容（当前版本 $vol_ver -> 目标版本 $CREATE_APP_VERSION）。"
