@@ -11,22 +11,11 @@ source "$REPO_ROOT/lib/colors.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/lib/utils.sh"
 # shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/release_publish_context.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/release_publish_args.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/release_publish_flow.sh"
-
-RELEASE_LOG_FILE="$(prepare_log_file_path "github-release-publish.log" "$SCRIPT_DIR/github-release-publish.log")"
-enable_log_capture "$RELEASE_LOG_FILE"
-
-REPO_SLUG="anzihenry/scripts"
-TAG=""
-TARGET="main"
-TITLE=""
-NOTES_FILE=""
-YES="false"
-DRY_RUN="false"
-VERIFY_ONLY="false"
-UPDATE_EXISTING="false"
 
 usage() {
   cat << EOF
@@ -64,6 +53,7 @@ EOF
 }
 
 main() {
+  initialize_release_publish_context
   parse_release_publish_args "$@"
   check_release_prerequisites
   print_release_state || true
