@@ -13,15 +13,17 @@ set -e
 set -u
 set -o pipefail
 
-SCRIPT_NAME="$(basename "$0")"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ==== 日志与颜色：集成 utils.sh（自动加载 colors.sh 并提供 fallback）====
 # shellcheck disable=SC1090
 source "$SCRIPT_DIR/../lib/utils.sh"
-
-MAINTAIN_LOG_FILE="$(prepare_log_file_path "macos-installer.log" "$SCRIPT_DIR/macos-installer.log")"
-enable_log_capture "$MAINTAIN_LOG_FILE"
+# shellcheck disable=SC1090
+source "$SCRIPT_DIR/lib/macos_installer_args.sh"
+# shellcheck disable=SC1090
+source "$SCRIPT_DIR/lib/macos_installer_commands.sh"
+# shellcheck disable=SC1090
+source "$SCRIPT_DIR/lib/macos_installer_flow.sh"
 
 if [ -f "$SCRIPT_DIR/lib/macos_installer_utils.sh" ]; then
   # shellcheck disable=SC1090
@@ -68,8 +70,6 @@ fi
 
 die() { log_fatal "$@"; }
 
-VERBOSE="false"
-
 usage() {
   cat <<EOF
 用法:
@@ -87,18 +87,6 @@ usage() {
   $SCRIPT_NAME download --version 14.6.1
   $SCRIPT_NAME create --volume /Volumes/MyUSB --version 14.6 -y
 EOF
-}
-
-LOCK_DIR=""
-acquire_lock() {
-  local key="$(sanitize_key "$1")"
-  LOCK_DIR="/tmp/${SCRIPT_NAME}.${key}.lock"
-  if mkdir "$LOCK_DIR" 2>/dev/null; then
-    trap 'rm -rf "$LOCK_DIR"' EXIT INT TERM HUP
-    log_debug "已获取锁: $LOCK_DIR"
-  else
-    die "另一个相同操作正在进行中（锁: $LOCK_DIR）。稍后重试。"
-  fi
 }
 
 # ------------------- 子命令：list -------------------
@@ -126,51 +114,32 @@ sub_list() {
 sub_download() {
   require_command softwareupdate
 
-  local VERSION=""
-  local FORCE="no"
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --version) VERSION="${2:-}"; shift 2;;
-      --force|-f) FORCE="yes"; shift;;
-      -v|--verbose) VERBOSE="true"; shift;;
-      -h|--help) usage; exit 0;;
-      *) die "未知参数: $1";;
-    esac
-  done
-  [ -n "${VERSION}" ] || die "请通过 --version 指定版本号，例如 --version 14.6.1"
-  [ "$VERBOSE" = "true" ] && export DEBUG=true
+  parse_download_args "$@"
 
-  acquire_lock "download_${VERSION}"
+  acquire_installer_lock "download_${DOWNLOAD_VERSION}"
 
   print_header "下载 macOS 安装器"
   print_step 1 3 "检查已有安装器..."
   local existing=""
-  existing="$(find_installer_app "$VERSION" || true)"
-  if [ -n "$existing" ] && [ "$FORCE" != "yes" ]; then
-    success "已存在版本 ${VERSION} 的安装器：$existing，跳过下载（使用 --force 可强制重下）。"
+  existing="$(resolve_existing_installer_for_download)"
+  if should_skip_installer_download "$existing"; then
+    success "已存在版本 ${DOWNLOAD_VERSION} 的安装器：$existing，跳过下载（使用 --force 可强制重下）。"
     return 0
   fi
   [ -n "$existing" ] && warning "检测到已存在安装器: $existing，将按 --force 重新下载。"
 
-  print_step 2 3 "开始下载 macOS 安装器版本: $(highlight "$VERSION")"
+  print_step 2 3 "开始下载 macOS 安装器版本: $(highlight "$DOWNLOAD_VERSION")"
   log_info "目标目录: /Applications (将生成 Install macOS *.app)"
-  log_time_start "download_${VERSION}" "softwareupdate 下载 ${VERSION}"
-  if ! softwareupdate --fetch-full-installer --full-installer-version "${VERSION}"; then
-    log_time_end "download_${VERSION}" "macOS 安装器下载" "error"
+  log_time_start "download_${DOWNLOAD_VERSION}" "softwareupdate 下载 ${DOWNLOAD_VERSION}"
+  if ! softwareupdate --fetch-full-installer --full-installer-version "${DOWNLOAD_VERSION}"; then
+    log_time_end "download_${DOWNLOAD_VERSION}" "macOS 安装器下载" "error"
     log_error "下载失败，请检查版本号是否有效、网络是否可用，或先执行 '$SCRIPT_NAME list' 查看可用版本。"
     exit 1
   fi
-  log_time_end "download_${VERSION}" "macOS 安装器下载"
+  log_time_end "download_${DOWNLOAD_VERSION}" "macOS 安装器下载"
 
   print_step 3 3 "校验下载结果..."
-  local after="" after_ver=""
-  after="$(find_installer_app "$VERSION" || true)"
-  [ -n "$after" ] && after_ver="$(get_installer_short_ver "$after")"
-  if [ -n "$after" ]; then
-    success "下载完成: $after (版本: ${after_ver:-unknown})"
-  else
-    warning "未自动定位到安装器，但下载命令已成功返回。请在 /Applications 中手动确认 'Install macOS *.app'"
-  fi
+  verify_downloaded_installer
 }
 
 # ------------------- 子命令：create -------------------
@@ -178,105 +147,40 @@ sub_download() {
 # - 若卷根已有 Install macOS*.app 且版本等于待写入安装器版本 => 直接成功并跳过
 # - 若卷已有其它版本安装器或非空内容 => 需要 --force 才覆盖（并抹盘）
 sub_create() {
-  local VOLUME=""
-  local INSTALLER_PATH=""
-  local VERSION=""
-  local YES="no"
-  local FORCE="no"
-
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --volume) VOLUME="${2:-}"; shift 2;;
-      --installer-path) INSTALLER_PATH="${2:-}"; shift 2;;
-      --version) VERSION="${2:-}"; shift 2;;
-      -y|--yes|--nointeraction) YES="yes"; shift;;
-      --force|-f) FORCE="yes"; shift;;
-      -v|--verbose) VERBOSE="true"; shift;;
-      -h|--help) usage; exit 0;;
-      *) die "未知参数: $1";;
-    esac
-  done
-
-  [ "$VERBOSE" = "true" ] && export DEBUG=true
+  parse_create_args "$@"
 
   print_header "制作 macOS USB 启动盘"
   print_step 1 6 "校验参数与环境"
 
-  [ -n "$VOLUME" ] || die "必须通过 --volume 指定目标卷，例如 --volume /Volumes/MyUSB"
-  [ -d "$VOLUME" ] || die "卷不存在: $VOLUME"
-  if [[ "$VOLUME" != /Volumes/* ]]; then
-    warning "目标卷不在 /Volumes 下，确保这是一个可抹写的可移动介质。"
-  fi
+  validate_create_target_volume
 
   require_command sudo
   require_command diskutil
 
   print_step 2 6 "解析安装器路径与版本"
-  if [ -z "$INSTALLER_PATH" ]; then
-    INSTALLER_PATH="$(find_installer_app "$VERSION" || true)"
-    [ -n "$INSTALLER_PATH" ] || die "未找到安装器。请先执行 'list' 和 'download'，或用 --installer-path 指定"
-  fi
-  [ -d "$INSTALLER_PATH" ] || die "安装器路径无效: $INSTALLER_PATH"
-
-  local CIM="$INSTALLER_PATH/Contents/Resources/createinstallmedia"
-  [ -x "$CIM" ] || die "缺少 createinstallmedia: $CIM"
-
-  local APP_VER APP_NAME APP_LABEL
-  APP_VER="$(get_installer_short_ver "$INSTALLER_PATH" || echo "unknown")"
-  APP_NAME="$(basename "$INSTALLER_PATH")"
-  APP_LABEL="$(get_installer_label "$INSTALLER_PATH")"
-
-  log_info "目标卷: $VOLUME"
-  log_info "安装器: $APP_NAME (版本 $APP_VER)"
-  log_debug "卷信息: $(diskutil info "$VOLUME" | tr '\n' ' ' | sed 's/  */ /g')"
+  resolve_create_installer_path
+  prepare_createinstallmedia_context
 
   print_step 3 6 "幂等性检查"
-  local VOL_APP="" VOL_VER=""
-  VOL_APP="$(detect_volume_installer_app "$VOLUME" || true)"
-  if [ -n "$VOL_APP" ]; then
-    VOL_VER="$(get_installer_short_ver "$VOL_APP")"
-    log_info "卷上检测到安装器: $(basename "$VOL_APP") (版本: ${VOL_VER:-unknown})"
-    if [ -n "$VOL_VER" ] && { [ "$VOL_VER" = "$APP_VER" ] || [[ "$VOL_VER" == "$APP_VER"* ]]; }; then
-      success "目标卷已是同版本可启动安装器（$VOL_VER），跳过制作。"
-      return 0
-    else
-      if [ "$FORCE" != "yes" ]; then
-        die "目标卷包含不同版本的安装器（$VOL_VER）。使用 --force 覆盖，或更换目标卷。"
-      else
-        warning "将按 --force 覆盖卷上现有内容（当前版本 $VOL_VER -> 目标版本 $APP_VER）。"
-      fi
-    fi
-  else
-    log_info "卷上未检测到安装器或为空，将继续创建。"
-  fi
+  ensure_create_target_is_ready || return 0
 
-  acquire_lock "create_$(sanitize_key "$VOLUME")"
+  acquire_installer_lock "create_$(sanitize_key "$CREATE_VOLUME")"
 
   print_step 4 6 "确认将抹掉目标卷数据"
-  warning "此操作将抹掉 ${VOLUME} 上的所有数据！"
-  if [ "$YES" != "yes" ]; then
-    if [ "$FORCE" = "yes" ]; then
-      warning "已指定 --force，将覆盖可能存在的旧安装器或其他文件。"
-    fi
-    if ! confirm "是否继续" "N"; then
-      die "已取消"
-    fi
-  else
-    log_info "已通过 -y/--yes，跳过交互确认"
-  fi
+  confirm_create_target_wipe
 
   print_step 5 6 "执行 createinstallmedia"
   log_info "需要管理员权限，可能会提示输入密码。"
-  log_time_start "createinstallmedia_${VOLUME}" "写入安装器至 $VOLUME"
-  if ! sudo "$CIM" --volume "$VOLUME" --nointeraction; then
-    log_time_end "createinstallmedia_${VOLUME}" "createinstallmedia 执行" "error"
+  log_time_start "createinstallmedia_${CREATE_VOLUME}" "写入安装器至 $CREATE_VOLUME"
+  if ! sudo "$CREATEINSTALLMEDIA_PATH" --volume "$CREATE_VOLUME" --nointeraction; then
+    log_time_end "createinstallmedia_${CREATE_VOLUME}" "createinstallmedia 执行" "error"
     log_error "createinstallmedia 执行失败。请检查 USB 是否可写、容量是否足够（建议 ≥ 16GB），或查看系统日志。"
     exit 1
   fi
-  log_time_end "createinstallmedia_${VOLUME}" "createinstallmedia 执行"
+  log_time_end "createinstallmedia_${CREATE_VOLUME}" "createinstallmedia 执行"
 
   print_step 6 6 "收尾与提示"
-  success "USB 启动盘制作完成: $VOLUME（应被重命名为：$APP_LABEL）"
+  success "USB 启动盘制作完成: $CREATE_VOLUME（应被重命名为：$CREATE_APP_LABEL）"
   log_info "使用方法："
   log_info "- Apple Silicon: 关机后按住电源键进入启动选项，选择该 U 盘"
   log_info "- Intel Mac: 开机时按住 Option 键选择启动盘"
@@ -284,22 +188,14 @@ sub_create() {
 
 # ------------------- 主入口 -------------------
 main() {
+  initialize_macos_installer_context
+  parse_macos_installer_global_args "$@"
+  set -- "${REMAINING_ARGS[@]}"
+
   [ $# -ge 1 ] || { usage; exit 1; }
 
-  case "${1:-}" in
-    -v|--verbose) VERBOSE="true"; shift;;
-  esac
-  [ "$VERBOSE" = "true" ] && export DEBUG=true
-
   log_info "日志文件位置: $MAINTAIN_LOG_FILE"
-
-  case "${1:-}" in
-    list) shift; sub_list "$@";;
-    download) shift; sub_download "$@";;
-    create) shift; sub_create "$@";;
-    -h|--help|help) usage;;
-    *) log_error "未知子命令: ${1:-}"; usage; exit 1;;
-  esac
+  dispatch_macos_installer_command "$@"
 }
 
 main "$@"
