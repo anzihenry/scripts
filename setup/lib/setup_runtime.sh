@@ -1,6 +1,20 @@
 #!/bin/zsh
 # filepath: setup/lib/setup_runtime.sh
 
+initialize_setup_context() {
+    SETUP_LOG_FILE="$(prepare_log_file_path "macos-setup.log" "$SCRIPT_DIR/setup.log")"
+    enable_log_capture "$SETUP_LOG_FILE"
+
+    DEFAULT_BREW_CONFIG_FILE="${SCRIPT_DIR}/brew.conf.sh"
+
+    if [[ -n "${MACOS_SCRIPTS_CONFIG_DIR:-}" ]]; then
+        mkdir -p "$MACOS_SCRIPTS_CONFIG_DIR"
+        BREW_CONFIG_FILE="${MACOS_SCRIPTS_CONFIG_DIR}/brew.conf.sh"
+    else
+        BREW_CONFIG_FILE="$DEFAULT_BREW_CONFIG_FILE"
+    fi
+}
+
 ensure_brew_config_file() {
     if [[ "$BREW_CONFIG_FILE" == "$DEFAULT_BREW_CONFIG_FILE" ]]; then
         return 0
@@ -81,4 +95,21 @@ install_core_software() {
     else
         success "核心软件安装完成"
     fi
+}
+
+run_setup_workflow() {
+    precheck
+    ensure_xcode_cli_installed
+    configure_homebrew
+
+    install_node
+    install_python
+    install_ruby
+    install_go
+    config_android_and_java
+
+    install_core_software
+
+    post_verification
+    print_setup_completion
 }

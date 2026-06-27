@@ -21,57 +21,11 @@ source "${JOB_LIB_DIR}/job_plist.sh"
 # shellcheck disable=SC1091
 source "${JOB_LIB_DIR}/job_launchctl.sh"
 # shellcheck disable=SC1091
+source "${JOB_LIB_DIR}/job_runtime.sh"
+# shellcheck disable=SC1091
 source "${JOB_LIB_DIR}/job_args.sh"
 # shellcheck disable=SC1091
 source "${JOB_LIB_DIR}/job_dispatch.sh"
-
-typeset -gA JOB_TIMERS
-
-_job_timer_key() {
-    local raw="${1:-default}"
-    echo "${raw//[^A-Za-z0-9]/_}" | tr '[:lower:]' '[:upper:]'
-}
-
-job_timer_start() {
-    local key="$(_job_timer_key "$1")"
-    local message="${2:-}"
-    local now
-    now="$(date +%s 2>/dev/null || printf '%s' "${EPOCHSECONDS:-0}")"
-    JOB_TIMERS[$key]="$now"
-    [[ -n "$message" ]] && info "$message (开始)"
-}
-
-job_timer_end() {
-    local key="$(_job_timer_key "$1")"
-    local message="${2:-任务完成}"
-    local level="${3:-success}"
-    local start="${JOB_TIMERS[$key]-}"
-
-    if [[ -z "$start" ]]; then
-        warning "未找到计时器：$1"
-        return 1
-    fi
-
-    local now
-    now="$(date +%s 2>/dev/null || printf '%s' "${EPOCHSECONDS:-0}")"
-    local duration=$(( now - start ))
-    local formatted
-    formatted="$(__color_format_duration "$duration")"
-
-    case "$level" in
-        success|ok)
-            success "${message}，耗时 ${formatted}"
-            ;;
-        warn|warning)
-            warning "${message}，耗时 ${formatted}"
-            ;;
-        *)
-            error "${message}，耗时 ${formatted}"
-            ;;
-    esac
-
-    unset "JOB_TIMERS[$key]"
-}
 
 print_usage() {
     cat <<'EOF'
@@ -235,16 +189,9 @@ execute_disable() {
     fi
 }
 
-ACTION="${1:-}" || true
-if [[ -z "$ACTION" || "$ACTION" == "--help" || "$ACTION" == "-h" ]]; then
-    print_usage
-    exit 0
-fi
-shift || true
+main() {
+    initialize_scheduler_context "$@"
+    run_scheduler_entry
+}
 
-require_command launchctl
-require_command plutil
-
-init_scheduler_args
-parse_scheduler_args "$@"
-dispatch_scheduler_action
+main "$@"
