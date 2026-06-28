@@ -81,6 +81,21 @@ main() {
     zsh bin/macos-scripts lint help
 
   run_expect_success_contains \
+    "Help setup topic" \
+    "macos-scripts setup github [参数]" \
+    zsh bin/macos-scripts help setup
+
+  run_expect_success_contains \
+    "Help maintain installer topic" \
+    "macos-scripts maintain installer download" \
+    zsh bin/macos-scripts help maintain installer
+
+  run_expect_success_contains \
+    "Job create help topic" \
+    "如需向目标脚本透传参数" \
+    zsh bin/macos-scripts job create --help
+
+  run_expect_success_contains \
     "Maintain brew dry-run" \
     "Homebrew 维护完成" \
     zsh bin/macos-scripts maintain brew --dry-run
@@ -94,6 +109,21 @@ main() {
     "Setup github rejects custom domain" \
     "setup github 固定使用 github.com" \
     zsh bin/macos-scripts setup github --domain example.com
+
+  run_expect_failure_contains \
+    "Setup shell rejects extra args" \
+    "该命令不接受额外参数: unexpected" \
+    zsh bin/macos-scripts setup shell unexpected
+
+  run_expect_failure_contains \
+    "Maintain brew rejects unsupported arg" \
+    "maintain brew 不支持参数: --bogus" \
+    zsh bin/macos-scripts maintain brew --bogus
+
+  run_expect_failure_contains \
+    "Release verify rejects unsupported arg" \
+    "release verify 不支持参数: --bogus" \
+    zsh bin/macos-scripts release verify v0.2.0 --bogus
 
   run_expect_success_contains \
     "Job list" \
@@ -111,6 +141,11 @@ main() {
     zsh bin/macos-scripts job create --job-name smoke-refactor --script ./lint/lint_shell.sh --interval 5 --dry-run -- --demo value
 
   run_expect_failure_contains \
+    "Job status requires job name" \
+    "job status 需要提供 --job-name" \
+    zsh bin/macos-scripts job status
+
+  run_expect_failure_contains \
     "Job create missing script" \
     "job create 需要提供 --script" \
     zsh bin/macos-scripts job create --job-name smoke-refactor --interval 5 --dry-run
@@ -119,6 +154,11 @@ main() {
     "Job create invalid interval" \
     "--interval 需要正整数" \
     zsh bin/macos-scripts job create --job-name smoke-refactor --script ./lint/lint_shell.sh --interval abc --dry-run
+
+  run_expect_failure_contains \
+    "Job create rejects weekday without at" \
+    "--weekday 需要配合 --at 使用" \
+    zsh bin/macos-scripts job create --job-name smoke-refactor --script ./lint/lint_shell.sh --interval 5 --weekday 1 --dry-run
 
   run_expect_failure_contains \
     "Job create rejects stray args before separator" \
