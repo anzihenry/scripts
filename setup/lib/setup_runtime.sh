@@ -15,6 +15,27 @@ initialize_setup_context() {
     fi
 }
 
+collect_configured_package_values() {
+    local prefix="$1"
+    local -a matched_names=()
+    local name
+    for name in ${(k)parameters}; do
+        [[ "$name" == ${prefix}* ]] || continue
+        [[ "${(Pt)name}" == *array* ]] || continue
+        matched_names+=("$name")
+    done
+
+    local -a values=()
+    local matched_name value
+    for matched_name in ${(on)matched_names}; do
+        for value in ${(P)matched_name}; do
+            values+=("$value")
+        done
+    done
+
+    printf '%s\n' "${values[@]}"
+}
+
 ensure_brew_config_file() {
     if [[ "$BREW_CONFIG_FILE" == "$DEFAULT_BREW_CONFIG_FILE" ]]; then
         return 0
@@ -53,40 +74,44 @@ configure_homebrew() {
     configure_homebrew_environment "$brew_bin"
 }
 
-install_core_software() {
-    print_header "安装核心开发工具"
+install_formulae_packages() {
+    local -a formulae=("$@")
 
-    source "$BREW_CONFIG_FILE"
-
-    bh_reset_summary
-
-    local install_failed=false
-    local all_formulae=(${(F)FORMULAE_@})
-    local all_casks=(${(F)CASKS_@})
-
-    if [[ ${#all_formulae[@]} -gt 0 ]]; then
-        log_time_start "brew_formulae" "安装 ${#all_formulae[@]} 个 Homebrew Formulae"
-        if bh_install_packages --formulae --retries 2 --label "Homebrew Formulae" "${all_formulae[@]}"; then
-            log_time_end "brew_formulae" "Formulae 安装" "success"
-        else
-            install_failed=true
-            log_time_end "brew_formulae" "Formulae 安装" "warn"
-        fi
-    else
+    if [[ ${#formulae[@]} -eq 0 ]]; then
         info "未在配置中检测到 Formulae 项"
+        return 0
     fi
 
-    if [[ ${#all_casks[@]} -gt 0 ]]; then
-        log_time_start "brew_casks" "安装 ${#all_casks[@]} 个 Homebrew Casks"
-        if bh_install_packages --cask --retries 2 --label "Homebrew Casks" "${all_casks[@]}"; then
-            log_time_end "brew_casks" "Cask 安装" "success"
-        else
-            install_failed=true
-            log_time_end "brew_casks" "Cask 安装" "warn"
-        fi
-    else
-        info "未在配置中检测到 Cask 项"
+    log_time_start "brew_formulae" "安装 ${#formulae[@]} 个 Homebrew Formulae"
+    if bh_install_packages --formulae --retries 2 --label "Homebrew Formulae" "${formulae[@]}"; then
+        log_time_end "brew_formulae" "Formulae 安装" "success"
+        return 0
     fi
+
+    log_time_end "brew_formulae" "Formulae 安装" "warn"
+    return 1
+}
+
+install_cask_packages() {
+    local -a casks=("$@")
+
+    if [[ ${#casks[@]} -eq 0 ]]; then
+        info "未在配置中检测到 Cask 项"
+        return 0
+    fi
+
+    log_time_start "brew_casks" "安装 ${#casks[@]} 个 Homebrew Casks"
+    if bh_install_packages --cask --retries 2 --label "Homebrew Casks" "${casks[@]}"; then
+        log_time_end "brew_casks" "Cask 安装" "success"
+        return 0
+    fi
+
+    log_time_end "brew_casks" "Cask 安装" "warn"
+    return 1
+}
+
+report_core_software_result() {
+    local install_failed="$1"
 
     bh_print_summary "核心软件安装报告"
 
@@ -95,6 +120,23 @@ install_core_software() {
     else
         success "核心软件安装完成"
     fi
+}
+
+install_core_software() {
+    print_header "安装核心开发工具"
+
+    source "$BREW_CONFIG_FILE"
+
+    bh_reset_summary
+
+    local install_failed=false
+    local all_formulae=("${(@f)$(collect_configured_package_values "FORMULAE_")}")
+    local all_casks=("${(@f)$(collect_configured_package_values "CASKS_")}")
+
+    install_formulae_packages "${all_formulae[@]}" || install_failed=true
+    install_cask_packages "${all_casks[@]}" || install_failed=true
+
+    report_core_software_result "$install_failed"
 }
 
 run_setup_workflow() {
