@@ -141,6 +141,32 @@ test_ensure_create_target_is_ready_requires_force_for_different_version() {
   assert_contains "$output" "DIE:目标卷包含不同版本的安装器" "different version path asks for force"
 }
 
+test_sub_download_keeps_phase_order() {
+  local calls=()
+  prepare_download_context() { calls+=("prepare:$*"); }
+  print_header() { calls+=("header:$1"); }
+  check_existing_installer_before_download() { calls+=("check"); return 0; }
+  run_installer_download() { calls+=("download"); }
+  complete_installer_download() { calls+=("complete"); }
+
+  sub_download --version 14.6.1 --force
+  assert_eq "${calls[*]}" "prepare:--version 14.6.1 --force header:下载 macOS 安装器 check download complete" "sub download keeps expected phase order"
+}
+
+test_sub_create_keeps_phase_order() {
+  local calls=()
+  prepare_create_context() { calls+=("prepare:$*"); }
+  print_header() { calls+=("header:$1"); }
+  validate_create_prerequisites() { calls+=("validate"); }
+  resolve_create_inputs() { calls+=("resolve"); }
+  check_create_target_readiness() { calls+=("ready"); return 0; }
+  acquire_create_lock_and_confirm() { calls+=("confirm"); }
+  run_create_execution() { calls+=("execute"); }
+
+  sub_create --volume /Volumes/TestUSB --version 14.6.1 -y
+  assert_eq "${calls[*]}" "prepare:--volume /Volumes/TestUSB --version 14.6.1 -y header:制作 macOS USB 启动盘 validate resolve ready confirm execute" "sub create keeps expected phase order"
+}
+
 main() {
   cd "$REPO_ROOT"
 
@@ -148,6 +174,8 @@ main() {
   test_resolve_create_installer_path_uses_discovery
   test_ensure_create_target_is_ready_same_version_skips
   test_ensure_create_target_is_ready_requires_force_for_different_version
+  test_sub_download_keeps_phase_order
+  test_sub_create_keeps_phase_order
 
   printf '\nmacOS installer flow guard passed: %d\n' "$PASS_COUNT"
 }

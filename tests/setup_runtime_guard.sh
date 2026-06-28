@@ -69,6 +69,8 @@ test_run_setup_workflow_order() {
   precheck() { calls+=("precheck"); }
   ensure_xcode_cli_installed() { calls+=("xcode"); }
   configure_homebrew() { calls+=("brew"); }
+  run_language_environment_setup() { calls+=("languages"); }
+  run_setup_completion_checks() { calls+=("completion"); }
   install_node() { calls+=("node"); }
   install_python() { calls+=("python"); }
   install_ruby() { calls+=("ruby"); }
@@ -79,7 +81,24 @@ test_run_setup_workflow_order() {
   print_setup_completion() { calls+=("done"); }
 
   run_setup_workflow
-  assert_eq "${calls[*]}" "precheck xcode brew node python ruby go android core verify done" "run setup workflow keeps expected execution order"
+  assert_eq "${calls[*]}" "precheck xcode brew languages core completion" "run setup workflow keeps expected execution order"
+}
+
+test_precheck_runs_expected_phases() {
+  # 恢复真实实现，避免被前一个 workflow 顺序测试里的 stub 覆盖。
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/setup/lib/setup_runtime.sh"
+
+  local calls=()
+  print_header() { calls+=("header:$1"); }
+  ensure_setup_brew_config_ready() { calls+=("config"); }
+  verify_setup_platform_requirements() { calls+=("platform"); }
+  verify_setup_network_access() { calls+=("network"); }
+  verify_setup_brew_command_available() { calls+=("brew"); }
+  success() { calls+=("success:$1"); }
+
+  precheck
+  assert_eq "${calls[*]}" "header:系统环境预检 config platform network brew success:系统环境预检通过" "precheck keeps expected phase order"
 }
 
 test_install_core_software_reports_failure() {
@@ -104,6 +123,7 @@ EOF
   local output_file=""
   output_file="$(mktemp "${TMPDIR:-/tmp}/setup-runtime-output.XXXXXX")"
 
+  print_header() { printf 'HEADER:%s\n' "$1"; }
   bh_reset_summary() { :; }
   bh_print_summary() { printf 'SUMMARY:%s\n' "$1"; }
   bh_install_packages() {
@@ -124,6 +144,7 @@ main() {
   cd "$REPO_ROOT"
   test_initialize_setup_context_prefers_config_dir
   test_run_setup_workflow_order
+  test_precheck_runs_expected_phases
   test_install_core_software_reports_failure
   printf '\nSetup runtime guard passed: %d\n' "$PASS_COUNT"
 }

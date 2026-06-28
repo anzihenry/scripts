@@ -47,22 +47,36 @@ ensure_brew_config_file() {
     fi
 }
 
-precheck() {
-    print_header "系统环境预检"
-
+ensure_setup_brew_config_ready() {
     ensure_brew_config_file
-
     [[ ! -f $BREW_CONFIG_FILE ]] && log_fatal "缺失 Homebrew 配置文件: $BREW_CONFIG_FILE"
+}
+
+verify_setup_platform_requirements() {
     require_macos_min_version "1015" "需要 macOS Catalina (10.15) 或更高版本"
 
     local free_space
     free_space="$(df -g / | tail -1 | awk '{print $4}')"
     [[ $free_space -lt 15 ]] && log_fatal "磁盘空间不足15GB (剩余: ${free_space}GB)"
+}
 
+verify_setup_network_access() {
     check_network_reachability "https://mirrors.ustc.edu.cn" "223.5.5.5" || \
         log_fatal "中科大源异常，网络连接失败，请检查网络设置"
+}
 
+verify_setup_brew_command_available() {
     require_command brew
+}
+
+precheck() {
+    print_header "系统环境预检"
+
+    ensure_setup_brew_config_ready
+    verify_setup_platform_requirements
+    verify_setup_network_access
+    verify_setup_brew_command_available
+
     success "系统环境预检通过"
 }
 
@@ -139,19 +153,25 @@ install_core_software() {
     report_core_software_result "$install_failed"
 }
 
-run_setup_workflow() {
-    precheck
-    ensure_xcode_cli_installed
-    configure_homebrew
-
+run_language_environment_setup() {
     install_node
     install_python
     install_ruby
     install_go
     config_android_and_java
+}
 
-    install_core_software
-
+run_setup_completion_checks() {
     post_verification
     print_setup_completion
+}
+
+run_setup_workflow() {
+    precheck
+    ensure_xcode_cli_installed
+    configure_homebrew
+
+    run_language_environment_setup
+    install_core_software
+    run_setup_completion_checks
 }

@@ -51,23 +51,25 @@ verify_downloaded_installer() {
   fi
 }
 
-sub_download() {
+prepare_download_context() {
   require_command softwareupdate
-
   parse_download_args "$@"
-
   acquire_installer_lock "download_${DOWNLOAD_VERSION}"
+}
 
-  print_header "下载 macOS 安装器"
+check_existing_installer_before_download() {
   print_step 1 3 "检查已有安装器..."
   local existing=""
   existing="$(resolve_existing_installer_for_download)"
   if should_skip_installer_download "$existing"; then
     success "已存在版本 ${DOWNLOAD_VERSION} 的安装器：$existing，跳过下载（使用 --force 可强制重下）。"
-    return 0
+    return 1
   fi
   [ -n "$existing" ] && warning "检测到已存在安装器: $existing，将按 --force 重新下载。"
+  return 0
+}
 
+run_installer_download() {
   print_step 2 3 "开始下载 macOS 安装器版本: $(highlight "$DOWNLOAD_VERSION")"
   log_info "目标目录: /Applications (将生成 Install macOS *.app)"
   log_time_start "download_${DOWNLOAD_VERSION}" "softwareupdate 下载 ${DOWNLOAD_VERSION}"
@@ -77,9 +79,20 @@ sub_download() {
     exit 1
   fi
   log_time_end "download_${DOWNLOAD_VERSION}" "macOS 安装器下载"
+}
 
+complete_installer_download() {
   print_step 3 3 "校验下载结果..."
   verify_downloaded_installer
+}
+
+sub_download() {
+  prepare_download_context "$@"
+
+  print_header "下载 macOS 安装器"
+  check_existing_installer_before_download || return 0
+  run_installer_download
+  complete_installer_download
 }
 
 validate_create_target_volume() {
@@ -153,34 +166,55 @@ print_create_completion() {
   log_info "- Intel Mac: 开机时按住 Option 键选择启动盘"
 }
 
-sub_create() {
+prepare_create_context() {
   parse_create_args "$@"
+}
 
-  print_header "制作 macOS USB 启动盘"
+validate_create_prerequisites() {
   print_step 1 6 "校验参数与环境"
 
   validate_create_target_volume
 
   require_command sudo
   require_command diskutil
+}
 
+resolve_create_inputs() {
   print_step 2 6 "解析安装器路径与版本"
   resolve_create_installer_path
   prepare_createinstallmedia_context
+}
 
+check_create_target_readiness() {
   print_step 3 6 "幂等性检查"
-  ensure_create_target_is_ready || return 0
+  ensure_create_target_is_ready || return 1
+  return 0
+}
 
+acquire_create_lock_and_confirm() {
   acquire_installer_lock "create_$(sanitize_key "$CREATE_VOLUME")"
 
   print_step 4 6 "确认将抹掉目标卷数据"
   confirm_create_target_wipe
+}
 
+run_create_execution() {
   print_step 5 6 "执行 createinstallmedia"
   run_createinstallmedia
 
   print_step 6 6 "收尾与提示"
   print_create_completion
+}
+
+sub_create() {
+  prepare_create_context "$@"
+
+  print_header "制作 macOS USB 启动盘"
+  validate_create_prerequisites
+  resolve_create_inputs
+  check_create_target_readiness || return 0
+  acquire_create_lock_and_confirm
+  run_create_execution
 }
 
 confirm_create_target_wipe() {

@@ -125,6 +125,18 @@ test_run_brew_updater_workflow_skip_flags() {
   assert_contains "$output" "WARN:已跳过缓存清理" "workflow reports skipped cleanup"
 }
 
+test_run_brew_updater_workflow_order() {
+  local calls=()
+
+  run_homebrew_update() { calls+=("update"); }
+  run_optional_formulae_upgrade() { calls+=("formulae"); }
+  run_optional_cask_upgrades() { calls+=("casks"); }
+  run_optional_cleanup() { calls+=("cleanup"); }
+
+  run_brew_updater_workflow
+  assert_eq "${calls[*]}" "update formulae casks cleanup" "workflow keeps expected phase order"
+}
+
 main() {
   cd "$REPO_ROOT"
 
@@ -132,6 +144,7 @@ main() {
   test_run_logged_command_dry_run
   test_announce_brew_updater_context
   test_run_brew_updater_workflow_skip_flags
+  test_run_brew_updater_workflow_order
 
   printf '\nMaintain runtime guard passed: %d\n' "$PASS_COUNT"
 }

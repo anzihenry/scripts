@@ -51,26 +51,38 @@ run_cleanup() {
         brew cleanup
 }
 
-run_brew_updater_workflow() {
-    run_homebrew_update
-
+run_optional_formulae_upgrade() {
     if [[ "$SKIP_FORMULAE" == "true" ]]; then
         warning "已跳过 Formulae 更新"
-    else
-        run_formulae_upgrade
+        return 0
     fi
 
+    run_formulae_upgrade
+}
+
+run_optional_cask_upgrades() {
     if [[ "$SKIP_CASKS" == "true" ]]; then
         warning "已跳过 Cask 更新"
-    else
-        run_cask_upgrades
+        return 0
     fi
 
+    run_cask_upgrades
+}
+
+run_optional_cleanup() {
     if [[ "$SKIP_CLEANUP" == "true" ]]; then
         warning "已跳过缓存清理"
-    else
-        run_cleanup
+        return 0
     fi
+
+    run_cleanup
+}
+
+run_brew_updater_workflow() {
+    run_homebrew_update
+    run_optional_formulae_upgrade
+    run_optional_cask_upgrades
+    run_optional_cleanup
 }
 
 print_summary() {
