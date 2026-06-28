@@ -30,6 +30,7 @@ print_job_status_help() { printf 'HELP:job-status\n'; }
 print_job_enable_help() { printf 'HELP:job-enable\n'; }
 print_job_disable_help() { printf 'HELP:job-disable\n'; }
 print_job_delete_help() { printf 'HELP:job-delete\n'; }
+validate_setup_git_args() { return 0; }
 validate_setup_github_args() { return 0; }
 validate_release_publish_args() { return 0; }
 validate_release_verify_args() { return 0; }
@@ -38,6 +39,15 @@ validate_job_list_args() { return 0; }
 validate_job_name_action_args() { return 0; }
 normalize_release_tag() { printf 'v%s' "${1#v}"; }
 infer_release_notes_file() { printf 'releases/%s-release-notes.md' "$1"; }
+
+# shellcheck disable=SC1091
+source "$REPO_ROOT/bin/lib/cli_runtime.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/bin/lib/cli_dispatch_release.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/bin/lib/cli_dispatch_setup.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/bin/lib/cli_dispatch_job.sh"
 
 RUN_BASH_SCRIPT_PATH=""
 typeset -ga RUN_BASH_SCRIPT_ARGS=()
@@ -55,18 +65,8 @@ run_zsh_script() {
   RUN_ZSH_SCRIPT_ARGS=("$@")
 }
 
-# shellcheck disable=SC1091
-source "$REPO_ROOT/bin/lib/cli_dispatch_release.sh"
-# shellcheck disable=SC1091
-source "$REPO_ROOT/bin/lib/cli_dispatch_setup.sh"
-# shellcheck disable=SC1091
-source "$REPO_ROOT/bin/lib/cli_dispatch_job.sh"
-
 test_setup_github_adds_defaults() {
-  handle_setup_git() {
-    RUN_BASH_SCRIPT_ARGS=("$@")
-  }
-
+  RUN_BASH_SCRIPT_ARGS=()
   handle_setup_github --force
   assert_eq "${RUN_BASH_SCRIPT_ARGS[*]}" "--domain github.com --type personal --force" "setup github forwards default domain and type"
 }

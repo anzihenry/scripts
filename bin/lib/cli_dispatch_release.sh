@@ -48,10 +48,8 @@ handle_release_publish() {
   validate_release_publish_args "$@" || return 1
 
   local -a forwarded_args=()
-  while IFS= read -r arg; do
-    forwarded_args+=("$arg")
-  done < <(build_release_forwarded_args publish "$@")
-  run_bash_script "maintain/github_release_publish.sh" "${forwarded_args[@]}"
+  load_forwarded_args forwarded_args build_release_forwarded_args publish "$@"
+  run_release_script "${forwarded_args[@]}"
 }
 
 handle_release_verify() {
@@ -59,10 +57,8 @@ handle_release_verify() {
   validate_release_verify_args "$@" || return 1
 
   local -a forwarded_args=()
-  while IFS= read -r arg; do
-    forwarded_args+=("$arg")
-  done < <(build_release_forwarded_args verify "$@")
-  run_bash_script "maintain/github_release_publish.sh" "${forwarded_args[@]}"
+  load_forwarded_args forwarded_args build_release_forwarded_args verify "$@"
+  run_release_script "${forwarded_args[@]}"
 }
 
 handle_release() {

@@ -9,17 +9,17 @@ handle_maintain_installer() {
     list)
       has_help_flag "$@" && { print_maintain_installer_list_help; return 0; }
       validate_installer_list_args "$@" || return 1
-      run_zsh_script "maintain/macos_sys_usb_maker.sh" list "$@"
+      run_maintain_installer_action list "$@"
       ;;
     download)
       has_help_flag "$@" && { print_maintain_installer_download_help; return 0; }
       validate_installer_download_args "$@" || return 1
-      run_zsh_script "maintain/macos_sys_usb_maker.sh" download "$@"
+      run_maintain_installer_action download "$@"
       ;;
     create)
       has_help_flag "$@" && { print_maintain_installer_create_help; return 0; }
       validate_installer_create_args "$@" || return 1
-      run_zsh_script "maintain/macos_sys_usb_maker.sh" create "$@"
+      run_maintain_installer_action create "$@"
       ;;
     help|-h|--help)
       print_maintain_installer_help

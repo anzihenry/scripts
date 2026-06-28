@@ -1,6 +1,26 @@
 #!/bin/zsh
 # filepath: bin/lib/cli_dispatch_setup.sh
 
+build_setup_github_forwarded_args() {
+  local has_domain="false"
+  local has_type="false"
+  local arg
+
+  for arg in "$@"; do
+    case "$arg" in
+      -d|--domain) has_domain="true" ;;
+      -t|--type) has_type="true" ;;
+    esac
+  done
+
+  local -a forwarded_args=()
+  [[ "$has_domain" == "false" ]] && forwarded_args+=(--domain github.com)
+  [[ "$has_type" == "false" ]] && forwarded_args+=(--type personal)
+  forwarded_args+=("$@")
+
+  printf '%s\n' "${forwarded_args[@]}"
+}
+
 handle_setup_brew() {
   local action="${1:-configure}"
   shift || true
@@ -43,22 +63,8 @@ handle_setup_github() {
   has_help_flag "$@" && { print_setup_github_help; return 0; }
   validate_setup_github_args "$@" || return 1
 
-  local has_domain="false"
-  local has_type="false"
-  local arg
-
-  for arg in "$@"; do
-    case "$arg" in
-      -d|--domain) has_domain="true" ;;
-      -t|--type) has_type="true" ;;
-    esac
-  done
-
   local -a forwarded_args=()
-  [[ "$has_domain" == "false" ]] && forwarded_args+=(--domain github.com)
-  [[ "$has_type" == "false" ]] && forwarded_args+=(--type personal)
-  forwarded_args+=("$@")
-
+  load_forwarded_args forwarded_args build_setup_github_forwarded_args "$@"
   handle_setup_git "${forwarded_args[@]}"
 }
 

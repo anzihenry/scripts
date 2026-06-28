@@ -13,6 +13,41 @@ run_bash_script() {
   bash "$REPO_ROOT/$relative_path" "$@"
 }
 
+load_forwarded_args() {
+  local target_name="$1"
+  local builder_func="$2"
+  shift 2
+
+  local -a collected_args=()
+  local arg
+  while IFS= read -r arg; do
+    collected_args+=("$arg")
+  done < <("$builder_func" "$@")
+
+  local serialized=""
+  for arg in "${collected_args[@]}"; do
+    serialized+=" ${(qqq)arg}"
+  done
+
+  eval "$target_name=($serialized)"
+}
+
+run_release_script() {
+  run_bash_script "maintain/github_release_publish.sh" "$@"
+}
+
+run_scheduler_action() {
+  local action="$1"
+  shift
+  run_zsh_script "job/scheduler.sh" "$action" "$@"
+}
+
+run_maintain_installer_action() {
+  local action="$1"
+  shift
+  run_zsh_script "maintain/macos_sys_usb_maker.sh" "$action" "$@"
+}
+
 usage_error() {
   local message="$1"
   local help_func="$2"
