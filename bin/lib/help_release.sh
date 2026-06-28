@@ -11,7 +11,7 @@ print_release_publish_help() {
   默认自动使用 releases/<tag>-release-notes.md 作为 notes 文件。
 
 位置参数:
-  <tag>                    Git tag，例如 0.2.0 或 v0.2.0
+  <tag>                    Git tag，例如 0.3.0 或 v0.3.0
 
 选项:
   --notes-file <path>      自定义 Release note 文件路径
@@ -34,7 +34,7 @@ print_release_verify_help() {
   默认自动使用 releases/<tag>-release-notes.md 作为 notes 文件。
 
 位置参数:
-  <tag>                    Git tag，例如 0.2.0 或 v0.2.0
+  <tag>                    Git tag，例如 0.3.0 或 v0.3.0
 
 选项:
   --notes-file <path>      自定义 Release note 文件路径

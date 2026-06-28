@@ -28,7 +28,7 @@ usage() {
   使用 gh CLI 非交互创建或更新 GitHub Release，避免依赖 VS Code UI。
 
 必填参数:
-  --tag <tag>               Git tag，例如 v0.2.0
+  --tag <tag>               Git tag，例如 v0.3.0
   --notes-file <path>       Release note 文件路径
 
 可选参数:
@@ -43,13 +43,13 @@ usage() {
 
 示例:
   bash maintain/github_release_publish.sh \
-    --tag v0.2.0 \
-    --notes-file releases/v0.2.0-release-notes.md \
+    --tag v0.3.0 \
+    --notes-file releases/v0.3.0-release-notes.md \
     --yes
 
   bash maintain/github_release_publish.sh \
-    --tag v0.2.0 \
-    --notes-file releases/v0.2.0-release-notes.md \
+    --tag v0.3.0 \
+    --notes-file releases/v0.3.0-release-notes.md \
     --verify-only
 EOF
 }

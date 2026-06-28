@@ -123,7 +123,7 @@ main() {
   run_expect_failure_contains \
     "Release verify rejects unsupported arg" \
     "release verify 不支持参数: --bogus" \
-    zsh bin/macos-scripts release verify v0.2.0 --bogus
+    zsh bin/macos-scripts release verify v0.3.0 --bogus
 
   run_expect_success_contains \
     "Job list" \

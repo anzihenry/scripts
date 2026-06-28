@@ -24,8 +24,8 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
   macos-scripts setup github --force
   macos-scripts maintain brew --dry-run
   macos-scripts maintain installer list
-  macos-scripts release verify v0.2.0
-  macos-scripts release publish v0.2.0 --yes
+  macos-scripts release verify v0.3.0
+  macos-scripts release publish v0.3.0 --yes
   macos-scripts job list
   macos-scripts lint check setup
 EOF

@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 PASS_COUNT=0
-MACOS_SCRIPTS_VERSION="0.2.0"
+MACOS_SCRIPTS_VERSION="0.3.0"
 
 pass() {
   printf '[PASS] %s\n' "$1"
@@ -110,7 +110,7 @@ test_validator_failures() {
   run_expect_failure_contains \
     "release verify rejects unsupported arg" \
     "release verify 不支持参数: --bogus" \
-    validate_release_verify_args v0.2.0 --bogus
+    validate_release_verify_args v0.3.0 --bogus
 
   run_expect_failure_contains \
     "job status requires job name" \
