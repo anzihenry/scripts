@@ -1,6 +1,26 @@
 #!/bin/zsh
 # filepath: bin/lib/validators_setup.sh
 
+validate_setup_brew_configure_args() {
+  local -a args=("$@")
+
+  case "$#" in
+    0)
+      return 0
+      ;;
+    1)
+      [[ "${args[1]}" == "--dry-run" ]] || {
+        usage_error "setup brew configure 不支持参数: ${args[1]}" print_setup_brew_help
+        return 1
+      }
+      ;;
+    *)
+      usage_error "setup brew configure 不支持参数: $*" print_setup_brew_help
+      return 1
+      ;;
+  esac
+}
+
 validate_setup_git_args() {
   local -a args=("$@")
   local index=1

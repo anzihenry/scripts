@@ -19,10 +19,17 @@ export MACOS_SCRIPTS_ROOT="$REPO_ROOT"
 export MACOS_SCRIPTS_LOG_DIR
 export MACOS_SCRIPTS_CONFIG_DIR
 
+# CLI layering:
+# 1) help text/router
+# 2) shared runtime + forwarding glue
+# 3) validators
+# 4) top-level dispatch
 source "$REPO_ROOT/lib/colors.sh"
 source "$REPO_ROOT/bin/lib/help.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_runtime.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/bin/lib/cli_forward_args.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/validators.sh"
 # shellcheck disable=SC1091

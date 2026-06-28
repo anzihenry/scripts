@@ -1,24 +1,18 @@
 #!/bin/zsh
 # filepath: bin/lib/cli_dispatch_setup.sh
 
-build_setup_github_forwarded_args() {
-  local has_domain="false"
-  local has_type="false"
-  local arg
+dispatch_setup_argless_command() {
+  local help_func="$1"
+  local script_path="$2"
+  shift 2
 
-  for arg in "$@"; do
-    case "$arg" in
-      -d|--domain) has_domain="true" ;;
-      -t|--type) has_type="true" ;;
-    esac
-  done
+  has_help_flag "$@" && {
+    "$help_func"
+    return 0
+  }
 
-  local -a forwarded_args=()
-  [[ "$has_domain" == "false" ]] && forwarded_args+=(--domain github.com)
-  [[ "$has_type" == "false" ]] && forwarded_args+=(--type personal)
-  forwarded_args+=("$@")
-
-  printf '%s\n' "${forwarded_args[@]}"
+  reject_extra_args "$help_func" "$@" || return 1
+  run_zsh_script "$script_path" "$@"
 }
 
 handle_setup_brew() {
@@ -28,20 +22,7 @@ handle_setup_brew() {
   case "$action" in
     configure)
       has_help_flag "$@" && { print_setup_brew_help; return 0; }
-      case "$#" in
-        0)
-          ;;
-        1)
-          [[ "$1" == "--dry-run" ]] || {
-            usage_error "setup brew configure 不支持参数: $1" print_setup_brew_help
-            return 1
-          }
-          ;;
-        *)
-          usage_error "setup brew configure 不支持参数: $*" print_setup_brew_help
-          return 1
-          ;;
-      esac
+      validate_setup_brew_configure_args "$@" || return 1
       run_zsh_script "setup/homebrew-setup.sh" "$@"
       ;;
     help|-h|--help)
@@ -64,7 +45,7 @@ handle_setup_github() {
   validate_setup_github_args "$@" || return 1
 
   local -a forwarded_args=()
-  load_forwarded_args forwarded_args build_setup_github_forwarded_args "$@"
+  load_setup_github_forwarded_args forwarded_args "$@"
   handle_setup_git "${forwarded_args[@]}"
 }
 
@@ -74,17 +55,13 @@ handle_setup() {
 
   case "$action" in
     shell)
-      has_help_flag "$@" && { print_setup_shell_help; return 0; }
-      reject_extra_args print_setup_shell_help "$@" || return 1
-      run_zsh_script "setup/ohmyzsh-setup.sh" "$@"
+      dispatch_setup_argless_command print_setup_shell_help "setup/ohmyzsh-setup.sh" "$@"
       ;;
     brew)
       handle_setup_brew "$@"
       ;;
     packages)
-      has_help_flag "$@" && { print_setup_packages_help; return 0; }
-      reject_extra_args print_setup_packages_help "$@" || return 1
-      run_zsh_script "setup/macos-setup.sh" "$@"
+      dispatch_setup_argless_command print_setup_packages_help "setup/macos-setup.sh" "$@"
       ;;
     git)
       handle_setup_git "$@"

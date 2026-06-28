@@ -9,29 +9,8 @@ source "$REPO_ROOT/bin/lib/cli_dispatch_maintain.sh"
 source "$REPO_ROOT/bin/lib/cli_dispatch_release.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_dispatch_job.sh"
-
-handle_lint() {
-  local action="${1:-check}"
-
-  case "$action" in
-    check)
-      shift || true
-      has_help_flag "$@" && { print_lint_check_help; return 0; }
-      run_zsh_script "lint/lint_shell.sh" "$@"
-      ;;
-    fix)
-      shift || true
-      has_help_flag "$@" && { print_lint_fix_help; return 0; }
-      run_zsh_script "lint/lint_shell.sh" --fix "$@"
-      ;;
-    help|-h|--help)
-      print_lint_help
-      ;;
-    *)
-      run_zsh_script "lint/lint_shell.sh" "$@"
-      ;;
-  esac
-}
+# shellcheck disable=SC1091
+source "$REPO_ROOT/bin/lib/cli_dispatch_lint.sh"
 
 main() {
   local command="${1:-help}"

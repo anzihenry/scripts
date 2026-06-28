@@ -1,6 +1,11 @@
 #!/bin/zsh
 # filepath: bin/lib/cli_runtime.sh
 
+# Shared CLI runtime stays intentionally small:
+# - script runners
+# - forwarded-arg loaders
+# - reusable dispatch skeletons
+# - generic CLI error/help helpers
 run_zsh_script() {
   local relative_path="$1"
   shift
@@ -46,6 +51,25 @@ run_maintain_installer_action() {
   local action="$1"
   shift
   run_zsh_script "maintain/macos_sys_usb_maker.sh" "$action" "$@"
+}
+
+# Use this only for the stable shape:
+# help check -> validator -> action runner
+dispatch_validated_action() {
+  local help_checker="$1"
+  local help_func="$2"
+  local validator_func="$3"
+  local runner_func="$4"
+  local action="$5"
+  shift 5
+
+  "$help_checker" "$@" && {
+    "$help_func"
+    return 0
+  }
+
+  "$validator_func" "$@" || return 1
+  "$runner_func" "$action" "$@"
 }
 
 usage_error() {

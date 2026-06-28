@@ -1,25 +1,31 @@
 #!/bin/zsh
 # filepath: bin/lib/cli_dispatch_maintain.sh
 
+validate_maintain_installer_list_dispatch_args() {
+  validate_installer_list_args "$@"
+}
+
+validate_maintain_installer_download_dispatch_args() {
+  validate_installer_download_args "$@"
+}
+
+validate_maintain_installer_create_dispatch_args() {
+  validate_installer_create_args "$@"
+}
+
 handle_maintain_installer() {
   local action="${1:-help}"
   shift || true
 
   case "$action" in
     list)
-      has_help_flag "$@" && { print_maintain_installer_list_help; return 0; }
-      validate_installer_list_args "$@" || return 1
-      run_maintain_installer_action list "$@"
+      dispatch_validated_action has_help_flag print_maintain_installer_list_help validate_maintain_installer_list_dispatch_args run_maintain_installer_action list "$@"
       ;;
     download)
-      has_help_flag "$@" && { print_maintain_installer_download_help; return 0; }
-      validate_installer_download_args "$@" || return 1
-      run_maintain_installer_action download "$@"
+      dispatch_validated_action has_help_flag print_maintain_installer_download_help validate_maintain_installer_download_dispatch_args run_maintain_installer_action download "$@"
       ;;
     create)
-      has_help_flag "$@" && { print_maintain_installer_create_help; return 0; }
-      validate_installer_create_args "$@" || return 1
-      run_maintain_installer_action create "$@"
+      dispatch_validated_action has_help_flag print_maintain_installer_create_help validate_maintain_installer_create_dispatch_args run_maintain_installer_action create "$@"
       ;;
     help|-h|--help)
       print_maintain_installer_help
