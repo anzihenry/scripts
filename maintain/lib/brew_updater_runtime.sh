@@ -33,11 +33,11 @@ run_formulae_upgrade() {
     print_header "步骤 2：更新 Formulae"
     run_timed_command_or_fail \
         "brew_upgrade_formulae" \
-        "执行 brew upgrade" \
+        "执行 brew upgrade --formula" \
         "Formulae 更新完成" \
         "Formulae 更新失败" \
         "brew upgrade 执行失败" \
-        brew upgrade
+        brew upgrade --formula
 }
 
 run_cleanup() {

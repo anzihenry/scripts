@@ -50,6 +50,7 @@ error() { printf 'ERROR:%s\n' "$*" >&2; }
 print_header() { printf 'HEADER:%s\n' "$1"; }
 print_code() { printf 'CODE:%s\n' "$1"; }
 print_table_row() { printf 'TABLE:%s=%s\n' "$1" "$2"; }
+print_step() { printf 'STEP:%s/%s %s\n' "$1" "$2" "$3"; }
 success() { printf 'SUCCESS:%s\n' "$*"; }
 log_time_start() { printf 'TIME_START:%s|%s\n' "$1" "$2"; }
 log_time_end() { printf 'TIME_END:%s|%s|%s\n' "$1" "$2" "${3:-ok}"; }
@@ -58,9 +59,14 @@ log_fatal() {
   return 1
 }
 confirm() { return 0; }
+prepare_log_file_path() { printf '%s' "/tmp/$1"; }
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/maintain/lib/command_runtime.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/maintain/lib/brew_updater_args.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/maintain/lib/brew_updater_casks.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/maintain/lib/brew_updater_runtime.sh"
 
@@ -98,6 +104,60 @@ test_announce_brew_updater_context() {
   output="$(announce_brew_updater_context)"
   assert_contains "$output" "HEADER:Homebrew 维护工具" "announce context prints header"
   assert_contains "$output" "INFO:错误日志位置: $ERROR_LOG" "announce context prints error log"
+}
+
+test_run_formulae_upgrade_limits_brew_to_formulae() {
+  DRY_RUN="true"
+
+  local output=""
+  output="$(run_formulae_upgrade)"
+  assert_contains "$output" "CODE:brew upgrade --formula" "formulae upgrade dry-run limits brew upgrade to formulae"
+}
+
+test_excluded_cask_matching() {
+  SCRIPT_DIR="$REPO_ROOT/maintain"
+  initialize_brew_updater_context
+
+  is_excluded_cask "feishu" || fail "excluded cask list matches exact cask"
+  pass "excluded cask list matches exact cask"
+
+  is_excluded_cask "microsoft-teams" || fail "excluded cask list matches regex cask"
+  pass "excluded cask list matches regex cask"
+
+  if is_excluded_cask "chatgpt"; then
+    fail "excluded cask list leaves non-excluded cask upgradeable"
+  fi
+  pass "excluded cask list leaves non-excluded cask upgradeable"
+
+  FORCE_CASKS="true"
+  if is_excluded_cask "feishu"; then
+    fail "force flag bypasses excluded cask list"
+  fi
+  pass "force flag bypasses excluded cask list"
+}
+
+test_run_cask_upgrades_skips_excluded_casks() {
+  SCRIPT_DIR="$REPO_ROOT/maintain"
+  initialize_brew_updater_context
+
+  local calls=()
+  local output=""
+  local output_file
+  output_file="$(mktemp "${TMPDIR:-/tmp}/maintain-cask-output.XXXXXX")"
+  get_outdated_casks() {
+    printf '%s\n' "feishu" "chatgpt" "lark"
+  }
+  run_cask_upgrade() {
+    calls+=("$1")
+  }
+
+  run_cask_upgrades > "$output_file"
+  output="$(cat "$output_file")"
+  rm -f "$output_file"
+
+  assert_eq "${calls[*]}" "chatgpt" "cask upgrades only run for non-excluded casks"
+  assert_eq "${SKIPPED_CASKS[*]}" "feishu lark" "cask upgrades track skipped excluded casks"
+  assert_contains "$output" "WARN:发现 3 个可更新 Cask，排除 2 个" "cask upgrades report excluded count"
 }
 
 test_run_brew_updater_workflow_skip_flags() {
@@ -143,6 +203,9 @@ main() {
   test_command_preview
   test_run_logged_command_dry_run
   test_announce_brew_updater_context
+  test_run_formulae_upgrade_limits_brew_to_formulae
+  test_excluded_cask_matching
+  test_run_cask_upgrades_skips_excluded_casks
   test_run_brew_updater_workflow_skip_flags
   test_run_brew_updater_workflow_order
 
