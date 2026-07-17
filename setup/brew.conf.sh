@@ -44,7 +44,6 @@ CASKS_DEV_TOOLS=(
     "itermbrowserplugin"
     "docker-desktop"
     "zulu@17"
-    "requestly"
 )
 
 CASKS_SOCIAL=(
@@ -75,6 +74,5 @@ CASKS_PRO=(
 
 CASKS_AI=(
     "chatgpt"
-    "codex-app"
     "lm-studio"
 )

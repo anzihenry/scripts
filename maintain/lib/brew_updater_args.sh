@@ -11,6 +11,7 @@ initialize_brew_updater_context() {
         "google-chrome"
         "feishu"
         "lark"
+        "chatgpt"
     )
 
     ERROR_LOG="$(prepare_log_file_path "brew_update_errors.log" "$SCRIPT_DIR/brew_update_errors.log")"
