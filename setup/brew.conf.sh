@@ -48,7 +48,6 @@ CASKS_DEV_TOOLS=(
 
 CASKS_SOCIAL=(
     "wechat"
-    "whatsapp"
     "telegram"
 )
 
