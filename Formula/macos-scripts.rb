@@ -9,7 +9,7 @@ class MacosScripts < Formula
   head "https://github.com/anzihenry/scripts.git", branch: "main"
 
   def install
-    libexec.install "bin", "bootstrap", "job", "lib", "lint", "maintain", "setup", "README.md", "LICENSE"
+    libexec.install "bin", "bootstrap", "job", "lib", "lint", "maintain", "setup", "VERSION", "README.md", "LICENSE"
     bin.install_symlink libexec/"bin/macos-scripts"
   end
 

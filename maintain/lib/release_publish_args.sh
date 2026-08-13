@@ -1,6 +1,10 @@
 #!/bin/bash
 # filepath: maintain/lib/release_publish_args.sh
 
+# 本文件是被 source 的共享状态模块：解析参数并写入全局变量，
+# 由 release_publish_flow.sh 消费。静态分析无法跨文件追踪
+# 这些变量（在本文件看似未使用），因此文件级禁用 SC2034。
+# shellcheck disable=SC2034
 parse_release_publish_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in

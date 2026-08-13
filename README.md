@@ -17,11 +17,14 @@
 .
 ├── README.md
 ├── LICENSE
+├── VERSION                      # 版本号唯一权威来源（release 校验依据）
 ├── lib/
 │   ├── colors.sh                 # 彩色日志 & 计时工具库
 │   └── utils.sh                  # 运行时辅助、依赖检查与通用 helper
 ├── docs/
 │   └── refactor/                 # 渐进式重构阶段文档与基线记录
+├── .github/
+│   └── workflows/ci.yml          # GitHub Actions：语法护栏 + lint + guard + smoke
 ├── tests/
 │   └── smoke_cli.sh              # 最小 CLI smoke tests
 ├── lint/
@@ -132,6 +135,17 @@ curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}
 - `<tag>` 支持传 `0.3.0` 或 `v0.3.0`，CLI 会自动规范化为 `v0.3.0`
 - 默认自动使用 `releases/<tag>-release-notes.md` 作为 release notes
 - 如需自定义文案文件，可追加 `--notes-file <path>`
+
+### 版本号单一来源
+
+仓库根目录的 `VERSION` 文件是版本号的唯一权威来源（当前内容为 `0.3.0`）：
+
+- `bin/macos-scripts` 的 `version` 输出与 help 头部从 `VERSION` 读取
+- `bootstrap/install.sh` 本地运行时优先读取 `VERSION`（curl 管道执行时回退到内置默认值）
+- `Formula/macos-scripts.rb` 安装时会将 `VERSION` 一并安装到 `libexec`
+- `release verify` / `release publish` 会自动校验目标 tag 与 `VERSION` 及 `Formula` 引用版本是否一致；`publish` 在校验不通过时直接中止，避免以错误版本发布
+
+发布新版本时，请先更新 `VERSION` 文件、`Formula/macos-scripts.rb` 中的 URL tag 与 `sha256`，再执行 `release verify` 确认一致性。
 
 ## 🍺 Homebrew 安装
 

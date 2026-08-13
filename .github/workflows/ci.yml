@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Shell checks (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install lint dependencies
+        run: |
+          brew install shellcheck shfmt
+
+      - name: Syntax guard (shebang-level, no external deps)
+        run: zsh tests/syntax_guard.sh
+
+      - name: Lint + format check (bash/sh via shellcheck & shfmt)
+        run: ./lint/lint_shell.sh
+
+      - name: CLI smoke tests
+        run: bash tests/smoke_cli.sh
+
+      - name: Guard tests (zsh)
+        run: |
+          for t in cli_dispatch_guard cli_validators_guard job_runtime_guard \
+                   job_scheduler_guard macos_installer_flow_guard \
+                   release_publish_guard setup_runtime_guard maintain_runtime_guard; do
+            zsh "tests/${t}.sh"
+          done
