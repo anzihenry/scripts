@@ -28,13 +28,14 @@ compose_program_arguments() {
     local script_path="$1"
     shift
 
+    local nl=$'\n'
     local args=("$script_path" "$@")
-    local xml="    <key>ProgramArguments</key>\n    <array>\n"
+    local xml="    <key>ProgramArguments</key>${nl}    <array>${nl}"
     local arg
     for arg in "${args[@]}"; do
-        xml+="      <string>$(xml_escape "$arg")</string>\n"
+        xml+="      <string>$(xml_escape "$arg")</string>${nl}"
     done
-    xml+="    </array>\n"
+    xml+="    </array>${nl}"
     printf "%s" "$xml"
 }
 
@@ -42,6 +43,7 @@ compose_schedule_block() {
     local interval_minutes="$1"
     local at_time="$2"
     local weekday="$3"
+    local nl=$'\n'
     local xml=""
 
     if [[ -n "$interval_minutes" ]]; then
@@ -50,7 +52,7 @@ compose_schedule_block() {
             error "--interval 必须为正整数"
             exit 1
         fi
-        xml+="    <key>StartInterval</key>\n    <integer>${seconds}</integer>\n"
+        xml+="    <key>StartInterval</key>${nl}    <integer>${seconds}</integer>${nl}"
     fi
 
     if [[ -n "$at_time" ]]; then
@@ -60,15 +62,15 @@ compose_schedule_block() {
         fi
         local hour="${at_time%%:*}"
         local minute="${at_time##*:}"
-        xml+="    <key>StartCalendarInterval</key>\n    <dict>\n      <key>Hour</key>\n      <integer>${hour#0}</integer>\n      <key>Minute</key>\n      <integer>${minute#0}</integer>\n"
+        xml+="    <key>StartCalendarInterval</key>${nl}    <dict>${nl}      <key>Hour</key>${nl}      <integer>${hour#0}</integer>${nl}      <key>Minute</key>${nl}      <integer>${minute#0}</integer>${nl}"
         if [[ -n "$weekday" ]]; then
             if ! [[ "$weekday" =~ ^[0-6]$ ]]; then
                 error "--weekday 取值范围 0-6"
                 exit 1
             fi
-            xml+="      <key>Weekday</key>\n      <integer>${weekday}</integer>\n"
+            xml+="      <key>Weekday</key>${nl}      <integer>${weekday}</integer>${nl}"
         fi
-        xml+="    </dict>\n"
+        xml+="    </dict>${nl}"
     fi
 
     if [[ -z "$xml" ]]; then
@@ -88,18 +90,21 @@ compose_plist() {
     local schedule_block="$7"
     local program_block="$8"
 
-    local xml_header="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n    <key>Label</key>\n    <string>${label}</string>\n"
-    local xml_footer="</dict>\n</plist>\n"
-    local xml_body="${program_block}    <key>WorkingDirectory</key>\n    <string>$(xml_escape "$working_dir")</string>\n    <key>StandardOutPath</key>\n    <string>$(xml_escape "$stdout_path")</string>\n    <key>StandardErrorPath</key>\n    <string>$(xml_escape "$stderr_path")</string>\n    <key>RunAtLoad</key>\n    <true/>\n"
+    local nl=$'\n'
+    local xml_header="<?xml version=\"1.0\" encoding=\"UTF-8\"?>${nl}<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">${nl}<plist version=\"1.0\">${nl}<dict>${nl}    <key>Label</key>${nl}    <string>${label}</string>${nl}"
+    local xml_footer="</dict>${nl}</plist>${nl}"
+    # 命令替换 $(...) 会剥离子命令输出的尾随换行，这里在拼接点补回，
+    # 避免 </array>/</dict> 与后续标签粘连成一行。
+    local xml_body="${program_block}${nl}    <key>WorkingDirectory</key>${nl}    <string>$(xml_escape "$working_dir")</string>${nl}    <key>StandardOutPath</key>${nl}    <string>$(xml_escape "$stdout_path")</string>${nl}    <key>StandardErrorPath</key>${nl}    <string>$(xml_escape "$stderr_path")</string>${nl}    <key>RunAtLoad</key>${nl}    <true/>${nl}"
 
     if [[ "$keepalive" == "1" ]]; then
-        xml_body+="    <key>KeepAlive</key>\n    <true/>\n"
+        xml_body+="    <key>KeepAlive</key>${nl}    <true/>${nl}"
     fi
 
-    xml_body+="$schedule_block"
+    xml_body+="${schedule_block}${nl}"
 
     if [[ "$disabled" == "1" ]]; then
-        xml_body+="    <key>Disabled</key>\n    <true/>\n"
+        xml_body+="    <key>Disabled</key>${nl}    <true/>${nl}"
     fi
 
     printf "%s%s%s" "$xml_header" "$xml_body" "$xml_footer"

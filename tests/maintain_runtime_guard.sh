@@ -124,7 +124,7 @@ test_excluded_cask_matching() {
   is_excluded_cask "microsoft-teams" || fail "excluded cask list matches regex cask"
   pass "excluded cask list matches regex cask"
 
-  if is_excluded_cask "chatgpt"; then
+  if is_excluded_cask "vlc"; then
     fail "excluded cask list leaves non-excluded cask upgradeable"
   fi
   pass "excluded cask list leaves non-excluded cask upgradeable"
@@ -145,7 +145,7 @@ test_run_cask_upgrades_skips_excluded_casks() {
   local output_file
   output_file="$(mktemp "${TMPDIR:-/tmp}/maintain-cask-output.XXXXXX")"
   get_outdated_casks() {
-    printf '%s\n' "feishu" "chatgpt" "lark"
+    printf '%s\n' "feishu" "vlc" "lark"
   }
   run_cask_upgrade() {
     calls+=("$1")
@@ -155,7 +155,7 @@ test_run_cask_upgrades_skips_excluded_casks() {
   output="$(cat "$output_file")"
   rm -f "$output_file"
 
-  assert_eq "${calls[*]}" "chatgpt" "cask upgrades only run for non-excluded casks"
+  assert_eq "${calls[*]}" "vlc" "cask upgrades only run for non-excluded casks"
   assert_eq "${SKIPPED_CASKS[*]}" "feishu lark" "cask upgrades track skipped excluded casks"
   assert_contains "$output" "WARN:发现 3 个可更新 Cask，排除 2 个" "cask upgrades report excluded count"
 }

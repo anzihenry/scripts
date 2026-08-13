@@ -57,7 +57,7 @@ main() {
   local files=()
   while IFS= read -r file; do
     files+=("$file")
-  done < <(rg --files bin setup maintain job lint lib tests)
+  done < <(find bin setup maintain job lint lib tests -type f)
 
   if [[ ${#files[@]} -eq 0 ]]; then
     printf '未找到需要检查的脚本文件。\n' >&2
