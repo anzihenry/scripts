@@ -292,6 +292,22 @@ cd maintain
 
 > `smoke_cli.sh` 会使用临时目录覆盖 `MACOS_SCRIPTS_LOG_DIR` 与 `MACOS_SCRIPTS_CONFIG_DIR`，避免污染真实用户配置和日志目录。
 
+除 `syntax_guard.sh` 与 `smoke_cli.sh` 外，仓库还提供按模块划分的函数级 guard 测试（zsh 运行）：
+
+```bash
+zsh tests/cli_dispatch_guard.sh          # CLI 分发路由
+zsh tests/cli_validators_guard.sh        # CLI 参数校验
+zsh tests/job_runtime_guard.sh           # job 运行时
+zsh tests/job_scheduler_guard.sh         # job 调度动作
+zsh tests/job_plist_guard.sh             # plist 真实写入 + plutil 校验
+zsh tests/macos_installer_flow_guard.sh  # 安装器流程
+zsh tests/release_publish_guard.sh       # release 发布流程
+zsh tests/setup_runtime_guard.sh         # setup 流程编排
+zsh tests/maintain_runtime_guard.sh      # Homebrew 维护流程
+```
+
+> 以上 guard 测试均为 zsh 脚本，请用 `zsh tests/<name>.sh` 调用（用 bash 运行会因 zsh 语法报错）。CI 已自动执行全部 guard + lint + smoke 测试。
+
 ## 🤝 贡献指南
 
 欢迎通过 Issue 或 Pull Request 反馈问题与改进建议。在提交前请：
@@ -306,6 +322,8 @@ cd maintain
 ./tests/syntax_guard.sh         # 快速做 shebang 级语法回归检查
 ./lint/lint_shell.sh            # 确保脚本通过 lint
 ./tests/smoke_cli.sh            # 运行最小 CLI 回归护栏
+zsh tests/cli_validators_guard.sh   # CLI 参数校验 guard（zsh）
+zsh tests/maintain_runtime_guard.sh # 维护流程 guard（zsh）
 zsh -n setup/*.sh maintain/*.sh job/*.sh lint/*.sh
 bash -n lib/colors.sh setup/git_forge_ssh_setup.sh
 ```
