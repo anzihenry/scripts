@@ -19,24 +19,7 @@ homebrew_config_run() {
     "$@"
 }
 
-resolve_homebrew_bin() {
-    if command -v brew >/dev/null 2>&1; then
-        command -v brew
-        return 0
-    fi
-
-    if [[ -x /opt/homebrew/bin/brew ]]; then
-        printf '%s' "/opt/homebrew/bin/brew"
-        return 0
-    fi
-
-    if [[ -x /usr/local/bin/brew ]]; then
-        printf '%s' "/usr/local/bin/brew"
-        return 0
-    fi
-
-    return 1
-}
+# resolve_homebrew_bin 由 lib/utils.sh 统一提供（本文件已 source utils.sh）
 
 activate_homebrew_environment() {
     local brew_bin="$1"

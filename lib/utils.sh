@@ -129,7 +129,27 @@ require_commands() {
   done
 }
 
-# ===== 4. Xcode CLI 安装 =====
+# ===== 4. Homebrew 定位 =====
+resolve_homebrew_bin() {
+  if command -v brew > /dev/null 2>&1; then
+    command -v brew
+    return 0
+  fi
+
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    printf '%s' "/opt/homebrew/bin/brew"
+    return 0
+  fi
+
+  if [[ -x /usr/local/bin/brew ]]; then
+    printf '%s' "/usr/local/bin/brew"
+    return 0
+  fi
+
+  return 1
+}
+
+# ===== 5. Xcode CLI 安装 =====
 # 参数:
 #   --timeout N     最大轮询次数（每次间隔 5 秒），默认 60
 #   --no-check      跳过 /usr/bin/clang 验证

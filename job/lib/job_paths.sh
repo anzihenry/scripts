@@ -1,7 +1,8 @@
 #!/bin/zsh
 
 JOB_LABEL_PREFIX="com.biucing.scripts.job"
-LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
+# 支持环境变量覆盖，便于测试隔离与自定义部署位置
+LAUNCH_AGENTS_DIR="${MACOS_SCRIPTS_LAUNCH_AGENTS_DIR:-${HOME}/Library/LaunchAgents}"
 if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
     LOG_BASE_DIR="${MACOS_SCRIPTS_LOG_DIR}/jobs"
 else

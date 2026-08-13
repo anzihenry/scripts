@@ -22,24 +22,27 @@ if [[ -f "$REPO_ROOT/setup/lib/homebrew_config.sh" ]]; then
   # shellcheck disable=SC1091
   source "$REPO_ROOT/setup/lib/homebrew_config.sh"
 else
-  resolve_homebrew_bin() {
-    if command -v brew >/dev/null 2>&1; then
-      command -v brew
-      return 0
-    fi
+  # 防御性 fallback：仅当 lib/utils.sh 未提供 resolve_homebrew_bin 时定义
+  if ! typeset -f resolve_homebrew_bin > /dev/null 2>&1; then
+    resolve_homebrew_bin() {
+      if command -v brew >/dev/null 2>&1; then
+        command -v brew
+        return 0
+      fi
 
-    if [[ -x /opt/homebrew/bin/brew ]]; then
-      printf '%s' "/opt/homebrew/bin/brew"
-      return 0
-    fi
+      if [[ -x /opt/homebrew/bin/brew ]]; then
+        printf '%s' "/opt/homebrew/bin/brew"
+        return 0
+      fi
 
-    if [[ -x /usr/local/bin/brew ]]; then
-      printf '%s' "/usr/local/bin/brew"
-      return 0
-    fi
+      if [[ -x /usr/local/bin/brew ]]; then
+        printf '%s' "/usr/local/bin/brew"
+        return 0
+      fi
 
-    return 1
-  }
+      return 1
+    }
+  fi
 
   activate_homebrew_environment() {
     local brew_bin="$1"

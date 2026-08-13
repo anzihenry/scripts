@@ -144,13 +144,36 @@ update_ssh_config() {
 upload_github_key() {
   local pub_key="$1" title="$2" token="$3"
   log_info "上传公钥到GitHub..."
+
+  # 用 python3 生成 JSON，避免手动拼接导致特殊字符破坏 payload
+  local payload
+  payload="$(python3 -c 'import json, sys; print(json.dumps({"title": sys.argv[1], "key": sys.argv[2]}))' "$title" "$pub_key" 2> /dev/null)" || {
+    log_error "生成 JSON payload 失败（需要 python3）"
+    return 1
+  }
+
+  # token 通过临时 config 文件传给 curl，避免出现在进程列表（ps）中
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  chmod 700 "$tmpdir"
+  printf '%s' "$payload" > "$tmpdir/payload.json"
+  {
+    echo 'url = "https://api.github.com/user/keys"'
+    echo 'header = "Accept: application/vnd.github+json"'
+    echo "header = \"Authorization: token $token\""
+    echo "data = @$tmpdir/payload.json"
+  } > "$tmpdir/curl.conf"
+
   local resp http_code
-  resp=$(curl -s -w "\n%{http_code}" \
-    -X POST \
-    -H "Accept: application/vnd.github+json" \
-    -H "Authorization: token $token" \
-    -d "{\"title\":\"$title\",\"key\":\"$pub_key\"}" \
-    "https://api.github.com/user/keys")
+  resp=$(curl -s -w "\n%{http_code}" --config "$tmpdir/curl.conf")
+  local curl_status=$?
+  rm -rf "$tmpdir"
+
+  if [[ $curl_status -ne 0 ]]; then
+    log_error "GitHub API 请求失败 (curl 状态码 $curl_status)"
+    return 1
+  fi
+
   http_code="${resp##*$'\n'}"
   body="${resp%$'\n'*}"
   if [[ "$http_code" == "201" ]]; then

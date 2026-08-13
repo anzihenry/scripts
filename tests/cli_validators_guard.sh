@@ -7,7 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 PASS_COUNT=0
-MACOS_SCRIPTS_VERSION="0.3.0"
+# 从 VERSION 权威文件读取，避免版本升级时测试断言漂移
+MACOS_SCRIPTS_VERSION="$(<"$REPO_ROOT/VERSION")"
 
 pass() {
   printf '[PASS] %s\n' "$1"

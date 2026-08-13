@@ -1,1 +1,20 @@
+# 日志与运行产物
 *.log
+
+# macOS 系统噪音
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# 编辑器与备份
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+
+# 构建与缓存
+*.pyc
+__pycache__/
