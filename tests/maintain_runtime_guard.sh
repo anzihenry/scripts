@@ -197,6 +197,56 @@ test_run_brew_updater_workflow_order() {
   assert_eq "${calls[*]}" "update formulae casks cleanup" "workflow keeps expected phase order"
 }
 
+test_outdated_casks_filters_blank_lines() {
+  # 回归护栏：brew outdated 输出可能以空行开头（干净 runner 首次运行等），
+  # 空行经 (@f) 分割会产生空 cask 名并导致 brew info 对空参数失败。
+  # 用假 brew 输出含空行的列表，验证 get_outdated_casks 会过滤掉空行。
+  # 重新加载真实实现，避免此前测试对 get_outdated_casks 的 mock 残留。
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/maintain/lib/brew_updater_casks.sh"
+
+  local fakebin
+  fakebin="$(mktemp -d "${TMPDIR:-/tmp}/maintain-fakebrew.XXXXXX")"
+  cat > "$fakebin/brew" <<'EOF'
+#!/bin/bash
+# 模拟 brew outdated --cask --greedy：以空行开头，避免依赖真实 brew 状态
+printf '\nvisual-studio-code\niterm2\n'
+EOF
+  chmod +x "$fakebin/brew"
+
+  local orig_path="$PATH"
+  PATH="$fakebin:$PATH"
+  local result=""
+  result="$(get_outdated_casks)"
+  PATH="$orig_path"
+  rm -rf "$fakebin"
+
+  assert_eq "$result" "iterm2
+visual-studio-code" "get_outdated_casks filters leading blank lines"
+}
+
+test_run_cask_upgrades_skips_blank_cask_entry() {
+  # 即使上游传入含空行的列表，run_cask_upgrades 也不应把空 cask 交给 run_cask_upgrade
+  SCRIPT_DIR="$REPO_ROOT/maintain"
+  initialize_brew_updater_context
+
+  local calls=()
+  local output_file
+  output_file="$(mktemp "${TMPDIR:-/tmp}/maintain-cask-blank.XXXXXX")"
+  get_outdated_casks() {
+    printf '\nfeishu\nvlc\nlark\n'
+  }
+  run_cask_upgrade() {
+    calls+=("$1")
+  }
+
+  run_cask_upgrades > "$output_file" 2>&1
+  rm -f "$output_file"
+
+  assert_eq "${calls[*]}" "vlc" "blank cask entries are skipped before upgrade"
+  assert_eq "${SKIPPED_CASKS[*]}" "feishu lark" "blank cask entries do not pollute skipped list"
+}
+
 main() {
   cd "$REPO_ROOT"
 
@@ -208,6 +258,8 @@ main() {
   test_run_cask_upgrades_skips_excluded_casks
   test_run_brew_updater_workflow_skip_flags
   test_run_brew_updater_workflow_order
+  test_outdated_casks_filters_blank_lines
+  test_run_cask_upgrades_skips_blank_cask_entry
 
   printf '\nMaintain runtime guard passed: %d\n' "$PASS_COUNT"
 }

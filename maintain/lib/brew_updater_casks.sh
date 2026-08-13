@@ -13,7 +13,9 @@ get_outdated_casks() {
     local output
     output="$(brew outdated --cask --greedy 2>/dev/null || true)"
     [[ -z "$output" ]] && return 0
-    printf '%s\n' "$output" | awk '{print tolower($1)}' | sort -u
+    # awk 'NF' 过滤空行：brew outdated 输出可能以空行开头（如首次运行/镜像提示），
+    # 否则会分割出空 cask 名，导致后续 brew info 对空参数执行失败。
+    printf '%s\n' "$output" | awk 'NF {print tolower($1)}' | sort -u
 }
 
 cask_exists() {
@@ -76,6 +78,7 @@ run_cask_upgrades() {
     fi
 
     for cask in "${outdated_casks[@]}"; do
+        [[ -z "$cask" ]] && continue
         if is_excluded_cask "$cask"; then
             SKIPPED_CASKS+=("$cask")
             continue
