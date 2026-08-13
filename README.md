@@ -50,11 +50,10 @@
      ├── git_forge_ssh_setup.sh    # [可选] Git 平台 SSH 密钥自动化
      └── lib/
           ├── brew_helpers.sh       # Homebrew 安装/重试/汇总辅助函数
-          ├── config_writer.sh      # 受管理配置写入 helper
+          ├── config_writer.sh      # 受管理配置写入 + update_shell_config helper
           ├── homebrew_config.sh    # Homebrew 环境与镜像配置
           ├── setup_runtime.sh      # setup 运行时、预检与安装编排 helper
           ├── setup_lang_env.sh     # 各语言环境配置 helper
-          ├── setup_shell_config.sh # .zshrc 受管理配置块 helper
           └── setup_postcheck.sh    # 安装后验证与总结输出
 ```
 

@@ -247,6 +247,34 @@ test_run_cask_upgrades_skips_blank_cask_entry() {
   assert_eq "${SKIPPED_CASKS[*]}" "feishu lark" "blank cask entries do not pollute skipped list"
 }
 
+test_append_brew_update_error_log_writes_real_file() {
+  # 端到端写入测试：真实追加错误日志文件并校验内容与格式，
+  # 防止 ERROR_LOG 路径/格式回归（延续 plist 真实写入测试思路）。
+  local log_file
+  log_file="$(mktemp "${TMPDIR:-/tmp}/maintain-brew-errors.XXXXXX.log")"
+  ERROR_LOG="$log_file"
+
+  append_brew_update_error_log "feishu" "Cask 不存在或已失效"
+  append_brew_update_error_log "vlc" "brew upgrade --cask 执行失败"
+
+  [[ -f "$log_file" ]] || fail "error log file created on disk"
+  pass "error log file created on disk"
+
+  local content
+  content="$(<"$log_file")"
+  assert_contains "$content" "feishu" "first cask name recorded"
+  assert_contains "$content" "Cask 不存在或已失效" "first failure message recorded"
+  assert_contains "$content" "vlc" "second cask appended (not overwritten)"
+  assert_contains "$content" "brew upgrade --cask 执行失败" "second failure message recorded"
+
+  # 每行都应包含时间戳 + 更新失败标记
+  local line_count
+  line_count="$(grep -c "更新失败" "$log_file")"
+  assert_eq "$line_count" "2" "each failure produces one log line"
+
+  rm -f "$log_file"
+}
+
 main() {
   cd "$REPO_ROOT"
 
@@ -260,6 +288,7 @@ main() {
   test_run_brew_updater_workflow_order
   test_outdated_casks_filters_blank_lines
   test_run_cask_upgrades_skips_blank_cask_entry
+  test_append_brew_update_error_log_writes_real_file
 
   printf '\nMaintain runtime guard passed: %d\n' "$PASS_COUNT"
 }

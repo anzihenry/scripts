@@ -167,6 +167,55 @@ test_sub_create_keeps_phase_order() {
   assert_eq "${calls[*]}" "prepare:--volume /Volumes/TestUSB --version 14.6.1 -y header:制作 macOS USB 启动盘 validate resolve ready confirm execute" "sub create keeps expected phase order"
 }
 
+test_acquire_installer_lock_creates_real_dir() {
+  # 端到端写入测试：acquire_installer_lock 应创建真实锁目录，
+  # 且重复获取（并发场景）应通过 die 报错。
+  local lock_key="guard-$$-$(date +%s)"
+  SCRIPT_NAME="macos_installer_guard"
+  local lock_dir="/tmp/${SCRIPT_NAME}.${lock_key}.lock"
+  rm -rf "$lock_dir"
+
+  acquire_installer_lock "$lock_key"
+  [[ -d "$lock_dir" ]] || fail "lock directory created on disk"
+  pass "lock directory created on disk"
+
+  # 第二次获取同一 key 应失败（模拟并发）
+  local die_called=false
+  die() { die_called=true; }
+  acquire_installer_lock "$lock_key" || true
+  [[ "$die_called" == "true" ]] || fail "concurrent lock acquisition reports conflict"
+  pass "concurrent lock acquisition reports conflict"
+
+  rm -rf "$lock_dir"
+}
+
+test_detect_volume_installer_app_real_fs() {
+  # 端到端写入测试：在临时目录构造模拟卷 + 安装器 app，
+  # 验证 detect_volume_installer_app 能真实扫描到（非 mock）。
+  # 重新加载 macos_installer_utils.sh 的真实实现，
+  # 避免此前测试对 find_installer_app 等的 mock 残留。
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/maintain/lib/macos_installer_utils.sh"
+
+  local vol_root
+  vol_root="$(mktemp -d "${TMPDIR:-/tmp}/macos-installer-vol.XXXXXX")"
+  mkdir -p "$vol_root/Install macOS Sonoma.app/Contents"
+  printf 'fake-installer' > "$vol_root/Install macOS Sonoma.app/Contents/Info.plist"
+
+  local found=""
+  found="$(detect_volume_installer_app "$vol_root" || true)"
+  assert_eq "$found" "$vol_root/Install macOS Sonoma.app" "detect_volume_installer_app scans real volume"
+
+  # 空卷应返回空（无匹配时不报错）
+  local empty_vol
+  empty_vol="$(mktemp -d "${TMPDIR:-/tmp}/macos-installer-empty.XXXXXX")"
+  local empty_result=""
+  empty_result="$(detect_volume_installer_app "$empty_vol" || true)"
+  assert_eq "$empty_result" "" "detect_volume_installer_app returns empty on blank volume"
+
+  rm -rf "$vol_root" "$empty_vol"
+}
+
 main() {
   cd "$REPO_ROOT"
 
@@ -176,6 +225,8 @@ main() {
   test_ensure_create_target_is_ready_requires_force_for_different_version
   test_sub_download_keeps_phase_order
   test_sub_create_keeps_phase_order
+  test_acquire_installer_lock_creates_real_dir
+  test_detect_volume_installer_app_real_fs
 
   printf '\nmacOS installer flow guard passed: %d\n' "$PASS_COUNT"
 }

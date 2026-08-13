@@ -1,11 +1,17 @@
 #!/bin/zsh
 # filepath: maintain/lib/macos_installer_flow.sh
 
+# 已获取的锁目录登记表，由入口脚本（macos_sys_usb_maker.sh）的
+# 全局 trap 在脚本退出时统一清理。不要在函数内设置 EXIT trap：
+# zsh 的函数级 trap 会在函数返回时立即触发，锁会被提前删除，
+# 导致并发互斥保护失效。
+INSTALLER_LOCK_DIRS=()
+
 acquire_installer_lock() {
   local key="$(sanitize_key "$1")"
   LOCK_DIR="/tmp/${SCRIPT_NAME}.${key}.lock"
   if mkdir "$LOCK_DIR" 2>/dev/null; then
-    trap 'rm -rf "$LOCK_DIR"' EXIT INT TERM HUP
+    INSTALLER_LOCK_DIRS+=("$LOCK_DIR")
     log_debug "已获取锁: $LOCK_DIR"
   else
     die "另一个相同操作正在进行中（锁: $LOCK_DIR）。稍后重试。"

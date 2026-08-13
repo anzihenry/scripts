@@ -29,6 +29,16 @@ source "$SCRIPT_DIR/lib/macos_installer_utils.sh"
 
 die() { log_fatal "$@"; }
 
+# 脚本退出时统一清理所有已获取的安装器锁目录
+# （acquire_installer_lock 只登记到 INSTALLER_LOCK_DIRS，不再自设 trap）
+cleanup_installer_locks() {
+  local lock_dir
+  for lock_dir in "${INSTALLER_LOCK_DIRS[@]:-}"; do
+    rm -rf "$lock_dir"
+  done
+}
+trap cleanup_installer_locks EXIT INT TERM HUP
+
 usage() {
   cat <<EOF
 用法:

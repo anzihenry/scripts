@@ -58,3 +58,13 @@ write_managed_file() {
         chmod "$mode" "$target_file"
     fi
 }
+
+# 幂等地更新 shell 配置文件（写入 ~/.zshrc 的受管理配置块）
+# 原实现位于 setup/lib/setup_shell_config.sh，已并入本文件
+update_shell_config() {
+    local section_name="$1"
+    local config_content="$2"
+    local rc_file="$HOME/.zshrc"
+    write_managed_block "$rc_file" "$section_name" "macos-setup" "$config_content"
+    success "${section_name} 环境配置已更新"
+}
