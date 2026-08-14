@@ -15,8 +15,59 @@ BOOTSTRAP_LOG_FILE="$MACOS_SCRIPTS_LOG_DIR/bootstrap.log"
 
 exec > >(tee -a "$BOOTSTRAP_LOG_FILE") 2>&1
 
-# shellcheck disable=SC1091
-source "$REPO_ROOT/lib/utils.sh"
+# curl 管道执行（curl ... | zsh）时，${0:A} 无法解析出真实脚本路径，
+# REPO_ROOT 不可用且仓库文件不存在。此时必须自包含运行：
+# 定义本脚本用到的全部日志函数与工具函数 fallback。
+if [[ -f "$REPO_ROOT/lib/utils.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/lib/utils.sh"
+else
+  # ---- 日志函数 fallback（与 lib/colors.sh 输出风格保持一致）----
+  info() { printf '\033[0;34mℹ\033[0m %s\n' "$*"; }
+  error() { printf '\033[0;31m✗\033[0m %s\n' "$*" >&2; }
+  warning() { printf '\033[0;33m⚠\033[0m %s\n' "$*"; }
+  success() { printf '\033[0;32m✓\033[0m %s\n' "$*"; }
+  print_header() { printf '\n==== %s ====\n\n' "$1"; }
+  print_code() { printf '  %s\n' "$1"; }
+
+  # ---- 工具函数 fallback ----
+  require_command() {
+    local cmd="$1"
+    command -v "$cmd" >/dev/null 2>&1 || {
+      printf '缺少必要命令: %s\n' "$cmd" >&2
+      exit 1
+    }
+  }
+
+  resolve_homebrew_bin() {
+    if command -v brew >/dev/null 2>&1; then
+      command -v brew
+      return 0
+    fi
+
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+      printf '%s' "/opt/homebrew/bin/brew"
+      return 0
+    fi
+
+    if [[ -x /usr/local/bin/brew ]]; then
+      printf '%s' "/usr/local/bin/brew"
+      return 0
+    fi
+
+    return 1
+  }
+
+  ensure_xcode_cli_installed() {
+    # 管道模式下无仓库 utils.sh，使用最简实现：
+    # 已安装则直接通过；未安装则提示（不阻塞后续流程）。
+    if xcode-select -p >/dev/null 2>&1; then
+      return 0
+    fi
+    warning "未检测到 Xcode 命令行工具（xcode-select --install），bootstrap 将继续但可能受影响。"
+    return 0
+  }
+fi
 
 if [[ -f "$REPO_ROOT/setup/lib/homebrew_config.sh" ]]; then
   # shellcheck disable=SC1091
