@@ -307,6 +307,23 @@ zsh tests/maintain_runtime_guard.sh      # Homebrew 维护流程
 
 > 以上 guard 测试均为 zsh 脚本，请用 `zsh tests/<name>.sh` 调用（用 bash 运行会因 zsh 语法报错）。CI 已自动执行全部 guard + lint + smoke 测试。
 
+### 进程级 E2E（沙箱 + 命令桩）
+
+`tests/e2e/` 提供不依赖真实环境的进程级端到端测试：把 `HOME`、配置/日志/LaunchAgents 目录全部重定向到临时沙箱，并用 `tests/e2e/shims/` 下的命令桩（`brew`、`launchctl`、`gh`、`git`、`curl` 等）拦截外部副作用，随后跑**真实脚本全流程**，断言产物文件、外部调用序列与退出码。可在每次发布前本地或 CI 执行：
+
+```bash
+bash tests/e2e/run_all.sh
+```
+
+覆盖场景：
+
+- `job create` / `job list` / `job disable`：plist 真实写入 + `plutil` 校验 + `launchctl` 调用序列
+- `release verify` / `release publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
+- `maintain brew`：brew 调用顺序、Cask 失败错误日志
+- `bootstrap/install.sh`：tap + install 调用与日志写入
+
+> E2E 用例均为 bash 脚本，用 `bash tests/e2e/run_all.sh` 调用。发布门禁见 `.github/workflows/release.yml`（打 `v*` tag 时自动执行，含真实 macOS 上的 Formula 实装校验）。
+
 ## 🤝 贡献指南
 
 欢迎通过 Issue 或 Pull Request 反馈问题与改进建议。在提交前请：

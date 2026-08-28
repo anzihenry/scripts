@@ -1,0 +1,10 @@
+#!/bin/bash
+# filepath: tests/e2e/shims/id
+# id 命令桩：固定输出 uid 501，保证 launchctl 会话 gui/501 可确定性断言。
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_recorder.sh"
+
+record_invocation "$@"
+printf '501\n'
+exit 0

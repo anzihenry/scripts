@@ -1,0 +1,10 @@
+#!/bin/bash
+# filepath: tests/e2e/shims/curl
+# curl 命令桩：记录调用，不访问真实网络。
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_recorder.sh"
+
+record_invocation "$@"
+printf 'curl stub ok\n'
+exit 0

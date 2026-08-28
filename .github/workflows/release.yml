@@ -1,0 +1,67 @@
+name: Release E2E Gate
+
+# 发布前门禁：打 tag（v*）或手动触发时，在全新 macOS VM 上执行
+#   L1 沙箱命令桩 E2E（tests/e2e/run_all.sh）
+#   L2 真实 macOS 流程（release verify / 各 --dry-run / Formula 实装）
+# 全部通过后，才允许执行 release publish。
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  e2e-gate:
+    name: Pre-release E2E gate
+    runs-on: macos-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install lint dependencies
+        run: brew install shellcheck shfmt
+
+      - name: Syntax guard (shebang-level)
+        run: zsh tests/syntax_guard.sh
+
+      - name: Lint + format check
+        run: ./lint/lint_shell.sh
+
+      - name: CLI smoke tests
+        run: bash tests/smoke_cli.sh
+
+      - name: Guard tests (zsh)
+        run: |
+          for t in bootstrap_guard cli_dispatch_guard cli_validators_guard \
+                   job_runtime_guard job_scheduler_guard job_plist_guard \
+                   macos_installer_flow_guard release_publish_guard \
+                   setup_runtime_guard maintain_runtime_guard; do
+            zsh "tests/${t}.sh"
+          done
+
+      - name: E2E L1 (sandbox + command stubs)
+        run: bash tests/e2e/run_all.sh
+
+      - name: Release verify (real gh, non-destructive)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          ./bin/macos-scripts release verify "$TAG"
+
+      - name: Bootstrap install dry-run (real macOS)
+        run: zsh bootstrap/install.sh --dry-run
+
+      - name: Setup brew configure dry-run (real macOS)
+        run: ./bin/macos-scripts setup brew configure --dry-run
+
+      - name: Maintain brew dry-run (real macOS)
+        run: ./bin/macos-scripts maintain brew --dry-run
+
+      - name: Formula install (real end-to-end)
+        run: |
+          brew install --build-from-source ./Formula/macos-scripts.rb 2>&1 | tail -30
+          command -v macos-scripts
+          macos-scripts --version
+          macos-scripts help setup git
+          macos-scripts job list

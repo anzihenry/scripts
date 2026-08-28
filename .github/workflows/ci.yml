@@ -35,3 +35,6 @@ jobs:
                    setup_runtime_guard maintain_runtime_guard; do
             zsh "tests/${t}.sh"
           done
+
+      - name: E2E tests (sandbox + command stubs)
+        run: bash tests/e2e/run_all.sh

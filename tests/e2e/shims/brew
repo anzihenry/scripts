@@ -1,0 +1,69 @@
+#!/bin/bash
+# filepath: tests/e2e/shims/brew
+# brew 命令桩：记录调用并按子命令返回可预测输出，供
+#   - maintain brew 真实流程（update/upgrade/outdated/info/cleanup）
+#   - bootstrap/install.sh 真实流程（--version/shellenv/tap/list/install）
+# 可通过环境变量控制行为：
+#   E2E_BREW_OUTDATED_CASKS    brew outdated --cask --greedy 的输出（默认 rectangle 1.0.0）
+#   E2E_BREW_FAIL_CASK         模拟指定 cask 的 brew info --cask 失败
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_recorder.sh"
+
+record_invocation "$@"
+
+sub="${1:-}"
+shift || true
+
+case "$sub" in
+  --version)
+    printf 'Homebrew 4.4.0 (e2e stub)\n'
+    exit 0
+    ;;
+  shellenv)
+    # bootstrap 的 activate_homebrew_environment 会对该输出做 eval
+    printf 'export PATH="%s:$PATH"\n' "$SCRIPT_DIR"
+    exit 0
+    ;;
+  update)
+    printf 'Already up-to-date.\n'
+    exit 0
+    ;;
+  upgrade)
+    printf 'Upgraded.\n'
+    exit 0
+    ;;
+  outdated)
+    if [[ "${1:-}" == "--cask" ]]; then
+      printf '%s\n' "${E2E_BREW_OUTDATED_CASKS:-rectangle 1.0.0}"
+    fi
+    exit 0
+    ;;
+  info)
+    if [[ "${1:-}" == "--cask" && -n "${E2E_BREW_FAIL_CASK:-}" && "${2:-}" == "$E2E_BREW_FAIL_CASK" ]]; then
+      printf 'Error: Cask %s not found\n' "$2" >&2
+      exit 1
+    fi
+    printf 'stable 1.0.0\n'
+    exit 0
+    ;;
+  list)
+    # brew list --formula <name>：模拟 formula 未安装
+    exit 1
+    ;;
+  tap)
+    printf 'Tapping %s\n' "${1:-}"
+    exit 0
+    ;;
+  install)
+    printf 'Installing %s\n' "$*"
+    exit 0
+    ;;
+  cleanup)
+    printf 'Cleaned up.\n'
+    exit 0
+    ;;
+  *)
+    exit 0
+    ;;
+esac

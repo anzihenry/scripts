@@ -1,0 +1,44 @@
+#!/bin/bash
+# filepath: tests/e2e/shims/gh
+# gh 命令桩：记录调用，并用 $E2E_GH_STATE_DIR/release_created 标记模拟
+# release 是否已存在（gh release create 成功后会写入标记，使后续 api 查询返回已存在）。
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_recorder.sh"
+
+record_invocation "$@"
+
+GH_STATE_DIR="${E2E_GH_STATE_DIR:-$E2E_TMP_ROOT/gh_state}"
+mkdir -p "$GH_STATE_DIR"
+
+release_created() { [[ -f "$GH_STATE_DIR/release_created" ]]; }
+
+cmd="${1:-}"
+sub="${2:-}"
+shift 2 2>/dev/null || true
+
+case "$cmd" in
+  api)
+    if release_created; then
+      printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.4.0}"
+      exit 0
+    fi
+    printf 'release not found\n' >&2
+    exit 1
+    ;;
+  release)
+    case "$sub" in
+      create)
+        : > "$GH_STATE_DIR/release_created"
+        printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.4.0}"
+        exit 0
+        ;;
+      edit | *)
+        exit 0
+        ;;
+    esac
+    ;;
+  *)
+    exit 0
+    ;;
+esac

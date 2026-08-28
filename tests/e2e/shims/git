@@ -1,0 +1,39 @@
+#!/bin/bash
+# filepath: tests/e2e/shims/git
+# git 命令桩：记录调用，不访问真实远端。
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_recorder.sh"
+
+record_invocation "$@"
+
+# git 调用形如 git -C <dir> <subcommand> ...，子命令不一定是 $1，需扫描全部参数。
+# 注意：命令桩是顶层脚本而非函数，不能用 local。
+sub=""
+for arg in "$@"; do
+  case "$arg" in
+    rev-parse | ls-remote)
+      sub="$arg"
+      break
+      ;;
+  esac
+done
+
+case "$sub" in
+  rev-parse)
+    # 模拟本地 tag 存在
+    exit 0
+    ;;
+  ls-remote)
+    # git ls-remote --tags origin refs/tags/<tag>：回显该 ref，模拟远端 tag 已存在
+    ref=""
+    for arg in "$@"; do
+      [[ "$arg" == refs/tags/* ]] && ref="$arg"
+    done
+    [[ -n "$ref" ]] && printf '%s\n' "$ref"
+    exit 0
+    ;;
+  *)
+    exit 0
+    ;;
+esac
