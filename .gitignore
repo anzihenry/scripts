@@ -14,6 +14,7 @@
 *~
 *.bak
 *.orig
+.vscode/
 
 # 构建与缓存
 *.pyc

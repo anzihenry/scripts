@@ -1,6 +1,6 @@
 # Copilot Agents 指南（实验特性）
 
-> 本文件为 VS Code `AGENTS.md`，需启用 `chat.useAgentsMdFile` 设置后生效。用于指导 Copilot agent 模式在仓库中的协作方式与安全边界。
+> 本文件为 VS Code `AGENTS.md`，在 agent 模式下自动生效（`chat.useAgentsMdFile` 默认开启）。用于指导 Copilot agent 模式在仓库中的协作方式与安全边界。
 > 已合并原 `.github/copilot-instructions.md` 的通用规范，作为全仓库 Copilot 对话与 agent 会话的统一指引。
 
 ## 工作区背景
@@ -74,7 +74,7 @@
 - **任务集成**：若存在 `tasks.json`，可运行 `npm run lint` 等任务，执行前需说明原因。
 
 ## 安全与合规
-- 保持 `chat.checkpoints.enabled` 开启，每个重大步骤前后创建 checkpoint，便于回滚。
+- 保持 `chat.checkpoints.enabled` 开启（默认即开启），每个重大步骤前后创建 checkpoint，便于回滚。
 - 禁止修改 `.env`、密钥、用户主目录配置，除非指令明确授权。
 - 任何写入 `~/` 配置的操作必须使用带标记的插入片段，避免重复。
 - 对长耗时操作输出进度与耗时信息，提醒用户保持终端活跃。
