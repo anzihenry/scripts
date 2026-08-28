@@ -10,6 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/lib/brew_helpers.sh"
+source "$SCRIPT_DIR/lib/config_writer.sh"
 source "$SCRIPT_DIR/lib/homebrew_config.sh"
 
 # ===== 初始化配置 =====

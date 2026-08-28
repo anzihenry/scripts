@@ -14,6 +14,7 @@ CASES=(
   release_verify
   release_publish
   maintain_brew
+  setup_brew_configure
   bootstrap_install
 )
 
