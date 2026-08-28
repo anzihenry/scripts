@@ -331,10 +331,7 @@ bash tests/e2e/run_all.sh
 欢迎通过 Issue 或 Pull Request 反馈问题与改进建议。在提交前请：
 
 - 阅读遵循 [`CODE_OF_CONDUCT.md`](./.github/CODE_OF_CONDUCT.md)，保持专业、友善的协作氛围。
-- 使用对应的 Issue / PR 模板，补充复现信息、测试记录与回滚方案：
-    - Issue：`Bug 报告` 与 `功能需求` 模板覆盖常见场景。
-  按[「运行验证」](#-运行验证)的清单执行回归（语法 / lint / smoke / guard / E2E），命令与说明以该节为唯一权威源。h -n lib/colors.sh setup/git_forge_ssh_setup.sh
-```
+- 按[「运行验证」](#-运行验证)的清单执行回归（语法 / lint / smoke / guard / E2E），命令与说明以该节为唯一权威源。
 
 > 若涉及长耗时任务，建议附带 `log_time_start/_end` 输出截图或日志片段。
 
