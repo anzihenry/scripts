@@ -47,6 +47,7 @@
 - 优先运行 `./tests/syntax_guard.sh`，快速完成 shebang 级语法回归检查。
 - 默认运行 `./lint/lint_shell.sh`（可附 `--fix`）。
 - 涉及 CLI 或参数分发改动时，补跑 `./tests/smoke_cli.sh`。
+- 涉及跨流程或发布前改动时，补跑 `bash tests/e2e/run_all.sh`（进程级沙箱 E2E：job/release/maintain/setup brew/bootstrap 全流程）。
 - 在 PR/总结中列出验证命令与结果，保持与 `AGENTS.md` 要求一致。
 
 ## 推荐 Prompt
