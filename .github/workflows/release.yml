@@ -58,9 +58,13 @@ jobs:
       - name: Maintain brew dry-run (real macOS)
         run: ./bin/macos-scripts maintain brew --dry-run
 
-      - name: Formula install (real end-to-end)
+      - name: Formula install (real end-to-end via tap)
+        # 走真实用户路径：brew tap + brew install <tap>/macos-scripts。
+        # 读取的是 tap 仓库 main 分支的 Formula（sha256 已在 main 回填），
+        # 与 tag 内 Formula 解耦，避免 tag 冻结与 sha256 回填的循环依赖。
         run: |
-          brew install --build-from-source ./Formula/macos-scripts.rb 2>&1 | tail -30
+          brew tap anzihenry/scripts
+          brew install anzihenry/scripts/macos-scripts 2>&1 | tail -30
           command -v macos-scripts
           macos-scripts --version
           macos-scripts help setup git
