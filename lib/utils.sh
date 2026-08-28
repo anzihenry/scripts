@@ -194,7 +194,9 @@ ensure_xcode_cli_installed() {
   until xcode-select -p &> /dev/null; do
     info "等待 Xcode CLI 安装完成... (${wait_count}/${timeout})"
     sleep 5
-    ((wait_count++))
+    # 注意：不要用 ((wait_count++))——从 0 起时该算术表达式返回假，
+    # 在 set -e 下会触发 errexit 提前退出。
+    wait_count=$((wait_count + 1))
     [[ $wait_count -gt $timeout ]] && log_fatal "安装超时，请手动执行: xcode-select --install"
   done
 

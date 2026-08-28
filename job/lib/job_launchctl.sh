@@ -87,7 +87,9 @@ list_jobs() {
         job_name="${plist##*.job.}"
         job_name="${job_name%.plist}"
         printf "  - %s (%s)\n" "$job_name" "$plist"
-        ((count++))
+        # 注意：不要用 ((count++))——count 从 0 起时该算术表达式返回假，
+        # 在 set -e 下会触发 errexit 提前退出，导致 job list 返回非零。
+        count=$((count + 1))
     done
     if (( count == 0 )); then
         warning "未找到任何 ${JOB_LABEL_PREFIX} 前缀的任务"
