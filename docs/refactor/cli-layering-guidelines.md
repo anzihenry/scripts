@@ -237,7 +237,7 @@
 
 ## 回归要求
 
-CLI 层改动后，至少运行以下检查：
+完整命令清单以 `README.md`「运行验证」为**唯一权威源**，此处只列 CLI 专项必跑项：
 
 ```bash
 bash tests/syntax_guard.sh
@@ -246,7 +246,7 @@ zsh tests/cli_dispatch_guard.sh
 zsh tests/cli_validators_guard.sh
 ```
 
-如果改动涉及 release、setup、job、maintain 的内部装配逻辑，按需补充对应 guard。
+如果改动涉及 release、setup、job、maintain 的内部装配逻辑，按需补充对应 guard（清单见 README）。
 
 ## 何时停止继续抽象
 

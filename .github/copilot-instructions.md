@@ -43,11 +43,9 @@
 - 长耗时任务记录进度/耗时，必要时写入 `brew_update_errors.log` 等统一日志。
 
 ## 验证与交付
-- 提醒执行 `zsh -n path/to/script.sh` 或 `bash -n path/to/script.sh` 进行语法检查。
-- 优先运行 `./tests/syntax_guard.sh`，快速完成 shebang 级语法回归检查。
-- 默认运行 `./lint/lint_shell.sh`（可附 `--fix`）。
-- 涉及 CLI 或参数分发改动时，补跑 `./tests/smoke_cli.sh`。
-- 涉及跨流程或发布前改动时，补跑 `bash tests/e2e/run_all.sh`（进程级沙箱 E2E：job/release/maintain/setup brew/bootstrap 全流程）。
+- 测试命令清单以 `README.md`「运行验证」为**唯一权威源**，本指南不再罗列。
+- 按改动范围选择层级（语法 → lint → smoke → guard → E2E），改完至少跑一遍 `./tests/syntax_guard.sh` 与对应层级。
+- 涉及跨流程或发布前改动时，务必补跑 `bash tests/e2e/run_all.sh`（进程级沙箱 E2E）。
 - 在 PR/总结中列出验证命令与结果，保持与 `AGENTS.md` 要求一致。
 
 ## 推荐 Prompt

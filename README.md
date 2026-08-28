@@ -278,34 +278,35 @@ cd maintain
 
 ## 🧪 运行验证
 
-- 所有核心脚本均可通过 `zsh -n path/to/script.sh` 做语法检查。
-- `tests/syntax_guard.sh` 会根据 shebang 自动执行 `zsh -n` / `bash -n`，提供一层不依赖 `shellcheck` 与 `shfmt` 的快速语法护栏。
-- `lint/lint_shell.sh` 会先按 shebang 执行语法检查，再对 bash/sh 脚本执行 shellcheck 与 shfmt。
-- `lib/colors.sh` 的 `log_time_start/log_time_end` 可嵌入到自定义脚本中，统计关键步骤耗时。
-- 推荐在重构或修改 CLI 后额外运行：
+> **本节是测试命令的单一权威入口。** 其他文档（`docs/refactor/cli-layering-guidelines.md`、`AGENTS.md`、`.github/copilot-instructions.md`、发布清单）需要回归命令时引用本节，不再各自维护清单，避免随测试设施演进而漂移。
+
+按测试层级由快到慢执行（CI 已在每次 push/PR 自动运行全部）：
 
 ```bash
-./tests/syntax_guard.sh
-./tests/smoke_cli.sh
+./tests/syntax_guard.sh          # ① 语法：shebang 级 zsh -n / bash -n
+./lint/lint_shell.sh             # ② 静态：bash/sh 的 shellcheck + shfmt
+./tests/smoke_cli.sh             # ③ CLI：关键成功/失败路径
+bash tests/e2e/run_all.sh        # ④ 进程级：沙箱 + 命令桩 E2E（8 用例）
 ```
 
-> `smoke_cli.sh` 会使用临时目录覆盖 `MACOS_SCRIPTS_LOG_DIR` 与 `MACOS_SCRIPTS_CONFIG_DIR`，避免污染真实用户配置和日志目录。
+> `smoke_cli.sh` 与 E2E 均使用临时目录覆盖 `MACOS_SCRIPTS_LOG_DIR` / `MACOS_SCRIPTS_CONFIG_DIR`（E2E 另覆盖 LaunchAgents），避免污染真实用户配置和日志目录。
 
-除 `syntax_guard.sh` 与 `smoke_cli.sh` 外，仓库还提供按模块划分的函数级 guard 测试（zsh 运行）：
+函数级 guard 测试（zsh 运行，与 CI 的 guard 步骤一致）：
 
 ```bash
-zsh tests/cli_dispatch_guard.sh          # CLI 分发路由
-zsh tests/cli_validators_guard.sh        # CLI 参数校验
-zsh tests/job_runtime_guard.sh           # job 运行时
-zsh tests/job_scheduler_guard.sh         # job 调度动作
-zsh tests/job_plist_guard.sh             # plist 真实写入 + plutil 校验
-zsh tests/macos_installer_flow_guard.sh  # 安装器流程
-zsh tests/release_publish_guard.sh       # release 发布流程
-zsh tests/setup_runtime_guard.sh         # setup 流程编排
-zsh tests/maintain_runtime_guard.sh      # Homebrew 维护流程
+zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两种模式
+zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
+zsh tests/cli_validators_guard.sh     # CLI 参数校验
+zsh tests/job_runtime_guard.sh        # job 运行时
+zsh tests/job_scheduler_guard.sh      # job 调度动作
+zsh tests/job_plist_guard.sh          # plist 真实写入 + plutil 校验
+zsh tests/macos_installer_flow_guard.sh # 安装器流程
+zsh tests/release_publish_guard.sh    # release 发布流程
+zsh tests/setup_runtime_guard.sh      # setup 流程编排
+zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 ```
 
-> 以上 guard 测试均为 zsh 脚本，请用 `zsh tests/<name>.sh` 调用（用 bash 运行会因 zsh 语法报错）。CI 已自动执行全部 guard + lint + smoke 测试。
+> 以上 guard 均为 zsh 脚本，请用 `zsh tests/<name>.sh` 调用（用 bash 运行会因 zsh 语法报错）。
 
 ### 进程级 E2E（沙箱 + 命令桩）
 
@@ -320,6 +321,7 @@ bash tests/e2e/run_all.sh
 - `job create` / `job list` / `job disable`：plist 真实写入 + `plutil` 校验 + `launchctl` 调用序列
 - `release verify` / `release publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
 - `maintain brew`：brew 调用顺序、Cask 失败错误日志
+- `setup brew configure`：配置流程 dry-run，防缺失 source 依赖回归
 - `bootstrap/install.sh`：tap + install 调用与日志写入
 
 > E2E 用例均为 bash 脚本，用 `bash tests/e2e/run_all.sh` 调用。发布门禁见 `.github/workflows/release.yml`（打 `v*` tag 时自动执行，含真实 macOS 上的 Formula 实装校验）。
@@ -331,17 +333,7 @@ bash tests/e2e/run_all.sh
 - 阅读遵循 [`CODE_OF_CONDUCT.md`](./.github/CODE_OF_CONDUCT.md)，保持专业、友善的协作氛围。
 - 使用对应的 Issue / PR 模板，补充复现信息、测试记录与回滚方案：
     - Issue：`Bug 报告` 与 `功能需求` 模板覆盖常见场景。
-    - PR：根据修改范围选择 `setup_script.md`、`maintenance_script.md`、`docs_config_update.md` 或 `multi_scope_change.md`。
-- 运行以下校验命令，确认脚本质量：
-
-```bash
-./tests/syntax_guard.sh         # 快速做 shebang 级语法回归检查
-./lint/lint_shell.sh            # 确保脚本通过 lint
-./tests/smoke_cli.sh            # 运行最小 CLI 回归护栏
-zsh tests/cli_validators_guard.sh   # CLI 参数校验 guard（zsh）
-zsh tests/maintain_runtime_guard.sh # 维护流程 guard（zsh）
-zsh -n setup/*.sh maintain/*.sh job/*.sh lint/*.sh
-bash -n lib/colors.sh setup/git_forge_ssh_setup.sh
+  按[「运行验证」](#-运行验证)的清单执行回归（语法 / lint / smoke / guard / E2E），命令与说明以该节为唯一权威源。h -n lib/colors.sh setup/git_forge_ssh_setup.sh
 ```
 
 > 若涉及长耗时任务，建议附带 `log_time_start/_end` 输出截图或日志片段。

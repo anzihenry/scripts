@@ -31,7 +31,7 @@
    - 优先使用编辑工具（`#editor`, `#edits`），仅在必要时运行终端命令，并注明目的。
    - 对潜在破坏性命令（如 `brew upgrade`, `diskutil`）先 dry-run 或征得确认；禁止直接执行 `sudo`。
 4. **验证阶段**
-   - 自动运行可用的 lint/语法检查任务（如 `./lint/lint_shell.sh`, `zsh -n`）。
+   - 按 `README.md`「运行验证」的清单执行回归（语法 → lint → smoke → guard → E2E），命令以该节为唯一权威源，不在本文件重复维护。
    - 若任务涉及 Homebrew，建议读取/写入 `brew_update_errors.log` 以汇总失败项。
 5. **总结阶段**
    - 输出变更摘要、验证结果、后续建议（与 PR 模板保持一致）。
