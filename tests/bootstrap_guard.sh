@@ -41,7 +41,7 @@ main() {
 
   local output=""
 
-  # 1. 管道模式 --dry-run：应完整跑通流程（版本输出 0.4.0 行、不退出）
+  # 1. 管道模式 --dry-run：应完整跑通流程（版本输出 VERSION 行、不退出）
   output="$(run_bootstrap_pipe --dry-run --yes || true)"
   assert_contains() {
     if [[ "$output" != *"$1"* ]]; then
@@ -53,7 +53,8 @@ main() {
   assert_contains "Bootstrap 预检" "pipe mode reaches precheck"
   assert_contains "安装 Homebrew" "pipe mode reaches homebrew step"
   assert_contains "brew install anzihenry/scripts/macos-scripts" "pipe mode reaches formula install step"
-  assert_contains "0.4.0" "pipe mode uses version from VERSION env/default"
+  # 版本断言从 VERSION 权威文件读取，避免发版后固定值失效
+  assert_contains "$(<"$REPO_ROOT/VERSION")" "pipe mode uses version from VERSION env/default"
 
   # 2. 管道模式 --help：应输出帮助而非因 source 失败退出
   output="$(run_bootstrap_pipe --help || true)"
