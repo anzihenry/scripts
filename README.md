@@ -278,7 +278,7 @@ cd maintain
 
 ## 🧪 运行验证
 
-> **本节是测试命令的单一权威入口。** 其他文档（`docs/refactor/cli-layering-guidelines.md`、`AGENTS.md`、`.github/copilot-instructions.md`、发布清单）需要回归命令时引用本节，不再各自维护清单，避免随测试设施演进而漂移。
+> **本节是测试命令的单一权威入口。** 其他文档（`docs/refactor/cli-layering-guidelines.md`、`AGENTS.md`、发布清单）需要回归命令时引用本节，不再各自维护清单，避免随测试设施演进而漂移。
 
 按测试层级由快到慢执行（CI 已在每次 push/PR 自动运行全部）：
 

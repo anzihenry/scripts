@@ -54,7 +54,7 @@
 - `lint/lint_shell.sh`
 - `docs/refactor/`
 - `README.md`
-- `.github/copilot-instructions.md`
+- `AGENTS.md`
 - `.github/instructions/*.instructions.md`
 
 用于判断的问题：

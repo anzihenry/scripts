@@ -1,13 +1,15 @@
 # Copilot Agents 指南（实验特性）
 
 > 本文件为 VS Code `AGENTS.md`，需启用 `chat.useAgentsMdFile` 设置后生效。用于指导 Copilot agent 模式在仓库中的协作方式与安全边界。
+> 已合并原 `.github/copilot-instructions.md` 的通用规范，作为全仓库 Copilot 对话与 agent 会话的统一指引。
 
 ## 工作区背景
 - 仓库类型：macOS 自动化 Shell 脚本，覆盖初始化 (`setup/`)、维护 (`maintain/`) 与工具 (`lint/`, `lib/`).
 - 语言约束：主要为 `bash` (macOS 3.x) 与 `zsh`，需兼容 macOS 14+ 自带工具，不依赖 GNU 特性。
+- 目标：生成符合 Bash 3.x / Zsh 语法、可在系统自带工具上运行的脚本；优先保证幂等、安全与可回滚；默认输出彩色日志并记录关键步骤耗时。
 - 配置来源：
-  - `/.github/copilot-instructions.md`：通用规范。
   - `/.github/instructions/*.instructions.md`：目录/任务专项规范。
+  - `README.md`「运行验证」：测试命令唯一权威源（语法/lint/smoke/guard/E2E）。
   - 建议在执行前通过 `#instructions` 或自动绑定的文件加载对应上下文。
 
 ## 角色与分工
@@ -37,6 +39,34 @@
    - 输出变更摘要、验证结果、后续建议（与 PR 模板保持一致）。
    - 引导用户审阅 diff 并决定是否提交。
 
+## 代码风格要求
+
+### 头部与基础设置
+- 保留并更新 shebang 与 `# filepath:` 注释。
+- 根据 Shell 类型启用 `set -euo pipefail` 或等效严格模式；临时关闭需说明原因并及时恢复。
+
+### 日志与输出
+- 统一引入 `lib/colors.sh`，使用 `print_header`、`info`、`success`、`warning`、`error`、`highlight`、`log_time_start`/`_end` 等函数。
+- 输出以中文描述为主，命令/文件名保持英文。
+
+### 命名规范
+- 函数使用小写+下划线，局部变量加 `local`，常量大写或具有明显前缀。
+- 避免未使用变量、魔法字符串，必要时抽离为常量或配置项。
+
+## 功能与结构约束
+
+### 依赖与安全
+- 运行前通过 `command -v` 或库函数校验依赖；缺失时提示安装方式。
+- 执行网络、磁盘或系统修改操作前检查当前状态，并提供幂等处理分支。
+
+### 复用组件
+- Homebrew 逻辑优先调用 `setup/lib/brew_helpers.sh` 的 `bh_*` 函数。
+- 日志、计时、错误处理遵循公共库实现，避免重复造轮子。
+
+## 错误处理与提示
+- 捕获失败时调用 `error` 并给出下一步行动（重试、检查网络、手动命令等）。
+- 长耗时任务记录进度/耗时，必要时写入 `brew_update_errors.log` 等统一日志。
+
 ## 工具与命令策略
 - **首选工具**：`codebase`、`edits`、`changes`, `problems`, `terminal`（受限）。
 - **MCP/扩展工具**：仅在项目批准后使用；如需外部依赖，请说明来源与安全影响。
@@ -54,7 +84,13 @@
 - 若任务被中断，使用总结说明当前状态、剩余风险与未完成步骤。
 - 鼓励在总结中引用相关指南链接（如 `.github/instructions/maintain-scripts.instructions.md`），便于后续查阅。
 
+## 推荐 Prompt
+- “根据本指南与 `setup` 指南，为 `setup/new-script.sh` 生成初始化脚本，包含幂等检查与日志。”
+- “请在遵循本指南的前提下，为 `maintain/tool.sh` 增加 `--dry-run` 选项并记录耗时。”
+- “结合本指南和 `shell-general.instructions.md`，重构以下函数以复用 `bh_*` 辅助函数。”
+
 ## 维护与反馈
 - 负责人：脚本仓库维护者。
-- 检视频率：每季度或 VS Code agent 功能有重大更新时复查。
+- 检视频率：每季度或 VS Code agent / macOS / Copilot 功能重大更新时复查。
 - 反馈渠道：在 PR/Issue 中记录 agent 运行中的成功案例与问题，便于持续优化。
+- 关联文档：`.github/instructions/*.instructions.md`、`README.md`。
