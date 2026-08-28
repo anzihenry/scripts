@@ -60,10 +60,12 @@ jobs:
 
       - name: Formula install (real end-to-end via tap)
         # 走真实用户路径：brew tap + brew install <tap>/macos-scripts。
+        # 注意：brew tap 默认按 github.com/<user>/homebrew-<repo> 解析远端，
+        # 本仓库名为 scripts 而非 homebrew-scripts，必须显式指定远端 URL。
         # 读取的是 tap 仓库 main 分支的 Formula（sha256 已在 main 回填），
         # 与 tag 内 Formula 解耦，避免 tag 冻结与 sha256 回填的循环依赖。
         run: |
-          brew tap anzihenry/scripts
+          brew tap anzihenry/scripts https://github.com/anzihenry/scripts
           brew install anzihenry/scripts/macos-scripts 2>&1 | tail -30
           command -v macos-scripts
           macos-scripts --version
