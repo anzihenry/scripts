@@ -95,10 +95,16 @@ main() {
     "如需向目标脚本透传参数" \
     zsh bin/macos-scripts job create --help
 
-  run_expect_success_contains \
-    "Maintain brew dry-run" \
-    "Homebrew 维护完成" \
-    zsh bin/macos-scripts maintain brew --dry-run
+  # maintain brew --dry-run 会真实执行脚本并校验 brew 存在；
+  # 本机未安装 brew 时跳过该用例，避免最小回归依赖外部命令。
+  if command -v brew >/dev/null 2>&1; then
+    run_expect_success_contains \
+      "Maintain brew dry-run" \
+      "Homebrew 维护完成" \
+      zsh bin/macos-scripts maintain brew --dry-run
+  else
+    printf '[SKIP] Maintain brew dry-run（本机未安装 brew）\n'
+  fi
 
   run_expect_failure_contains \
     "Release verify missing tag" \

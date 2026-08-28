@@ -304,6 +304,7 @@ bash tests/e2e/run_all.sh        # ④ 进程级：沙箱 + 命令桩 E2E（8 �
 zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两种模式
 zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
+zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
 zsh tests/job_runtime_guard.sh        # job 运行时
 zsh tests/job_scheduler_guard.sh      # job 调度动作
 zsh tests/job_plist_guard.sh          # plist 真实写入 + plutil 校验
