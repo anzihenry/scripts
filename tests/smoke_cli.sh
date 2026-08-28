@@ -97,7 +97,7 @@ main() {
 
   # maintain brew --dry-run 会真实执行脚本并校验 brew 存在；
   # 本机未安装 brew 时跳过该用例，避免最小回归依赖外部命令。
-  if command -v brew >/dev/null 2>&1; then
+  if command -v brew > /dev/null 2>&1; then
     run_expect_success_contains \
       "Maintain brew dry-run" \
       "Homebrew 维护完成" \
