@@ -20,7 +20,7 @@ shift 2 2>/dev/null || true
 case "$cmd" in
   api)
     if release_created; then
-      printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.4.0}"
+      printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.5.0}"
       exit 0
     fi
     printf 'release not found\n' >&2
@@ -30,7 +30,7 @@ case "$cmd" in
     case "$sub" in
       create)
         : > "$GH_STATE_DIR/release_created"
-        printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.4.0}"
+        printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.5.0}"
         exit 0
         ;;
       edit | *)

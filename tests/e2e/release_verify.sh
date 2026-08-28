@@ -12,14 +12,18 @@ e2e_begin "release-verify"
 
 cd "$REPO_ROOT"
 
+# 从 VERSION 权威文件动态读取当前版本，避免每次发版都要改用例
+CURRENT_VERSION="$(< "$REPO_ROOT/VERSION")"
+CURRENT_TAG="v${CURRENT_VERSION}"
+
 e2e_run_expect_success \
   "release verify 版本一致通过" \
-  zsh bin/macos-scripts release verify v0.4.0
+  zsh bin/macos-scripts release verify "$CURRENT_TAG"
 
 e2e_assert_contains "$E2E_RUN_OUTPUT" "版本一致性检查通过" "release verify 输出一致性通过"
 e2e_assert_contains "$E2E_RUN_OUTPUT" "verify-only 检查完成" "release verify 完成 verify-only 链路"
 e2e_assert_transcript_contains \
-  "gh api repos/anzihenry/scripts/releases/tags/v0.4.0" \
+  "gh api repos/anzihenry/scripts/releases/tags/$CURRENT_TAG" \
   "release verify 调用 gh api 检查 release 状态"
 
 e2e_run_expect_failure \
