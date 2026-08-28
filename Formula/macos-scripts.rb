@@ -1,9 +1,10 @@
 class MacosScripts < Formula
   desc "Unified macOS automation CLI for setup, maintenance, jobs, and lint"
   homepage "https://github.com/anzihenry/scripts"
-  url "https://github.com/anzihenry/scripts/archive/refs/tags/v0.4.0.tar.gz"
+  url "https://github.com/anzihenry/scripts/archive/refs/tags/v0.5.0.tar.gz"
   # Homebrew infers the stable version from the tag URL.
-  sha256 "706ef84c9d346ddf33c63013acee3e2b22096ca3ad8fe109c084d757c688efe4"
+  # sha256 在 v0.5.0 tag 推送后回填（见 releases/v0.5.0-checklist.md）
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"
 
   head "https://github.com/anzihenry/scripts.git", branch: "main"
@@ -29,7 +30,7 @@ class MacosScripts < Formula
         ~/.config/macos-scripts
 
       全新 macOS 首次安装请使用独立 bootstrap 入口（正式发布示例）：
-        BOOTSTRAP_TAG=v0.4.0
+        BOOTSTRAP_TAG=v0.5.0
         curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh
 
       如需安装开发中的最新版本，可选：
