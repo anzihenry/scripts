@@ -3,7 +3,7 @@ class MacosScripts < Formula
   homepage "https://github.com/anzihenry/scripts"
   url "https://github.com/anzihenry/scripts/archive/refs/tags/v0.5.0.tar.gz"
   # Homebrew infers the stable version from the tag URL.
-  sha256 "342f533cfca081be529f057ed24206544bf5ee1e3853aee4c6a360e65fa60e6f"
+  sha256 "fe77a624d3becccdd6b9dcc554f9e84d26722a762213fb91b9df1065b5ffd70b"
   license "MIT"
 
   head "https://github.com/anzihenry/scripts.git", branch: "main"
