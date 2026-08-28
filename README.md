@@ -18,43 +18,48 @@
 ├── README.md
 ├── LICENSE
 ├── VERSION                      # 版本号唯一权威来源（release 校验依据）
+├── AGENTS.md                    # Copilot/agent 协作指南与安全边界
+├── bootstrap/
+│   └── install.sh               # 全新 macOS 独立安装入口（Xcode CLI → Homebrew → tap 安装）
+├── Formula/
+│   └── macos-scripts.rb         # Homebrew Formula（tap 安装）
 ├── lib/
-│   ├── colors.sh                 # 彩色日志 & 计时工具库
-│   └── utils.sh                  # 运行时辅助、依赖检查与通用 helper
-├── docs/
-│   └── refactor/                 # 渐进式重构阶段文档与基线记录
-├── .github/
-│   └── workflows/ci.yml          # GitHub Actions：语法护栏 + lint + guard + smoke
-├── tests/
-│   └── smoke_cli.sh              # 最小 CLI smoke tests
-├── lint/
-│   └── lint_shell.sh             # Shell 脚本 lint & 格式化工具
-├── job/
-│   ├── scheduler.sh              # Launchd 定时任务管理工具
-│   └── README.md                 # 使用说明与示例
+│   ├── colors.sh                # 彩色日志 & 计时工具库
+│   └── utils.sh                 # 运行时辅助、依赖检查与通用 helper
 ├── bin/
-│   ├── macos-scripts             # 统一 CLI 入口
-│   └── lib/
-│       ├── help.sh               # CLI 帮助文案模块
-│       └── validators.sh         # CLI 参数校验模块
+│   ├── macos-scripts            # 统一 CLI 入口
+│   └── lib/                     # CLI 分层模块（help / validators / forward / dispatch / runtime）
+├── setup/
+│   ├── brew.conf.sh             # Homebrew 安装清单（Formulae & Casks）
+│   ├── macos-setup.sh           # [步骤3] 批量安装开发工具 & GUI 应用
+│   ├── homebrew-setup.sh        # [步骤2] 校准 Homebrew 镜像与 shellenv
+│   ├── ohmyzsh-setup.sh         # [步骤1] 终端环境与主题
+│   ├── git_forge_ssh_setup.sh   # [可选] Git 平台 SSH 密钥自动化
+│   └── lib/                     # setup 运行时 / 配置写入 / 语言环境 / 安装后校验
 ├── maintain/
-│   ├── macos_sys_usb_maker.sh    # macOS 安装器下载 & USB 启动盘制作
-│   ├── formulaes_casks_updater.sh# Homebrew 批量更新工具
-│   └── lib/
-│       └── macos_installer_utils.sh # 安装器辅助函数
-└── setup/
-     ├── brew.conf.sh              # Homebrew 安装清单（Formulae & Casks）
-     ├── macos-setup.sh            # [步骤3] 批量安装开发工具 & GUI 应用
-     ├── homebrew-setup.sh         # [步骤2] 校准 Homebrew 镜像与 shellenv
-     ├── ohmyzsh-setup.sh          # [步骤1] 终端环境与主题
-     ├── git_forge_ssh_setup.sh    # [可选] Git 平台 SSH 密钥自动化
-     └── lib/
-          ├── brew_helpers.sh       # Homebrew 安装/重试/汇总辅助函数
-          ├── config_writer.sh      # 受管理配置写入 + update_shell_config helper
-          ├── homebrew_config.sh    # Homebrew 环境与镜像配置
-          ├── setup_runtime.sh      # setup 运行时、预检与安装编排 helper
-          ├── setup_lang_env.sh     # 各语言环境配置 helper
-          └── setup_postcheck.sh    # 安装后验证与总结输出
+│   ├── formulaes_casks_updater.sh   # Homebrew 批量更新工具
+│   ├── macos_sys_usb_maker.sh       # macOS 安装器下载 & USB 启动盘制作
+│   ├── github_release_publish.sh    # GitHub Release 发布（release 子命令底层执行器）
+│   └── lib/                     # 各执行器参数解析 / 流程编排 / 运行时辅助
+├── job/
+│   ├── scheduler.sh             # Launchd 定时任务管理工具
+│   ├── README.md                # 使用说明与示例
+│   └── lib/                     # job 参数 / 分发 / plist / launchctl / 运行时
+├── lint/
+│   └── lint_shell.sh            # Shell 脚本 lint & 格式化工具（shellcheck + shfmt）
+├── tests/
+│   ├── syntax_guard.sh          # 语法护栏（shebang 级 zsh -n / bash -n）
+│   ├── smoke_cli.sh             # 最小 CLI smoke tests
+│   ├── *_guard.sh               # 函数级 guard 测试（zsh 运行）
+│   └── e2e/                     # 进程级 E2E（沙箱 + 命令桩 + run_all.sh 汇总）
+├── releases/                    # 各版本发布清单与 release notes（v0.1.0 ~ v0.5.0）
+├── docs/
+│   └── refactor/                # CLI 分层约定、backlog 模板与归档阶段文档
+└── .github/
+    ├── workflows/
+    │   ├── ci.yml               # GitHub Actions：语法护栏 + lint + guard + smoke + E2E
+    │   └── release.yml          # 打 tag 时的发布门禁（含真实 macOS Formula 实装校验）
+    └── instructions/            # 各目录/任务专项 agent 指南（*.instructions.md）
 ```
 
 ## 🚀 快速开始
@@ -269,11 +274,13 @@ cd maintain
 
 ## 🧱 当前模块结构
 
-- `bin/lib/`：统一 CLI 的帮助文案与参数校验模块
+- `bin/lib/`：统一 CLI 分层模块（帮助文案、参数校验、参数转发、命令分发、共享运行时）
 - `setup/lib/`：setup 运行时、配置写入、语言环境、安装后校验模块
+- `maintain/lib/`：Homebrew 更新与安装器/USB 制作的参数解析与流程编排模块
+- `job/lib/`：launchd 任务的参数解析、plist 生成与运行时模块
 - `lib/utils.sh`：日志路径解析、运行时 helper、依赖检查
-- `tests/smoke_cli.sh`：最小 CLI 回归护栏
-- `docs/refactor/`：重构基线、阶段说明与验证记录
+- `tests/`：语法护栏、smoke、函数级 guard 与沙箱 E2E 四层测试
+- `docs/refactor/`：CLI 分层约定、backlog 归类模板与归档阶段文档
 - `docs/refactor/backlog-triage-template.md`：后续 backlog 归类、排序与验收模板
 
 ## 🧪 运行验证

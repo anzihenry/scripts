@@ -63,7 +63,7 @@ validate_release_publish_args() {
   done
 
   [[ -n "$tag" ]] || {
-    usage_error "release publish 需要提供版本 tag，例如 0.3.0 或 v0.3.0" print_release_publish_help
+    usage_error "release publish 需要提供版本 tag，例如 0.5.0 或 v0.5.0" print_release_publish_help
     return 1
   }
 }
@@ -101,7 +101,7 @@ validate_release_verify_args() {
   done
 
   [[ -n "$tag" ]] || {
-    usage_error "release verify 需要提供版本 tag，例如 0.3.0 或 v0.3.0" print_release_verify_help
+    usage_error "release verify 需要提供版本 tag，例如 0.5.0 或 v0.5.0" print_release_verify_help
     return 1
   }
 }
