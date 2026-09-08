@@ -240,8 +240,8 @@
 完整命令清单以 `README.md`「运行验证」为**唯一权威源**，此处只列 CLI 专项必跑项：
 
 ```bash
-bash tests/syntax_guard.sh
-bash tests/smoke_cli.sh
+zsh tests/syntax_guard.sh
+./tests/smoke_cli.sh
 zsh tests/cli_dispatch_guard.sh
 zsh tests/cli_validators_guard.sh
 ```

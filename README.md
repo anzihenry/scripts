@@ -188,6 +188,12 @@ MACOS_SCRIPTS_CONFIG_DIR="$HOME/.config/macos-scripts"
 例如 `macos-scripts maintain brew` 的错误日志默认会写入 `~/Library/Logs/macos-scripts/brew_update_errors.log`。
 `macos-scripts job create` 的默认任务日志会写入 `~/Library/Logs/macos-scripts/jobs/`。
 
+### 日志位置说明
+
+- 通过统一 CLI 或 Homebrew 安装态运行时，以 `~/Library/Logs/macos-scripts/` 为当前日志的权威位置。
+- 直接运行底层脚本且未设置 `MACOS_SCRIPTS_LOG_DIR` 时，部分旧入口会回退到脚本目录写日志；这些 `*.log` 均被 Git 忽略，只用于本机诊断，不代表仓库状态。
+- 排查最新一次运行时，先查看命令输出的“日志文件位置”，不要混用仓库根目录或子目录中遗留的历史日志。
+
 ## ️💻 四步搭建开发环境
 
 1. **终端美化** – 安装 Oh My Zsh、Powerlevel10k、字体等：
@@ -290,7 +296,7 @@ cd maintain
 按测试层级由快到慢执行（CI 已在每次 push/PR 自动运行全部）：
 
 ```bash
-./tests/syntax_guard.sh          # ① 语法：shebang 级 zsh -n / bash -n
+zsh tests/syntax_guard.sh        # ① 语法：shebang 级 zsh -n / bash -n
 ./lint/lint_shell.sh             # ② 静态：bash/sh 的 shellcheck + shfmt
 ./tests/smoke_cli.sh             # ③ CLI：关键成功/失败路径
 bash tests/e2e/run_all.sh        # ④ 进程级：沙箱 + 命令桩 E2E（8 用例）

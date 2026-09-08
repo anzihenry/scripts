@@ -18,7 +18,7 @@
 ## 入口
 
 ```bash
-./tests/syntax_guard.sh
+zsh tests/syntax_guard.sh
 ./tests/smoke_cli.sh
 ```
 

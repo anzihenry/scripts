@@ -5,6 +5,7 @@
 #   - bootstrap/install.sh 真实流程（--version/shellenv/tap/list/install）
 # 可通过环境变量控制行为：
 #   E2E_BREW_OUTDATED_CASKS    brew outdated --cask --greedy 的输出（默认 rectangle 1.0.0）
+#   E2E_BREW_INSTALLED_CASKS   brew list --cask 可识别的名称（默认 rectangle）
 #   E2E_BREW_FAIL_CASK         模拟指定 cask 的 brew info --cask 失败
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck disable=SC1091
@@ -48,6 +49,12 @@ case "$sub" in
     exit 0
     ;;
   list)
+    if [[ "${1:-}" == "--cask" ]]; then
+      case " ${E2E_BREW_INSTALLED_CASKS:-rectangle} " in
+        *" ${2:-} "*) exit 0 ;;
+        *) exit 1 ;;
+      esac
+    fi
     # brew list --formula <name>：模拟 formula 未安装
     exit 1
     ;;

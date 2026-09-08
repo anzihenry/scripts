@@ -11,11 +11,29 @@ append_brew_update_error_log() {
 
 get_outdated_casks() {
     local output
+    local line
+    local cask
+    local -a valid_casks=()
+
     output="$(brew outdated --cask --greedy 2>/dev/null || true)"
     [[ -z "$output" ]] && return 0
-    # awk 'NF' 过滤空行：brew outdated 输出可能以空行开头（如首次运行/镜像提示），
-    # 否则会分割出空 cask 名，导致后续 brew info 对空参数执行失败。
-    printf '%s\n' "$output" | awk 'NF {print tolower($1)}' | sort -u
+
+    # brew outdated 偶尔会把环境提示写到 stdout。不能把任意非空行的首列
+    # 都当作 Cask；只有 brew list 能确认已安装的 token 才进入升级队列。
+    for line in "${(@f)output}"; do
+        [[ -z "${line//[[:space:]]/}" ]] && continue
+        cask="${line%%[[:space:]]*}"
+        cask="${(L)cask}"
+
+        if brew list --cask "$cask" >/dev/null 2>&1; then
+            valid_casks+=("$cask")
+        else
+            warning "忽略 brew outdated 的非 Cask 输出: $cask" >&2
+        fi
+    done
+
+    [[ ${#valid_casks[@]} -eq 0 ]] && return 0
+    printf '%s\n' "${(ou)valid_casks[@]}"
 }
 
 cask_exists() {

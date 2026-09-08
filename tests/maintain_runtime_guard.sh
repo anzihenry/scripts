@@ -197,10 +197,9 @@ test_run_brew_updater_workflow_order() {
   assert_eq "${calls[*]}" "update formulae casks cleanup" "workflow keeps expected phase order"
 }
 
-test_outdated_casks_filters_blank_lines() {
-  # 回归护栏：brew outdated 输出可能以空行开头（干净 runner 首次运行等），
-  # 空行经 (@f) 分割会产生空 cask 名并导致 brew info 对空参数失败。
-  # 用假 brew 输出含空行的列表，验证 get_outdated_casks 会过滤掉空行。
+test_outdated_casks_filters_non_cask_output() {
+  # 回归护栏：brew outdated 输出可能混入空行或环境提示。
+  # 用假 brew 同时模拟合法 Cask 与提示文本，验证只有已安装 Cask 会被保留。
   # 重新加载真实实现，避免此前测试对 get_outdated_casks 的 mock 残留。
   # shellcheck disable=SC1091
   source "$REPO_ROOT/maintain/lib/brew_updater_casks.sh"
@@ -209,20 +208,32 @@ test_outdated_casks_filters_blank_lines() {
   fakebin="$(mktemp -d "${TMPDIR:-/tmp}/maintain-fakebrew.XXXXXX")"
   cat > "$fakebin/brew" <<'EOF'
 #!/bin/bash
-# 模拟 brew outdated --cask --greedy：以空行开头，避免依赖真实 brew 状态
-printf '\nvisual-studio-code\niterm2\n'
+if [[ "${1:-}" == "outdated" ]]; then
+  # 模拟 stdout 混入空行和 Homebrew 环境提示。
+  printf '\nHOMEBREW_BREW_GIT_REMOTE: https://example.invalid\nvisual-studio-code\niterm2\n'
+  exit 0
+fi
+
+if [[ "${1:-}" == "list" && "${2:-}" == "--cask" ]]; then
+  case "${3:-}" in
+    visual-studio-code|iterm2) exit 0 ;;
+    *) exit 1 ;;
+  esac
+fi
+
+exit 1
 EOF
   chmod +x "$fakebin/brew"
 
   local orig_path="$PATH"
   PATH="$fakebin:$PATH"
   local result=""
-  result="$(get_outdated_casks)"
+  result="$(get_outdated_casks 2>/dev/null)"
   PATH="$orig_path"
   rm -rf "$fakebin"
 
   assert_eq "$result" "iterm2
-visual-studio-code" "get_outdated_casks filters leading blank lines"
+visual-studio-code" "get_outdated_casks keeps only installed casks"
 }
 
 test_run_cask_upgrades_skips_blank_cask_entry() {
@@ -286,7 +297,7 @@ main() {
   test_run_cask_upgrades_skips_excluded_casks
   test_run_brew_updater_workflow_skip_flags
   test_run_brew_updater_workflow_order
-  test_outdated_casks_filters_blank_lines
+  test_outdated_casks_filters_non_cask_output
   test_run_cask_upgrades_skips_blank_cask_entry
   test_append_brew_update_error_log_writes_real_file
 
