@@ -20,7 +20,10 @@ release_status() {
     return 0
   fi
 
-  if grep -qE '(^|[^0-9])(404|HTTP 404|Not Found)' "$stderr_file" 2> /dev/null; then
+  # 仅把明确的 404 视为「确定不存在」。使用 -i 以兼容 gh 的不同文案
+  # （GitHub API 的 message 字段是 "Not Found"，CLI 前缀是 "HTTP 404"）。
+  # 其余错误（401/403/5xx/超时/限流）一律判为状态未知，避免误创建。
+  if grep -qiE '(^|[^0-9])(404|not found)' "$stderr_file" 2> /dev/null; then
     rm -f "$stderr_file"
     return 1
   fi

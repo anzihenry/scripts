@@ -123,6 +123,34 @@ test_update_release_path() {
   assert_eq "$recorded_command" "gh release edit $TAG --repo $REPO_SLUG --title $TITLE --notes-file $NOTES_FILE" "update path forwards edit command"
 }
 
+test_query_failure_aborts_publish() {
+  # release_status 返回 2 = 查询失败（网络/限流/鉴权）。
+  # 此时必须中止，绝不能当作「不存在」去创建 release。
+  # 用文件记录（而非变量）以便在子 shell 中也能观测。
+  local record_file=""
+  record_file="$(mktemp "${TMPDIR:-/tmp}/release-guard-record.XXXXXX")"
+
+  release_status() { return 2; }
+  run_logged_command() {
+    shift
+    printf '%s\n' "$*" >> "$record_file"
+  }
+
+  TAG="v1.2.3"
+  REPO_SLUG="anzihenry/scripts"
+  TITLE="Release 1.2.3"
+  TARGET="main"
+  NOTES_FILE="/tmp/release-notes.md"
+  UPDATE_EXISTING="false"
+
+  local rc=0
+  (create_or_update_release) > /dev/null 2>&1 || rc=$?
+  assert_eq "$rc" "1" "query failure aborts publish"
+  assert_eq "$(cat "$record_file")" "" "query failure does not run any gh release command"
+
+  rm -f "$record_file"
+}
+
 test_verify_release_dry_run() {
   local output=""
 
@@ -139,6 +167,7 @@ main() {
   test_confirm_publish_short_circuit
   test_create_release_path
   test_update_release_path
+  test_query_failure_aborts_publish
   test_verify_release_dry_run
 
   printf '\nRelease publish guard passed: %d\n' "$PASS_COUNT"

@@ -272,11 +272,31 @@ test_release_status_three_states() {
   PATH="$ghdir:$PATH" release_status > /dev/null 2>&1 || rc=$?
   assert_eq "$rc" "1" "404 判定为确定不存在"
 
+  # gh api 对缺失 release 的真实文案变体（大小写/位置不同）也必须识别为不存在
+  ghdir="$sandbox/notfound-lower"
+  mkgh "$ghdir" '{"message":"Not Found"}' 1
+  rc=0
+  PATH="$ghdir:$PATH" release_status > /dev/null 2>&1 || rc=$?
+  assert_eq "$rc" "1" "JSON message not found 亦判定为不存在"
+
   ghdir="$sandbox/error"
   mkgh "$ghdir" "gh: API rate limit exceeded (HTTP 403)" 1
   rc=0
   PATH="$ghdir:$PATH" release_status > /dev/null 2>&1 || rc=$?
-  assert_eq "$rc" "2" "限流/网络错误判定为查询失败"
+  assert_eq "$rc" "2" "限流判定为查询失败"
+
+  # 401/5xx 同样属于「状态未知」，不得误判为不存在
+  ghdir="$sandbox/auth"
+  mkgh "$ghdir" "gh: Bad credentials (HTTP 401)" 1
+  rc=0
+  PATH="$ghdir:$PATH" release_status > /dev/null 2>&1 || rc=$?
+  assert_eq "$rc" "2" "鉴权失败判定为查询失败"
+
+  ghdir="$sandbox/server"
+  mkgh "$ghdir" "gh: Server Error (HTTP 502)" 1
+  rc=0
+  PATH="$ghdir:$PATH" release_status > /dev/null 2>&1 || rc=$?
+  assert_eq "$rc" "2" "5xx 判定为查询失败"
 
   ghdir="$sandbox/ok"
   mkgh "$ghdir" "" 0
