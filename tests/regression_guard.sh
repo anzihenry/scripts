@@ -301,6 +301,20 @@ test_release_status_three_states() {
   return 0
 }
 
+# 待扫描的脚本清单：所有带 bash shebang 的文件（含 bin/ 下无扩展名入口与
+# e2e 命令桩）。zsh 文件不受该 bash 3.2 解析缺陷影响。
+SHELL_FILES_FOR_SCAN=()
+_collect_shell_files_for_scan() {
+  local f first
+  while IFS= read -r f; do
+    [[ -f "$f" ]] || continue
+    first="$(head -1 "$f" 2> /dev/null || true)"
+    [[ "$first" == *bash* ]] && SHELL_FILES_FOR_SCAN+=("$f")
+  done < <(find "$REPO_ROOT" \( -name '*.sh' -o -type f -path '*/bin/*' \) \
+    -not -path '*/.git/*' -not -path '*/vendor/*' 2> /dev/null)
+}
+_collect_shell_files_for_scan
+
 # ===== 6. first_line 不引入 SIGPIPE =====
 test_first_line_helper() {
   # shellcheck disable=SC1091
@@ -332,6 +346,62 @@ test_first_line_helper() {
   return 0
 }
 
+# ===== 7. bash 3.2 多字节变量邻接（CI 真实翻车点） =====
+# bash 3.2 在 `"$var，…"`（变量后紧跟多字节字符）且 set -u 时，会把该字符的
+# 首字节并入变量名，报 `var<0xef>: unbound variable`；zsh 不会。
+# 本机 zsh 验证无法发现，必须在 bash 下用字节扫描拦截。
+test_multibyte_var_adjacency() {
+  local bad good
+  bad="$(mktemp "${TMPDIR:-/tmp}/regression-mb-bad.XXXXXX")"
+  good="$(mktemp "${TMPDIR:-/tmp}/regression-mb-good.XXXXXX")"
+  printf 'echo "$message，耗时"\n' > "$bad"
+  printf 'echo "${message}，耗时"\n' > "$good"
+
+  # 内联扫描器：逐字节状态机，跳过 ${...} 形式，只报 $var 后紧跟高位字节。
+  # 用 perl（zsh/bash 内联正则无法可靠处理原始字节）。
+  local scanner
+  scanner="$(mktemp "${TMPDIR:-/tmp}/regression-mb-scan.XXXXXX.pl")"
+  cat > "$scanner" <<'PERL'
+use strict; use warnings;
+my $total = 0;
+for my $f (@ARGV) {
+  open my $fh, "<:raw", $f or next;
+  while (my $line = <$fh>) {
+    my $len = length($line);
+    for (my $i = 0; $i < $len; $i++) {
+      next unless substr($line, $i, 1) eq '$';
+      my $j = $i + 1;
+      next unless $j < $len && substr($line, $j, 1) =~ /[A-Za-z_]/;
+      next if substr($line, $j, 1) eq '{';
+      $j++ while $j < $len && substr($line, $j, 1) =~ /[A-Za-z0-9_]/;
+      if ($j < $len && ord(substr($line, $j, 1)) >= 0x80) {
+        my $name = substr($line, $i + 1, $j - $i - 1);
+        printf "%s: \$%s + 0x%02x\n", $f, $name, ord(substr($line, $j, 1));
+        $total++;
+        last;
+      }
+    }
+  }
+  close $fh;
+}
+print "TOTAL=$total\n";
+PERL
+
+  local bad_hits good_hits
+  bad_hits="$(perl "$scanner" "$bad" | tail -1)"
+  good_hits="$(perl "$scanner" "$good" | tail -1)"
+  assert_eq "$bad_hits" "TOTAL=1" "扫描能发现多字节变量邻接"
+  assert_eq "$good_hits" "TOTAL=0" "花括号写法不被误报"
+
+  # 真实仓库：所有带 bash shebang 的脚本必须为 0
+  local repo_hits
+  repo_hits="$(perl "$scanner" $SHELL_FILES_FOR_SCAN | tail -1)"
+  assert_eq "$repo_hits" "TOTAL=0" "生产代码无多字节变量邻接"
+
+  rm -f "$bad" "$good" "$scanner"
+  return 0
+}
+
 main() {
   cd "$REPO_ROOT"
 
@@ -342,6 +412,7 @@ main() {
   test_installer_stale_lock_takeover
   test_release_status_three_states
   test_first_line_helper
+  test_multibyte_var_adjacency
 
   printf '\nRegression guard passed: %d\n' "$PASS_COUNT"
 }

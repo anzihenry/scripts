@@ -6,7 +6,7 @@
 #   - 每个用例脚本 source 本文件后调用 e2e_begin <name>，末尾调用 e2e_summary。
 #   - 沙箱：HOME / MACOS_SCRIPTS_CONFIG_DIR / MACOS_SCRIPTS_LOG_DIR /
 #     MACOS_SCRIPTS_LAUNCH_AGENTS_DIR 全部指向临时目录，PATH 前置 shims/。
-#   - transcript：tests/e2e/shims/ 下的命令桩把每次外部调用追加到 $E2E_TRANSCRIPT，
+#   - transcript：tests/e2e/shims/ 下的命令桩把每次外部调用追加到 ${E2E_TRANSCRIPT}，
 #     用例据此断言“脚本实际执行了什么”，而非只验证不报错。
 
 # 本文件为共享库：大量变量由子脚本/命令桩跨进程消费，文件内看似未使用。

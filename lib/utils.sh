@@ -97,7 +97,7 @@ require_macos_min_version() {
   current_version_code="$(get_macos_version_code "$os_version")"
   if [[ "$current_version_code" -lt "$min_version_code" ]]; then
     if [[ -n "$message" ]]; then
-      log_fatal "$message，当前版本：$os_version"
+      log_fatal "${message}，当前版本：${os_version}"
     fi
     log_fatal "当前 macOS 版本过低：$os_version"
   fi

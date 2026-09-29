@@ -25,7 +25,7 @@ release_status() {
     return 1
   fi
 
-  warning "无法查询 Release 状态（gh 退出码 $release_state）：$(tr '\n' ' ' < "$stderr_file")"
+  warning "无法查询 Release 状态（gh 退出码 ${release_state}）：$(tr '\n' ' ' < "$stderr_file")"
   rm -f "$stderr_file"
   return 2
 }

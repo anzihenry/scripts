@@ -159,13 +159,13 @@ log_time_end() {
 
   case "$outcome" in
     success | ok)
-      log_success "$message，耗时 $formatted"
+      log_success "${message}，耗时 ${formatted}"
       ;;
     warn | warning)
-      log_warn "$message，耗时 $formatted"
+      log_warn "${message}，耗时 ${formatted}"
       ;;
     *)
-      log_error "$message，耗时 $formatted"
+      log_error "${message}，耗时 ${formatted}"
       ;;
   esac
 
