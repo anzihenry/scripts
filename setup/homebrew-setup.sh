@@ -88,9 +88,9 @@ configure_homebrew() {
     print_header "配置 Homebrew"
     configure_homebrew_environment "$BREW_BIN" "$DRY_RUN"
     if [[ "$DRY_RUN" == "true" ]]; then
-        success "Homebrew dry-run 预演完成 (版本: $($BREW_BIN --version | head -n1))"
+        success "Homebrew dry-run 预演完成 (版本: $(first_line "$BREW_BIN" --version))"
     else
-        success "Homebrew 配置完成 (版本: $($BREW_BIN --version | head -n1))"
+        success "Homebrew 配置完成 (版本: $(first_line "$BREW_BIN" --version))"
     fi
 }
 

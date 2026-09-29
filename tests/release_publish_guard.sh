@@ -79,7 +79,7 @@ test_create_release_path() {
   local output=""
   output_file="$(mktemp "${TMPDIR:-/tmp}/release-publish-guard.XXXXXX")"
 
-  release_exists() { return 1; }
+  release_status() { return 1; }
   run_logged_command() {
     recorded_description="$1"
     shift
@@ -105,7 +105,7 @@ test_update_release_path() {
   local recorded_description=""
   local recorded_command=""
 
-  release_exists() { return 0; }
+  release_status() { return 0; }
   run_logged_command() {
     recorded_description="$1"
     shift

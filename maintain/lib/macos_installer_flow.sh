@@ -7,15 +7,63 @@
 # 导致并发互斥保护失效。
 INSTALLER_LOCK_DIRS=()
 
-acquire_installer_lock() {
-  local key="$(sanitize_key "$1")"
-  LOCK_DIR="/tmp/${SCRIPT_NAME}.${key}.lock"
-  if mkdir "$LOCK_DIR" 2>/dev/null; then
-    INSTALLER_LOCK_DIRS+=("$LOCK_DIR")
-    log_debug "已获取锁: $LOCK_DIR"
-  else
-    die "另一个相同操作正在进行中（锁: $LOCK_DIR）。稍后重试。"
+# 判断锁目录的持有进程是否仍存活。只认明确的「进程不存在」；
+# 任何不确定情况（无 ps、读取失败、仅剩僵尸/孤儿目录）都保守视为存活，
+# 避免误删他人正在持有的锁而破坏互斥。
+_installer_lock_owner_alive() {
+  local lock_dir="$1"
+  local info_file="$lock_dir/pid"
+  local pid=""
+
+  [[ -r "$info_file" ]] || return 0
+  pid="$(<"$info_file")"
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+  [[ "$pid" -gt 0 ]] || return 0
+  # 自己持有
+  [[ "$pid" -eq "$$" ]] && return 0
+
+  if command -v ps > /dev/null 2>&1; then
+    if ps -p "$pid" > /dev/null 2>&1; then
+      return 0
+    fi
+    return 1
   fi
+
+  if kill -0 "$pid" 2> /dev/null; then
+    return 0
+  fi
+  case "$(kill -0 "$pid" 2>&1)" in
+    *"No such process"*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+acquire_installer_lock() {
+  local key
+  key="$(sanitize_key "$1")"
+  LOCK_DIR="/tmp/${SCRIPT_NAME}.${key}.lock"
+
+  if ! mkdir "$LOCK_DIR" 2> /dev/null; then
+    # 陈旧锁接管：SIGKILL / 断电等异常退出会留下锁目录，
+    # 若不做存活判断将导致后续运行永久阻塞。
+    if _installer_lock_owner_alive "$LOCK_DIR"; then
+      local owner_pid=""
+      owner_pid="$(<"$LOCK_DIR/pid" 2> /dev/null || true)"
+      warning "另一个相同操作正在进行中（PID ${owner_pid:-未知}，锁: $LOCK_DIR）。"
+      die "请等待其结束；若确认进程已不存在，可手动删除该锁目录后重试。"
+    fi
+
+    warning "检测到陈旧锁（持有进程已退出），自动接管: $LOCK_DIR"
+    rm -rf "$LOCK_DIR"
+    if ! mkdir "$LOCK_DIR" 2> /dev/null; then
+      die "另一个相同操作正在进行中（锁: $LOCK_DIR）。稍后重试。"
+    fi
+  fi
+
+  INSTALLER_LOCK_DIRS+=("$LOCK_DIR")
+  # best-effort 写入持有者 PID，供下次启动做陈旧判断；写入失败不影响互斥。
+  printf '%s' "$$" > "$LOCK_DIR/pid" 2> /dev/null || true
+  log_debug "已获取锁: $LOCK_DIR (pid $$)"
 }
 
 sub_list() {

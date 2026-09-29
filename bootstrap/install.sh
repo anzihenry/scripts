@@ -31,6 +31,10 @@ else
   print_code() { printf '  %s\n' "$1"; }
 
   # ---- 工具函数 fallback ----
+  first_line() {
+    "$@" 2> /dev/null | awk 'NR == 1 { print; exit }'
+  }
+
   require_command() {
     local cmd="$1"
     command -v "$cmd" >/dev/null 2>&1 || {
@@ -227,7 +231,7 @@ install_homebrew_if_needed() {
   local brew_bin=""
   if brew_bin="$(resolve_homebrew_bin)"; then
     activate_homebrew_environment "$brew_bin"
-    success "检测到现有 Homebrew: $($brew_bin --version | head -n1)"
+    success "检测到现有 Homebrew: $(first_line "$brew_bin" --version)"
     return 0
   fi
 
@@ -255,7 +259,7 @@ install_homebrew_if_needed() {
   }
   activate_homebrew_environment "$brew_bin"
 
-  success "Homebrew 安装完成: $($brew_bin --version | head -n1)"
+  success "Homebrew 安装完成: $(first_line "$brew_bin" --version)"
 }
 
 install_macos_scripts() {
@@ -288,7 +292,9 @@ install_macos_scripts() {
       print_code "brew upgrade $TAP_NAME/$FORMULA_NAME"
     else
       info "检测到已安装 $FORMULA_NAME，尝试升级到 stable $FORMULA_STABLE_VERSION"
-      brew upgrade "$TAP_NAME/$FORMULA_NAME" || info "当前已是最新版本或无需升级"
+      # 不要用 `|| info "已是最新"` 吞掉失败：brew 在「已是最新」时本来就返回 0，
+      # 返回非零代表真实升级失败（网络/tap/权限），必须让 bootstrap 失败退出。
+      brew upgrade "$TAP_NAME/$FORMULA_NAME"
     fi
   else
     run_command "安装 stable formula: $TAP_NAME/$FORMULA_NAME@$FORMULA_STABLE_VERSION" brew install "$TAP_NAME/$FORMULA_NAME"

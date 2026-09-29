@@ -46,7 +46,12 @@ get_git_email() {
   local email
   email="$(git config --global user.email 2> /dev/null || true)"
   while [[ ! "$email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
-    read -r -p "$(highlight '请输入有效的Git全局邮箱地址: ')" email
+    # read 在 EOF（非交互 stdin，如 `curl | zsh` 或 </dev/null）时返回非零
+    # 且不会修改 email，条件恒真 -> 死循环。必须显式处理失败。
+    if ! read -r -p "$(highlight '请输入有效的Git全局邮箱地址: ')" email; then
+      log_error "无法读取邮箱输入（stdin 已结束）；请先执行 git config --global user.email <邮箱>"
+      return 1
+    fi
     if [[ "$email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
       git config --global user.email "$email" || log_error "设置Git邮箱失败"
     fi
@@ -141,6 +146,16 @@ update_ssh_config() {
   echo "$host_alias"
 }
 
+# 幂等清理 upload_github_key 的临时目录（内含 Authorization token）。
+# 供 EXIT/INT/TERM/HUP trap 调用，也可在正常路径手动调用。
+_cleanup_github_key_tmpdir() {
+  if [[ -n "${_GITHUB_KEY_TMPDIR:-}" ]]; then
+    rm -rf "$_GITHUB_KEY_TMPDIR"
+    _GITHUB_KEY_TMPDIR=""
+  fi
+  trap - EXIT INT TERM HUP
+}
+
 upload_github_key() {
   local pub_key="$1" title="$2" token="$3"
   log_info "上传公钥到GitHub..."
@@ -156,6 +171,9 @@ upload_github_key() {
   local tmpdir
   tmpdir="$(mktemp -d)"
   chmod 700 "$tmpdir"
+  # 兜底清理：中途 Ctrl-C / 其他 set -e 退出也不会把含 token 的目录留在 /tmp。
+  _GITHUB_KEY_TMPDIR="$tmpdir"
+  trap '_cleanup_github_key_tmpdir' EXIT INT TERM HUP
   printf '%s' "$payload" > "$tmpdir/payload.json"
   {
     echo 'url = "https://api.github.com/user/keys"'
@@ -165,9 +183,16 @@ upload_github_key() {
   } > "$tmpdir/curl.conf"
 
   local resp http_code
+  # 必须用 set +e 捕获 curl 状态：在 set -e 下，裸赋值 `resp=$(curl ...)`
+  # 会直接继承 curl 的非零状态并立即退出，导致下面的清理与错误分支成为
+  # 死代码，含 Authorization token 的 $tmpdir 残留在 /tmp。
+  local curl_status=0
+  set +e
   resp=$(curl -s -w "\n%{http_code}" --config "$tmpdir/curl.conf")
-  local curl_status=$?
-  rm -rf "$tmpdir"
+  curl_status=$?
+  set -e
+
+  _cleanup_github_key_tmpdir
 
   if [[ $curl_status -ne 0 ]]; then
     log_error "GitHub API 请求失败 (curl 状态码 $curl_status)"

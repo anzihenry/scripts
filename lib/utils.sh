@@ -114,6 +114,14 @@ check_network_reachability() {
   ping -c2 "$ping_host" > /dev/null 2>&1
 }
 
+# 取命令输出的第一行。
+# 用 awk 读完整管道再退出，而不是 `cmd | head -n1`：后者在
+# `set -o pipefail` 下，当 writer 因 head 提前退出收到 SIGPIPE(141) 时，
+# 整个命令替换会被判为失败。
+first_line() {
+  "$@" 2> /dev/null | awk 'NR == 1 { print; exit }'
+}
+
 # ===== 3. 命令检查 =====
 require_command() {
   local cmd="$1"

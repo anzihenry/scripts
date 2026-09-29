@@ -120,7 +120,8 @@ read_version_authority() {
 read_formula_referenced_version() {
   local formula_file="$REPO_ROOT/Formula/macos-scripts.rb"
   [[ -f "$formula_file" ]] || return 1
-  grep -oE 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+' "$formula_file" | head -1 | sed 's#refs/tags/v##'
+  # 用 grep -m1 直接取首个匹配，避免 `... | head -1` 在 pipefail 下的 SIGPIPE 风险。
+  grep -m1 -oE 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+' "$formula_file" | sed 's#refs/tags/v##'
 }
 
 verify_release_version_consistency() {

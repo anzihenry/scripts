@@ -13,9 +13,19 @@ get_outdated_casks() {
     local output
     local line
     local cask
+    local outdated_status=0
     local -a valid_casks=()
 
-    output="$(brew outdated --cask --greedy 2>/dev/null || true)"
+    # 不能吞掉 brew 的退出码：网络故障/brew 异常时会返回非零，
+    # 若与「无更新」一样 return 0，会把失败误报成「没有需要更新的 Cask」。
+    set +e
+    output="$(brew outdated --cask --greedy 2> /dev/null)"
+    outdated_status=$?
+    set -e
+    if [[ $outdated_status -ne 0 ]]; then
+        warning "brew outdated --cask 执行失败（退出码 $outdated_status），本次跳过 Cask 更新检测"
+        return 1
+    fi
     [[ -z "$output" ]] && return 0
 
     # brew outdated 偶尔会把环境提示写到 stdout。不能把任意非空行的首列
@@ -69,8 +79,13 @@ run_cask_upgrade() {
 
     log_time_start "$timer_key" "升级 Cask: $cask"
     if run_command brew upgrade --cask "$cask"; then
-        UPDATED_CASKS+=("$cask")
-        log_time_end "$timer_key" "Cask 更新完成: $cask"
+        # dry-run 下 run_command 只预览、并未真正升级，不能计入「已更新」。
+        if [[ "${DRY_RUN:-false}" == "true" ]]; then
+            log_time_end "$timer_key" "Cask 更新预览: $cask"
+        else
+            UPDATED_CASKS+=("$cask")
+            log_time_end "$timer_key" "Cask 更新完成: $cask"
+        fi
         return 0
     fi
 
@@ -89,7 +104,20 @@ run_cask_upgrades() {
     print_header "步骤 3：更新 Cask"
     info "正在检测可更新的 Cask 应用..."
 
-    outdated_casks=("${(@f)$(get_outdated_casks)}")
+    # 捕获返回值：get_outdated_casks 在 brew 失败时返回非零。直接写
+    # `outdated_casks=("${(@f)$(get_outdated_casks)}")` 在 set -e 下会
+    # 因赋值语句继承失败状态而终止；同时也不能把失败当作「无更新」。
+    local outdated_output="" outdated_status=0
+    set +e
+    outdated_output="$(get_outdated_casks)"
+    outdated_status=$?
+    set -e
+    if [[ $outdated_status -ne 0 ]]; then
+        warning "Cask 更新检测失败，跳过本步骤（其余维护步骤继续）"
+        return 0
+    fi
+
+    outdated_casks=("${(@f)outdated_output}")
     if [[ ${#outdated_casks[@]} -eq 0 ]]; then
         warning "没有检测到需要更新的 Cask 应用"
         return 0

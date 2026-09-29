@@ -1,5 +1,17 @@
 #!/bin/zsh
 
+# plist 原子写入的临时文件登记（供 EXIT/INT/TERM/HUP trap 清理）
+_PLIST_TMP_PATH=""
+
+_cleanup_plist_tmp() {
+    if [[ -n "${_PLIST_TMP_PATH:-}" && -e "$_PLIST_TMP_PATH" ]]; then
+        rm -f "$_PLIST_TMP_PATH"
+    fi
+    _PLIST_TMP_PATH=""
+    trap - EXIT INT TERM HUP
+    return 0
+}
+
 xml_escape() {
     local input="${1:-}"
     local escaped="$input"
@@ -124,6 +136,33 @@ backup_existing_plist() {
 write_plist_file() {
     local plist_path="$1"
     local plist_content="$2"
-    printf "%s" "$plist_content" > "$plist_path"
-    plutil -lint "$plist_path" >/dev/null
+
+    # 原子写入：先写同目录临时文件 -> plutil 校验 -> mv 覆盖目标。
+    # 直接 `> "$plist_path"` 再校验会在校验前就破坏已有 plist，
+    # 一旦中断就留下损坏文件且无法回滚。
+    local tmp_path="${plist_path}.tmp.$$"
+    _PLIST_TMP_PATH="$tmp_path"
+    trap '_cleanup_plist_tmp' EXIT INT TERM HUP
+
+    if ! printf "%s" "$plist_content" > "$tmp_path"; then
+        _cleanup_plist_tmp
+        error "无法写入临时 plist: $tmp_path"
+        return 1
+    fi
+
+    if ! plutil -lint "$tmp_path" > /dev/null; then
+        _cleanup_plist_tmp
+        error "plist 校验失败，未覆盖原文件: $plist_path"
+        return 1
+    fi
+
+    if ! mv "$tmp_path" "$plist_path"; then
+        _cleanup_plist_tmp
+        error "无法替换 plist: $plist_path"
+        return 1
+    fi
+
+    _PLIST_TMP_PATH=""
+    trap - EXIT INT TERM HUP
+    return 0
 }
