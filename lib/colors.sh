@@ -47,6 +47,9 @@ if _supports_color; then
   export COLOR_UNDERLINE='\033[4m'
   export COLOR_BLINK='\033[5m'
   export COLOR_REVERSE='\033[7m'
+  # setup 脚本历史上有直接用 ${BOLD} 的写法，这里补齐兼容别名，
+  # 否则在 set -u 下会因未定义变量而报错。
+  export BOLD="$COLOR_BOLD"
 
   # 重置
   export COLOR_RESET='\033[0m'
@@ -67,7 +70,7 @@ else
   export COLOR_BG_RED='' COLOR_BG_GREEN='' COLOR_BG_YELLOW='' COLOR_BG_BLUE=''
   export COLOR_BOLD='' COLOR_DIM='' COLOR_UNDERLINE='' COLOR_BLINK='' COLOR_REVERSE=''
   export COLOR_RESET='' COLOR_NC=''
-  export RED='' GREEN='' YELLOW='' BLUE='' NC=''
+  export RED='' GREEN='' YELLOW='' BLUE='' NC='' BOLD=''
 fi
 
 # ===== 日志函数 =====

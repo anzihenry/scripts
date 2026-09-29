@@ -10,6 +10,7 @@ fi
 
 # 启用错误中断和显示执行命令
 set -e
+set -u
 set -o pipefail
 
 # 引入工具库（自动加载 colors.sh 并提供 fallback）

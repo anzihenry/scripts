@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # filepath: tests/e2e/shims/git
 # git 命令桩：记录调用，不访问真实远端。
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -34,6 +35,8 @@ case "$sub" in
     exit 0
     ;;
   *)
-    exit 0
+    # fail loud：未建模的 git 子命令不应被静默放过。
+    printf 'git stub: 未支持的子命令: %s\n' "${sub:-<none>}" >&2
+    exit 127
     ;;
 esac

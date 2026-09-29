@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # filepath: tests/e2e/shims/launchctl
 # launchctl 命令桩：记录调用；模拟“任务未加载”（print 返回 1），
 # 使 job create 走 bootstrap 路径、job disable 提示未运行。
@@ -13,7 +14,12 @@ case "${1:-}" in
     # 任务未加载 -> job create 走 bootstrap；job disable 提示未运行
     exit 1
     ;;
-  *)
+  bootstrap | bootout | enable | disable)
     exit 0
+    ;;
+  *)
+    # fail loud：未建模的 launchctl 子命令不应被静默放过。
+    printf 'launchctl stub: 未支持的命令: %s\n' "${1:-}" >&2
+    exit 127
     ;;
 esac

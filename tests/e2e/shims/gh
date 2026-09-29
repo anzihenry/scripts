@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # filepath: tests/e2e/shims/gh
 # gh 命令桩：记录调用，并用 $E2E_GH_STATE_DIR/release_created 标记模拟
 # release 是否已存在（gh release create 成功后会写入标记，使后续 api 查询返回已存在）。
@@ -8,14 +9,14 @@ source "$SCRIPT_DIR/_recorder.sh"
 
 record_invocation "$@"
 
-GH_STATE_DIR="${E2E_GH_STATE_DIR:-$E2E_TMP_ROOT/gh_state}"
+GH_STATE_DIR="${E2E_GH_STATE_DIR:-${E2E_TMP_ROOT:-/tmp}/gh_state}"
 mkdir -p "$GH_STATE_DIR"
 
 release_created() { [[ -f "$GH_STATE_DIR/release_created" ]]; }
 
 cmd="${1:-}"
 sub="${2:-}"
-shift 2 2>/dev/null || true
+shift 2 2> /dev/null || true
 
 case "$cmd" in
   api)
@@ -26,6 +27,10 @@ case "$cmd" in
     printf 'release not found\n' >&2
     exit 1
     ;;
+  auth)
+    # gh auth status / gh auth login：E2E 默认视为已登录
+    exit 0
+    ;;
   release)
     case "$sub" in
       create)
@@ -33,12 +38,18 @@ case "$cmd" in
         printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.5.0}"
         exit 0
         ;;
-      edit | *)
+      edit)
         exit 0
+        ;;
+      *)
+        printf 'gh stub: 未支持的 release 子命令: %s\n' "$sub" >&2
+        exit 127
         ;;
     esac
     ;;
   *)
-    exit 0
+    # fail loud：不再静默 exit 0，避免「生产代码调用了未建模的命令却测试通过」的假绿。
+    printf 'gh stub: 未支持的命令: %s %s\n' "$cmd" "$sub" >&2
+    exit 127
     ;;
 esac

@@ -2,6 +2,7 @@
 # filepath: setup/homebrew-setup.sh
 
 set -e                            # 错误立即退出
+set -u                            # 未定义变量视为错误
 set -o pipefail                   # 管道错误捕获
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

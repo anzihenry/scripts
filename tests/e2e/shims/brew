@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # filepath: tests/e2e/shims/brew
 # brew 命令桩：记录调用并按子命令返回可预测输出，供
 #   - maintain brew 真实流程（update/upgrade/outdated/info/cleanup）
@@ -22,7 +23,9 @@ case "$sub" in
     exit 0
     ;;
   shellenv)
-    # bootstrap 的 activate_homebrew_environment 会对该输出做 eval
+    # bootstrap 的 activate_homebrew_environment 会对该输出做 eval，
+    # 因此这里的 $PATH 必须是字面量而不能被本层 shell 展开。
+    # shellcheck disable=SC2016
     printf 'export PATH="%s:$PATH"\n' "$SCRIPT_DIR"
     exit 0
     ;;

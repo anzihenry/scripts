@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # filepath: tests/e2e/shims/xcode-select
 # xcode-select 命令桩：记录调用，模拟 Xcode CLI 已就绪（-p 返回 0）。
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,7 +13,12 @@ case "${1:-}" in
     printf '/Library/Developer/CommandLineTools\n'
     exit 0
     ;;
-  *)
+  --install)
     exit 0
+    ;;
+  *)
+    # fail loud：未建模的子命令不应被静默放过。
+    printf 'xcode-select stub: 未支持的命令: %s\n' "${1:-}" >&2
+    exit 127
     ;;
 esac

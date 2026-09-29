@@ -311,6 +311,7 @@ zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两�
 zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
 zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
+zsh tests/regression_guard.sh         # 已修缺陷回归（日志 stderr / plist 原子写 / 陈旧锁 / release_status）
 zsh tests/job_runtime_guard.sh        # job 运行时
 zsh tests/job_scheduler_guard.sh      # job 调度动作
 zsh tests/job_plist_guard.sh          # plist 真实写入 + plutil 校验

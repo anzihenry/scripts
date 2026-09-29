@@ -52,7 +52,11 @@ collect_shell_files() {
   local base="$1"
   while IFS= read -r file; do
     FILES+=("$file")
-  done < <(find "$base" -type f \( -name '*.sh' -o -path '*/bin/*' \) -not -path '*/.git/*' -not -path '*/vendor/*')
+  done < <(find "$base" -type f \( \
+    -name '*.sh' \
+    -o -path '*/bin/*' \
+    -o -path '*/tests/e2e/shims/*' \
+    \) -not -path '*/.git/*' -not -path '*/vendor/*')
 }
 
 detect_shell() {
