@@ -16,7 +16,10 @@ parse_download_args() {
   done
 
   [ -n "${DOWNLOAD_VERSION}" ] || die "请通过 --version 指定版本号，例如 --version 14.6.1"
+  # 必须显式 return 0：`[ ... ] && export ...` 在未加 -v 时返回 1，
+  # 会被调用方的 set -e 当作失败（此前导致无 -v 的 download 直接退出）。
   [ "$VERBOSE" = "true" ] && export DEBUG=true
+  return 0
 }
 
 parse_create_args() {
@@ -39,7 +42,9 @@ parse_create_args() {
     esac
   done
 
+  # 同 parse_download_args：避免末位 && 条件在未加 -v 时返回 1。
   [ "$VERBOSE" = "true" ] && export DEBUG=true
+  return 0
 }
 
 dispatch_macos_installer_command() {

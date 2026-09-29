@@ -2,7 +2,11 @@
 # filepath: maintain/lib/macos_installer_args.sh
 
 initialize_macos_installer_context() {
-  SCRIPT_NAME="$(basename "$0")"
+  # SCRIPT_NAME 由入口脚本在顶层赋值（函数内 $0 是函数名、库内 $0 是库名）。
+  # 若被直接 source 后调用且未预设，则回退到进程名，保证 set -u 下不报未绑定。
+  if [[ -z "${SCRIPT_NAME:-}" ]]; then
+    SCRIPT_NAME="${0:t}"
+  fi
   MAINTAIN_LOG_FILE="$(prepare_log_file_path "macos-installer.log" "$SCRIPT_DIR/macos-installer.log")"
   enable_log_capture "$MAINTAIN_LOG_FILE"
 

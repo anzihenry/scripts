@@ -49,7 +49,11 @@ ensure_brew_config_file() {
 
 ensure_setup_brew_config_ready() {
     ensure_brew_config_file
-    [[ ! -f $BREW_CONFIG_FILE ]] && log_fatal "缺失 Homebrew 配置文件: $BREW_CONFIG_FILE"
+    # 必须用 if 而不是 `[[ ... ]] && log_fatal ...`：后者在条件为假时会让
+    # 函数返回 1，配合调用方的 set -e 会把成功路径也判为失败。
+    if [[ ! -f "$BREW_CONFIG_FILE" ]]; then
+        log_fatal "缺失 Homebrew 配置文件: $BREW_CONFIG_FILE"
+    fi
 }
 
 verify_setup_platform_requirements() {
@@ -57,7 +61,12 @@ verify_setup_platform_requirements() {
 
     local free_space
     free_space="$(df -g / | tail -1 | awk '{print $4}')"
-    [[ $free_space -lt 15 ]] && log_fatal "磁盘空间不足15GB (剩余: ${free_space}GB)"
+    if [[ ! "$free_space" =~ ^[0-9]+$ ]]; then
+        log_fatal "无法解析根分区可用空间（df 输出: ${free_space:-空}）"
+    fi
+    if [[ $free_space -lt 15 ]]; then
+        log_fatal "磁盘空间不足15GB (剩余: ${free_space}GB)"
+    fi
 }
 
 verify_setup_network_access() {

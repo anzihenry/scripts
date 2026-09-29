@@ -170,20 +170,24 @@ log_time_end() {
 }
 
 # 带图标的日志函数
+# 注意：四个函数必须写入 stderr（与 log_info/log_warn/log_error 一致）。
+# 若写 stdout，被 $(...) 捕获时会污染返回值（例如 job 的
+# resolve_job_load_behavior 会把 warning 文本当成 no_load_flag），
+# 且在 $(resolve_path ...) 内调用时错误信息会被整个吞掉。
 success() {
-  echo -e "${COLOR_GREEN}✓${COLOR_NC} $*"
+  echo -e "${COLOR_GREEN}✓${COLOR_NC} $*" >&2
 }
 
 warning() {
-  echo -e "${COLOR_YELLOW}⚠${COLOR_NC} $*"
+  echo -e "${COLOR_YELLOW}⚠${COLOR_NC} $*" >&2
 }
 
 error() {
-  echo -e "${COLOR_RED}✗${COLOR_NC} $*"
+  echo -e "${COLOR_RED}✗${COLOR_NC} $*" >&2
 }
 
 info() {
-  echo -e "${COLOR_BLUE}ℹ${COLOR_NC} $*"
+  echo -e "${COLOR_BLUE}ℹ${COLOR_NC} $*" >&2
 }
 
 # ===== 高级输出函数 =====

@@ -15,6 +15,15 @@ set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# 供 usage 文案与锁路径使用：必须在顶层取 ${0:t}。
+# zsh 中函数内的 $0 是函数名、被 source 的库内 $0 是库名，
+# 因此在 initialize_macos_installer_context 里取 $0 会得到函数名
+# （曾导致 usage 打印函数名、锁目录名错误）。
+# 使用 if 而非 ${VAR:-${0:t}}：zsh 会先套用 :t 修饰符再取默认值。
+if [[ -z "${SCRIPT_NAME:-}" ]]; then
+  SCRIPT_NAME="${0:t}"
+fi
+
 # ==== 日志与颜色：集成 utils.sh（自动加载 colors.sh 并提供 fallback）====
 # shellcheck disable=SC1090
 source "$SCRIPT_DIR/../lib/utils.sh"

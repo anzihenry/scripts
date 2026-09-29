@@ -23,9 +23,10 @@ if ! _utils_has log_info; then
   print_step() { echo "[$1/$2] $3"; }
   print_code() { echo "  $1"; }
   highlight() { echo "$*"; }
-  info() { echo "[INFO] $*"; }
-  success() { echo "[SUCCESS] $*"; }
-  warning() { echo "[WARN] $*"; }
+  # 与 lib/colors.sh 保持一致：四个日志函数均写 stderr，避免污染 $(...) 捕获值。
+  info() { echo "[INFO] $*" >&2; }
+  success() { echo "[SUCCESS] $*" >&2; }
+  warning() { echo "[WARN] $*" >&2; }
   error() { echo "[ERROR] $*" >&2; }
   log_time_start() { :; }
   log_time_end() { :; }
