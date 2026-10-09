@@ -44,12 +44,12 @@ usage() {
 示例:
   bash maintain/github_release_publish.sh \
     --tag v0.3.0 \
-    --notes-file releases/v0.3.0-release-notes.md \
+    --notes-file docs/releases/0.3.0/README.md \
     --yes
 
   bash maintain/github_release_publish.sh \
     --tag v0.3.0 \
-    --notes-file releases/v0.3.0-release-notes.md \
+    --notes-file docs/releases/0.3.0/README.md \
     --verify-only
 EOF
 }

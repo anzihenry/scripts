@@ -3,7 +3,7 @@
 
 infer_release_notes_file() {
   local tag="$1"
-  printf 'releases/%s-release-notes.md' "$tag"
+  printf 'docs/releases/%s/README.md' "${tag#v}"
 }
 
 normalize_release_tag() {

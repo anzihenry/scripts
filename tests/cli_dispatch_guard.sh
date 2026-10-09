@@ -52,7 +52,7 @@ validate_job_create_args() { return 0; }
 validate_job_list_args() { return 0; }
 validate_job_name_action_args() { return 0; }
 normalize_release_tag() { printf 'v%s' "${1#v}"; }
-infer_release_notes_file() { printf 'releases/%s-release-notes.md' "$1"; }
+infer_release_notes_file() { printf 'docs/releases/%s/README.md' "${1#v}"; }
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_runtime.sh"
@@ -122,7 +122,7 @@ test_build_release_forwarded_args_publish() {
     args+=("$arg")
   done < <(build_release_forwarded_args publish 0.3.0 --yes)
 
-  assert_eq "${args[*]}" "--tag v0.3.0 --update-existing --yes --notes-file releases/v0.3.0-release-notes.md" "release publish builds default forwarded args"
+  assert_eq "${args[*]}" "--tag v0.3.0 --update-existing --yes --notes-file docs/releases/0.3.0/README.md" "release publish builds default forwarded args"
 }
 
 test_handle_job_create_routes_scheduler() {

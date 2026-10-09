@@ -8,7 +8,7 @@ print_release_publish_help() {
 
 说明:
   创建或更新 GitHub Release。
-  默认自动使用 releases/<tag>-release-notes.md 作为 notes 文件。
+  默认自动使用 docs/releases/<version>/README.md 作为 notes 文件。
 
 位置参数:
   <tag>                    Git tag，例如 0.5.0 或 v0.5.0
@@ -31,7 +31,7 @@ print_release_verify_help() {
 
 说明:
   仅检查 tag、gh 登录状态和现有 Release 状态。
-  默认自动使用 releases/<tag>-release-notes.md 作为 notes 文件。
+  默认自动使用 docs/releases/<version>/README.md 作为 notes 文件。
 
 位置参数:
   <tag>                    Git tag，例如 0.5.0 或 v0.5.0

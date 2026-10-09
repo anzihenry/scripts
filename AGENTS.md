@@ -9,7 +9,7 @@
 - 目标：生成符合 Bash 3.x / Zsh 语法、可在系统自带工具上运行的脚本；优先保证幂等、安全与可回滚；默认输出彩色日志并记录关键步骤耗时。
 - 配置来源：
   - `/.github/instructions/*.instructions.md`：目录/任务专项规范。
-  - `README.md`「运行验证」：测试命令唯一权威源（语法/lint/smoke/guard/E2E）。
+  - `docs/guides/development.md`「运行验证」：测试命令唯一权威源（语法/lint/smoke/guard/E2E）。
   - 建议在执行前通过 `#instructions` 或自动绑定的文件加载对应上下文。
 
 ## 角色与分工
@@ -33,7 +33,7 @@
    - 优先使用编辑工具（`#editor`, `#edits`），仅在必要时运行终端命令，并注明目的。
    - 对潜在破坏性命令（如 `brew upgrade`, `diskutil`）先 dry-run 或征得确认；禁止直接执行 `sudo`。
 4. **验证阶段**
-   - 按 `README.md`「运行验证」的清单执行回归（语法 → lint → smoke → guard → E2E），命令以该节为唯一权威源，不在本文件重复维护。
+   - 按 `docs/guides/development.md`「运行验证」的清单执行回归（语法 → lint → smoke → guard → E2E），命令以该节为唯一权威源，不在本文件重复维护。
    - 若任务涉及 Homebrew，建议读取/写入 `brew_update_errors.log` 以汇总失败项。
 5. **总结阶段**
    - 输出变更摘要、验证结果与后续建议。

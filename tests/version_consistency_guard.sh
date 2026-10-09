@@ -5,7 +5,7 @@
 #   - bin/macos-scripts 的 fallback 版本
 #   - bootstrap/install.sh 的 fallback 版本
 #   - Formula/macos-scripts.rb 引用的 tag 版本
-#   - releases/v<version>-release-notes.md 文件
+#   - docs/releases/<version>/README.md 文件
 # 纯本地只读检查，不依赖 gh / tag / 网络，可在普通 PR 的 CI 中执行。
 
 set -euo pipefail
@@ -70,9 +70,9 @@ main() {
     || fail "Formula 引用=$formula_version != VERSION=$expected"
 
   # 4. 对应版本 release notes 文件存在（发布流程依赖）
-  local notes_file="$REPO_ROOT/releases/v${expected}-release-notes.md"
+  local notes_file="$REPO_ROOT/docs/releases/${expected}/README.md"
   [[ -f "$notes_file" ]] \
-    && pass "release notes 存在: releases/v${expected}-release-notes.md" \
+    && pass "release notes 存在: docs/releases/${expected}/README.md" \
     || fail "缺少 release notes 文件: $notes_file"
 
   printf '\nVersion consistency guard passed: %d\n' "$PASS_COUNT"

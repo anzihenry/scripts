@@ -1,0 +1,46 @@
+---
+title: 0.1.0 版本记录
+status: planned
+owner: project-maintainers
+updated: 2026-10-10
+---
+
+## v0.1.0
+
+[English](README.en.md)
+
+首个对外发布版本，完成了从脚本仓库到统一 CLI 的产品化收口，并补齐了全新 macOS 的 bootstrap 链路。
+
+### Highlights
+
+- 新增统一入口 `macos-scripts`，覆盖 setup、maintain、job、lint 四类能力
+- 新增独立 bootstrap 入口，可在全新 macOS 上完成 Homebrew 安装并拉起 CLI
+- 新增 Homebrew Formula 结构，支持通过 tap 安装 `macos-scripts`
+- 统一安装态日志与配置目录，避免把运行产物写回仓库或 Homebrew 安装目录
+- 为主要命令补齐 CLI 层帮助、参数校验和错误提示
+
+### Included Commands
+
+- `macos-scripts setup shell`
+- `macos-scripts setup brew configure`
+- `macos-scripts setup packages`
+- `macos-scripts setup git`
+- `macos-scripts setup github`
+- `macos-scripts maintain brew`
+- `macos-scripts maintain installer list|download|create`
+- `macos-scripts job list|create|status|enable|disable|delete`
+- `macos-scripts lint check|fix`
+
+### Bootstrap
+
+全新 macOS 可使用以下命令启动安装：
+
+```bash
+BOOTSTRAP_TAG="v0.1.0"
+curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh
+```
+
+### Notes
+
+- Formula 已补齐 stable `url` / `sha256`，可直接通过 `brew install anzihenry/scripts/macos-scripts` 安装
+- `brew install --HEAD anzihenry/scripts/macos-scripts` 仍保留给开发版安装场景

@@ -1,0 +1,246 @@
+---
+title: 0.1.0 发布与验证记录
+status: planned
+owner: project-maintainers
+updated: 2026-10-10
+---
+
+> 历史材料迁移；正式发布状态、发布时间和候选提交待核实。操作清单不构成验收证据。当前操作见[发布指南](../../guides/releasing.md)。
+
+# v0.1.0 发布清单
+
+[English](validation.en.md)
+
+本文档用于 `v0.1.0` 的首次正式发布准备，覆盖 tag、GitHub Release 文案，以及 bootstrap 对外文案检查项。
+
+## 发布目标
+
+- 版本号：`0.1.0`
+- Git tag：`v0.1.0`
+- 发布分支：`main`
+- 发布定位：首个可对外说明的统一 CLI + Homebrew bootstrap 版本
+
+## 发布前确认
+
+- 工作区变更已审阅完毕，确认没有不应进入 `v0.1.0` 的临时改动。
+- [bin/macos-scripts](../../../bin/macos-scripts) 中的 `MACOS_SCRIPTS_VERSION` 为 `0.1.0`。
+- [bootstrap/install.sh](../../../bootstrap/install.sh) 中的 `BOOTSTRAP_RELEASE_TAG` 默认为 `v0.1.0`。
+- [README.md](README.md) 中首次 bootstrap 示例使用 `BOOTSTRAP_TAG="v0.1.0"`。
+- [Formula/macos-scripts.rb](../../../Formula/macos-scripts.rb) 中 caveats 的 bootstrap 示例使用 `v0.1.0`。
+- [Formula/macos-scripts.rb](../../../Formula/macos-scripts.rb) 的 stable `url` 与 `sha256` 指向 `v0.1.0` 归档。
+- 仓库中不再残留面向用户的 `main` 分支 bootstrap raw URL。
+
+## 发布前验证
+
+在仓库根目录执行：
+
+```bash
+./bin/macos-scripts --version
+zsh bootstrap/install.sh --dry-run --yes --skip-configure
+zsh lint/lint_shell.sh bootstrap/install.sh bin/macos-scripts setup maintain job lint
+zsh -n bootstrap/install.sh setup/*.sh maintain/*.sh job/*.sh lint/*.sh bin/macos-scripts
+bash -n lib/colors.sh setup/git_forge_ssh_setup.sh
+```
+
+固定发布前验证项还应包含一次“本地真实安装实测”，用于在远端 tap 更新前验证当前工作区快照：
+
+```bash
+cat >/tmp/macos-scripts-install-test.sh <<'EOF'
+#!/bin/zsh
+set -e
+set -u
+set -o pipefail
+
+WORKSPACE="/absolute/path/to/scripts"
+TMPDIR_ROOT="$(mktemp -d)"
+
+cleanup() {
+  set +e
+  if brew list --formula macos-scripts >/dev/null 2>&1; then
+    HOMEBREW_NO_AUTO_UPDATE=1 brew uninstall --formula macos-scripts >/dev/null 2>&1 || true
+  fi
+  if brew tap | grep -qx 'anzihenry/scripts'; then
+    HOMEBREW_NO_AUTO_UPDATE=1 brew untap anzihenry/scripts >/dev/null 2>&1 || true
+  fi
+  rm -rf "$TMPDIR_ROOT"
+}
+trap cleanup EXIT
+
+mkdir -p "$TMPDIR_ROOT/work"
+rsync -a --exclude '.git' --exclude '.DS_Store' "$WORKSPACE/" "$TMPDIR_ROOT/work/"
+cd "$TMPDIR_ROOT/work"
+
+git init -b main >/dev/null
+git config user.name 'Test Runner'
+git config user.email 'test@example.com'
+git add . >/dev/null
+git commit -m 'test snapshot' >/dev/null
+git clone --bare "$TMPDIR_ROOT/work" "$TMPDIR_ROOT/repo.git" >/dev/null
+
+cd "$WORKSPACE"
+
+echo '=== stable install test ==='
+HOMEBREW_NO_AUTO_UPDATE=1 brew tap --custom-remote anzihenry/scripts "file://$TMPDIR_ROOT/repo.git"
+HOMEBREW_NO_AUTO_UPDATE=1 brew install anzihenry/scripts/macos-scripts
+./bin/macos-scripts --version
+
+HOMEBREW_NO_AUTO_UPDATE=1 brew uninstall --formula macos-scripts
+HOMEBREW_NO_AUTO_UPDATE=1 brew untap anzihenry/scripts
+
+echo '=== bootstrap test ==='
+HOMEBREW_NO_AUTO_UPDATE=1 TAP_REMOTE_URL="file://$TMPDIR_ROOT/repo.git" zsh bootstrap/install.sh --yes --skip-configure
+macos-scripts --version
+EOF
+
+chmod +x /tmp/macos-scripts-install-test.sh
+zsh /tmp/macos-scripts-install-test.sh
+```
+
+验证结果应满足：
+
+- `macos-scripts --version` 输出 `macos-scripts v0.1.0`
+- bootstrap dry-run 显示的 raw URL、tag 和安装流程均为 `v0.1.0`
+- `brew install anzihenry/scripts/macos-scripts` 可解析到 stable formula
+- 使用临时本地 tap 的 stable install 实测可成功安装并输出 `macos-scripts v0.1.0`
+- 使用 `TAP_REMOTE_URL=file://...` 的 bootstrap 实测可成功安装并输出 `macos-scripts v0.1.0`
+- 实测结束后，`brew list --formula macos-scripts` 与 `brew tap | grep '^anzihenry/scripts$'` 均不应残留测试状态
+- lint 和语法检查全部通过
+- README 中的安装链路与 CLI 当前行为一致
+
+## Tag 操作
+
+确认 `main` 已经是待发布提交后执行：
+
+```bash
+git checkout main
+git pull --ff-only origin main
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin v0.1.0
+```
+
+发布后校验：
+
+```bash
+git ls-remote --tags origin | grep "refs/tags/v0.1.0$"
+curl -I https://raw.githubusercontent.com/anzihenry/scripts/v0.1.0/bootstrap/install.sh
+```
+
+通过标准：
+
+- 远端存在 `refs/tags/v0.1.0`
+- raw bootstrap URL 返回 `200 OK`
+
+## GitHub Release 操作
+
+创建 GitHub Release 时：
+
+- Tag：`v0.1.0`
+- Title：`v0.1.0`
+- Target：`main`
+- 方式：普通 release，不标记为 pre-release
+
+如果 VS Code UI 不稳定，优先改用终端脚本：
+
+```bash
+./bin/macos-scripts release publish v0.1.0 \
+  --yes
+```
+
+底层等价命令：
+
+```bash
+bash maintain/github_release_publish.sh \
+  --tag v0.1.0 \
+  --notes-file docs/releases/0.1.0/README.md \
+  --update-existing \
+  --yes
+```
+
+仅做状态检查：
+
+```bash
+./bin/macos-scripts release verify v0.1.0
+```
+
+## Release Note 草案
+
+可直接作为 GitHub Release 描述：
+
+```md
+## v0.1.0
+
+首个对外发布版本，完成了从脚本仓库到统一 CLI 的产品化收口，并补齐了全新 macOS 的 bootstrap 链路。
+
+### Highlights
+
+- 新增统一入口 `macos-scripts`，覆盖 setup、maintain、job、lint 四类能力
+- 新增独立 bootstrap 入口，可在全新 macOS 上完成 Homebrew 安装并拉起 CLI
+- 新增 Homebrew Formula 结构，支持通过 tap 安装 `macos-scripts`
+- 统一安装态日志与配置目录，避免把运行产物写回仓库或 Homebrew 安装目录
+- 为主要命令补齐 CLI 层帮助、参数校验和错误提示
+
+### Included Commands
+
+- `macos-scripts setup shell`
+- `macos-scripts setup brew configure`
+- `macos-scripts setup packages`
+- `macos-scripts setup git`
+- `macos-scripts setup github`
+- `macos-scripts maintain brew`
+- `macos-scripts maintain installer list|download|create`
+- `macos-scripts job list|create|status|enable|disable|delete`
+- `macos-scripts lint check|fix`
+
+### Bootstrap
+
+全新 macOS 可使用以下命令启动安装：
+
+```bash
+BOOTSTRAP_TAG="v0.1.0"
+curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}/bootstrap/install.sh" | zsh
+```
+
+### Notes
+
+- Formula 已补齐 stable `url` / `sha256`，可直接通过 `brew install anzihenry/scripts/macos-scripts` 安装
+- `brew install --HEAD anzihenry/scripts/macos-scripts` 仍保留给开发版安装场景
+```
+
+## Bootstrap 文案检查项
+
+发布前逐项确认：
+
+- [README.md](README.md) 中首次 bootstrap 示例使用 tag URL，而不是 `main`
+- [bootstrap/install.sh](../../../bootstrap/install.sh) 的 `--help` 输出展示 `v0.1.0`
+- [Formula/macos-scripts.rb](../../../Formula/macos-scripts.rb) 的 caveats 使用 tag 口径
+- 文案中明确区分：
+  - bootstrap 用于首次安装 Homebrew + 拉起 CLI
+  - `macos-scripts setup brew configure` 仅用于已具备 Homebrew 的系统配置/修复
+- 文案中没有把 head-only formula 误写成稳定版 formula
+- 文案中 stable 安装命令与 `--HEAD` 安装命令区分清楚
+
+建议执行以下检查：
+
+```bash
+zsh bootstrap/install.sh --help | grep 'v0.1.0'
+rg 'raw.githubusercontent.com/anzihenry/scripts/main/bootstrap/install.sh|--HEAD|head-only|BOOTSTRAP_TAG' README.md bootstrap/install.sh Formula/macos-scripts.rb
+```
+
+人工检查重点：
+
+- 对外示例是否统一写成 `v0.1.0`
+- 是否仍有“请先用 main 分支 raw URL”之类的旧说法
+- 是否明确说明对应 tag 必须已经推到远端
+
+## 发布后检查
+
+- 在一台未安装 `macos-scripts` 的 macOS 设备上验证 bootstrap 链路
+- 确认 `curl .../v0.1.0/bootstrap/install.sh | zsh -s -- --dry-run` 可以正常运行
+- 确认 `brew tap anzihenry/scripts && brew install anzihenry/scripts/macos-scripts` 可工作
+- 如需验证开发版，再单独确认 `brew install --HEAD anzihenry/scripts/macos-scripts` 仍可工作
+- 检查 release 页面文案是否与 [README.md](README.md) 一致
+
+## 已知限制
+
+- bootstrap 文案已经按正式发布口径固定到 tag，但前提是远端必须先存在该 tag
+- 本地真实安装实测默认覆盖“已有 Homebrew/Xcode CLI 的机器”这一分支；真正未安装 Homebrew 的首装分支仍需在干净 macOS 或 VM 上补验
