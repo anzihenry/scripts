@@ -17,7 +17,6 @@ error() { printf 'ERROR:%s\n' "$*" >&2; }
 usage_error() { printf 'USAGE_ERROR:%s|%s\n' "$1" "$2"; return 1; }
 command_error() { printf 'COMMAND_ERROR:%s|%s\n' "$1" "$2"; return 1; }
 has_help_flag() { return 1; }
-has_help_flag_before_separator() { return 1; }
 reject_extra_args() { [[ $# -eq 1 ]] && return 0; shift; [[ $# -eq 0 ]] && return 0; return 1; }
 print_setup_shell_help() { printf 'HELP:setup-shell\n'; }
 print_setup_packages_help() { printf 'HELP:setup-packages\n'; }
@@ -26,13 +25,6 @@ print_setup_github_help() { printf 'HELP:setup-github\n'; }
 print_release_help() { printf 'HELP:release\n'; }
 print_release_publish_help() { printf 'HELP:release-publish\n'; }
 print_release_verify_help() { printf 'HELP:release-verify\n'; }
-print_job_help() { printf 'HELP:job\n'; }
-print_job_create_help() { printf 'HELP:job-create\n'; }
-print_job_list_help() { printf 'HELP:job-list\n'; }
-print_job_status_help() { printf 'HELP:job-status\n'; }
-print_job_enable_help() { printf 'HELP:job-enable\n'; }
-print_job_disable_help() { printf 'HELP:job-disable\n'; }
-print_job_delete_help() { printf 'HELP:job-delete\n'; }
 print_maintain_installer_list_help() { printf 'HELP:maintain-installer-list\n'; }
 VALIDATE_SETUP_BREW_ARGS_CALLS=0
 typeset -ga VALIDATE_SETUP_BREW_ARGS=()
@@ -48,9 +40,6 @@ validate_installer_download_args() { return 0; }
 validate_installer_create_args() { return 0; }
 validate_release_publish_args() { return 0; }
 validate_release_verify_args() { return 0; }
-validate_job_create_args() { return 0; }
-validate_job_list_args() { return 0; }
-validate_job_name_action_args() { return 0; }
 normalize_release_tag() { printf 'v%s' "${1#v}"; }
 infer_release_notes_file() { printf 'docs/releases/%s/README.md' "${1#v}"; }
 
@@ -62,8 +51,6 @@ source "$REPO_ROOT/bin/lib/cli_forward_args.sh"
 source "$REPO_ROOT/bin/lib/cli_dispatch_release.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_dispatch_setup.sh"
-# shellcheck disable=SC1091
-source "$REPO_ROOT/bin/lib/cli_dispatch_job.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_dispatch_maintain.sh"
 
@@ -117,12 +104,6 @@ test_build_release_forwarded_args_publish() {
   assert_eq "${args[*]}" "--tag v0.3.0 --update-existing --yes --notes-file docs/releases/0.3.0/README.md" "release publish builds default forwarded args"
 }
 
-test_handle_job_create_routes_scheduler() {
-  handle_job create --job-name demo --script ./lint/lint_shell.sh --interval 5 --dry-run
-  assert_eq "$RUN_ZSH_SCRIPT_PATH" "job/scheduler.sh" "job create routes to scheduler"
-  assert_eq "${RUN_ZSH_SCRIPT_ARGS[*]}" "create --job-name demo --script ./lint/lint_shell.sh --interval 5 --dry-run" "job create preserves forwarded args"
-}
-
 test_handle_maintain_installer_list_routes_runner() {
   RUN_ZSH_SCRIPT_PATH=""
   RUN_ZSH_SCRIPT_ARGS=()
@@ -139,7 +120,6 @@ main() {
   test_setup_brew_configure_uses_validator
   test_setup_argless_commands_route_scripts
   test_build_release_forwarded_args_publish
-  test_handle_job_create_routes_scheduler
   test_handle_maintain_installer_list_routes_runner
   printf '\nCLI dispatch guard passed: %d\n' "$PASS_COUNT"
 }

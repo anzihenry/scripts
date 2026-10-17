@@ -12,7 +12,6 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
   setup       初始化与配置开发环境
   maintain    日常维护工具
   release     GitHub Release 发布辅助
-  job         launchd 定时任务管理
   lint        Shell 脚本检查与格式化
   help        显示帮助
   version     显示版本
@@ -26,7 +25,6 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
   macos-scripts maintain installer list
   macos-scripts release verify v0.5.0
   macos-scripts release publish v0.5.0 --yes
-  macos-scripts job list
   macos-scripts lint check setup
 EOF
 }

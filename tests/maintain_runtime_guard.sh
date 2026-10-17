@@ -260,7 +260,7 @@ test_run_cask_upgrades_skips_blank_cask_entry() {
 
 test_append_brew_update_error_log_writes_real_file() {
   # 端到端写入测试：真实追加错误日志文件并校验内容与格式，
-  # 防止 ERROR_LOG 路径/格式回归（延续 plist 真实写入测试思路）。
+  # 真实写入临时文件，防止 ERROR_LOG 路径/格式回归。
   local log_file
   log_file="$(mktemp "${TMPDIR:-/tmp}/maintain-brew-errors.XXXXXX.log")"
   ERROR_LOG="$log_file"

@@ -2,7 +2,7 @@
 title: Installation and setup
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # Installation and setup
@@ -65,7 +65,7 @@ MACOS_SCRIPTS_LOG_DIR="$HOME/Library/Logs/macos-scripts"
 MACOS_SCRIPTS_CONFIG_DIR="$HOME/.config/macos-scripts"
 ```
 
-Homebrew maintenance errors go to `~/Library/Logs/macos-scripts/brew_update_errors.log`. Default job logs go to `~/Library/Logs/macos-scripts/jobs/`.
+Homebrew maintenance errors go to `~/Library/Logs/macos-scripts/brew_update_errors.log`.
 
 ### Log locations
 

@@ -90,11 +90,6 @@ main() {
     "macos-scripts maintain installer download" \
     zsh bin/macos-scripts help maintain installer
 
-  run_expect_success_contains \
-    "Job create help topic" \
-    "如需向目标脚本透传参数" \
-    zsh bin/macos-scripts job create --help
-
   # maintain brew --dry-run 会真实执行脚本并校验 brew 存在；
   # 本机未安装 brew 时跳过该用例，避免最小回归依赖外部命令。
   if command -v brew > /dev/null 2>&1; then
@@ -131,45 +126,20 @@ main() {
     "release verify 不支持参数: --bogus" \
     zsh bin/macos-scripts release verify v0.3.0 --bogus
 
-  run_expect_success_contains \
-    "Job list" \
-    "列出当前用户的脚本任务" \
+  run_expect_failure_contains \
+    "Removed job command is rejected" \
+    "未知命令: job" \
     zsh bin/macos-scripts job list
 
-  run_expect_success_contains \
-    "Job disable dry-run" \
-    "将执行: launchctl disable" \
-    zsh bin/macos-scripts job disable --job-name smoke-refactor --dry-run
-
-  run_expect_success_contains \
-    "Job create dry-run forwards args" \
-    "创建任务 smoke-refactor，耗时" \
-    zsh bin/macos-scripts job create --job-name smoke-refactor --script ./lint/lint_shell.sh --interval 5 --dry-run -- --demo value
-
   run_expect_failure_contains \
-    "Job status requires job name" \
-    "job status 需要提供 --job-name" \
-    zsh bin/macos-scripts job status
+    "Removed job help topic is rejected" \
+    "未知的帮助主题: job" \
+    zsh bin/macos-scripts help job
 
-  run_expect_failure_contains \
-    "Job create missing script" \
-    "job create 需要提供 --script" \
-    zsh bin/macos-scripts job create --job-name smoke-refactor --interval 5 --dry-run
-
-  run_expect_failure_contains \
-    "Job create invalid interval" \
-    "--interval 需要正整数" \
-    zsh bin/macos-scripts job create --job-name smoke-refactor --script ./lint/lint_shell.sh --interval abc --dry-run
-
-  run_expect_failure_contains \
-    "Job create rejects weekday without at" \
-    "--weekday 需要配合 --at 使用" \
-    zsh bin/macos-scripts job create --job-name smoke-refactor --script ./lint/lint_shell.sh --interval 5 --weekday 1 --dry-run
-
-  run_expect_failure_contains \
-    "Job create rejects stray args before separator" \
-    "job create 不支持参数: name" \
-    zsh bin/macos-scripts job create --job-name bad name --script ./lint/lint_shell.sh --interval 5 --dry-run
+  local help_output
+  help_output="$(zsh bin/macos-scripts --help)"
+  [[ "$help_output" != *launchd* && "$help_output" != *'macos-scripts job'* ]] || fail "CLI help advertises removed jobs"
+  pass "CLI help omits removed scheduling feature"
 
   printf '\nSmoke tests passed: %d\n' "$PASS_COUNT"
 }

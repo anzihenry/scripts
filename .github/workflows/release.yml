@@ -35,7 +35,6 @@ jobs:
         run: |
           for t in bootstrap_guard cli_dispatch_guard cli_validators_guard \
                    version_consistency_guard regression_guard zsh_migration_guard \
-                   job_runtime_guard job_scheduler_guard job_plist_guard \
                    macos_installer_flow_guard release_publish_guard \
                    setup_runtime_guard maintain_runtime_guard; do
             zsh "tests/${t}.sh"
@@ -72,4 +71,3 @@ jobs:
           command -v macos-scripts
           macos-scripts --version
           macos-scripts help setup git
-          macos-scripts job list

@@ -23,10 +23,10 @@ updated: 2026-10-17
 zsh tests/syntax_guard.sh        # ① 语法：统一 #!/bin/zsh 与 zsh -n
 ./lint/lint_shell.sh             # ② 检查：Zsh shebang 与语法（同一检查入口）
 ./tests/smoke_cli.sh             # ③ CLI：关键成功/失败路径
-zsh tests/e2e/run_all.sh         # ④ 进程级：沙箱 + 命令桩 E2E（8 用例）
+zsh tests/e2e/run_all.sh         # ④ 进程级：沙箱 + 命令桩 E2E（5 用例）
 ```
 
-> `smoke_cli.sh` 与 E2E 均使用临时目录覆盖 `MACOS_SCRIPTS_LOG_DIR` / `MACOS_SCRIPTS_CONFIG_DIR`（E2E 另覆盖 LaunchAgents），避免污染真实用户配置和日志目录。
+> `smoke_cli.sh` 与 E2E 均使用临时目录覆盖 `MACOS_SCRIPTS_LOG_DIR` / `MACOS_SCRIPTS_CONFIG_DIR`，避免污染真实用户配置和日志目录。
 
 函数级 guard 测试（zsh 运行，与 CI 的 guard 步骤一致）：
 
@@ -35,11 +35,8 @@ zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两�
 zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
 zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
-zsh tests/regression_guard.sh         # 已修缺陷回归：日志、plist 原子写、陈旧锁和 release 状态
+zsh tests/regression_guard.sh         # 已修缺陷回归：日志、陈旧锁和 release 状态
 zsh tests/zsh_migration_guard.sh      # Zsh 迁移：交互、数组、安装 helper 与进程隔离
-zsh tests/job_runtime_guard.sh        # job 运行时
-zsh tests/job_scheduler_guard.sh      # job 调度动作
-zsh tests/job_plist_guard.sh          # plist 真实写入 + plutil 校验
 zsh tests/macos_installer_flow_guard.sh # 安装器流程
 zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
@@ -50,7 +47,7 @@ zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 
 ### 进程级 E2E（沙箱 + 命令桩）
 
-`tests/e2e/` 提供不依赖真实环境的进程级端到端测试：把 `HOME`、配置/日志/LaunchAgents 目录全部重定向到临时沙箱，并用 `tests/e2e/shims/` 下的命令桩（`brew`、`launchctl`、`gh`、`git`、`curl` 等）拦截外部副作用，随后跑**真实脚本全流程**，断言产物文件、外部调用序列与退出码。可在每次发布前本地或 CI 执行：
+`tests/e2e/` 提供不依赖真实环境的进程级端到端测试：把 `HOME`、配置/日志 目录全部重定向到临时沙箱，并用 `tests/e2e/shims/` 下的命令桩（`brew`、`gh`、`git`、`curl` 等）拦截外部副作用，随后跑**真实脚本全流程**，断言产物文件、外部调用序列与退出码。可在每次发布前本地或 CI 执行：
 
 ```bash
 zsh tests/e2e/run_all.sh
@@ -58,7 +55,6 @@ zsh tests/e2e/run_all.sh
 
 覆盖场景：
 
-- `job create` / `job list` / `job disable`：plist 真实写入 + `plutil` 校验 + `launchctl` 调用序列
 - `release verify` / `release publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
 - `maintain brew`：brew 调用顺序、Cask 失败错误日志
 - `setup brew configure`：配置流程 dry-run，防缺失 source 依赖回归

@@ -4,8 +4,8 @@
 #
 # 设计要点：
 #   - 每个用例脚本 source 本文件后调用 e2e_begin <name>，末尾调用 e2e_summary。
-#   - 沙箱：HOME / MACOS_SCRIPTS_CONFIG_DIR / MACOS_SCRIPTS_LOG_DIR /
-#     MACOS_SCRIPTS_LAUNCH_AGENTS_DIR 全部指向临时目录，PATH 前置 shims/。
+#   - 沙箱：HOME / MACOS_SCRIPTS_CONFIG_DIR / MACOS_SCRIPTS_LOG_DIR
+#     全部指向临时目录，PATH 前置 shims/。
 #   - transcript：tests/e2e/shims/ 下的命令桩把每次外部调用追加到 ${E2E_TRANSCRIPT}，
 #     用例据此断言“脚本实际执行了什么”，而非只验证不报错。
 
@@ -22,7 +22,6 @@ E2E_TMP_ROOT=""
 E2E_HOME=""
 E2E_CONFIG_DIR=""
 E2E_LOG_DIR=""
-E2E_LAUNCH_AGENTS_DIR=""
 E2E_TRANSCRIPT=""
 E2E_TEST_NAME=""
 E2E_PASS_COUNT=0
@@ -39,14 +38,12 @@ e2e_begin() {
   E2E_HOME="$E2E_TMP_ROOT/home"
   E2E_CONFIG_DIR="$E2E_TMP_ROOT/config"
   E2E_LOG_DIR="$E2E_TMP_ROOT/logs"
-  E2E_LAUNCH_AGENTS_DIR="$E2E_TMP_ROOT/launch_agents"
   E2E_TRANSCRIPT="$E2E_TMP_ROOT/transcript.log"
 
-  mkdir -p "$E2E_HOME" "$E2E_CONFIG_DIR" "$E2E_LOG_DIR" "$E2E_LAUNCH_AGENTS_DIR"
+  mkdir -p "$E2E_HOME" "$E2E_CONFIG_DIR" "$E2E_LOG_DIR"
   export HOME="$E2E_HOME"
   export MACOS_SCRIPTS_CONFIG_DIR="$E2E_CONFIG_DIR"
   export MACOS_SCRIPTS_LOG_DIR="$E2E_LOG_DIR"
-  export MACOS_SCRIPTS_LAUNCH_AGENTS_DIR="$E2E_LAUNCH_AGENTS_DIR"
   export E2E_TMP_ROOT
   export E2E_TRANSCRIPT
   export PATH="$E2E_SHIMS_DIR:$PATH"

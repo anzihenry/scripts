@@ -11,7 +11,7 @@ updated: 2026-10-17
 
 Translation of the Chinese primary version. Commands and historical log excerpts retain their original language where applicable.
 
-Shell automation for macOS 14+: developer environment setup, Homebrew maintenance, macOS installer creation, and launchd jobs. The unified CLI uses the system Zsh and provides colored logs, timing, idempotent checks, and dry-run support. See [VERSION](VERSION) for the source version.
+Shell automation for macOS 14+: developer environment setup, Homebrew maintenance, and macOS installer creation. The unified CLI uses the system Zsh and provides colored logs, timing, idempotent checks, and dry-run support. See [VERSION](VERSION) for the source version.
 
 ## Quick start
 
@@ -35,7 +35,7 @@ See the [installation guide](docs/guides/installation.en.md) for fresh machines 
 ## Documentation
 
 - [Documentation map](docs/README.en.md), [documentation conventions](docs/documentation.en.md)
-- [Usage and maintenance](docs/guides/using.en.md), [scheduled jobs](docs/guides/jobs.en.md)
+- [Usage and maintenance](docs/guides/using.en.md)
 - [Development and validation](docs/guides/development.en.md), [architecture](docs/engineering/architecture.en.md)
 - [Planning](docs/planning/README.en.md), [initiatives](docs/initiatives/README.en.md)
 - [Releasing](docs/guides/releasing.en.md), [version records](docs/releases/README.en.md), [CHANGELOG](CHANGELOG.en.md)

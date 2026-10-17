@@ -23,11 +23,10 @@ updated: 2026-10-17
 ./bin/macos-scripts release verify v0.5.0
 ./bin/macos-scripts release publish v0.5.0 --yes
 
-./bin/macos-scripts job list
 ./bin/macos-scripts lint check
 ```
 
-> 当前 `bin/macos-scripts` 是统一入口，现有 `setup/`、`maintain/`、`job/`、`lint/` 脚本继续作为内部执行器保留。
+> 当前 `bin/macos-scripts` 是统一入口，现有 `setup/`、`maintain/`、`lint/` 脚本继续作为内部执行器保留。
 > 入口本身已拆分为 `bin/macos-scripts` + `bin/lib/*.sh`，帮助文案与参数校验逻辑不再和分发逻辑混在同一个文件里。
 
 ## 🧰 常用工具脚本
@@ -39,20 +38,6 @@ updated: 2026-10-17
 ./lint/lint_shell.sh --fix     # 兼容入口，仅检查并提示不自动格式化
 ```
 > 无需额外依赖。仓库统一使用 Zsh，执行 shebang 校验与 `zsh -n`。ShellCheck/shfmt 不支持 Zsh，运行时验证见[开发指南](development.md)。
-
-### Launchd 定时任务工具
-
-```bash
-cd job
-./scheduler.sh list                                 # 查看当前以 com.biucing.scripts.job.* 命名的任务
-./scheduler.sh create \
-    --job-name daily-brew \
-    --script ../maintain/formulaes_casks_updater.sh \
-    --interval 720                                   # 每 12 小时执行脚本
-./scheduler.sh status --job-name daily-brew        # 查看任务加载状态
-./scheduler.sh delete --job-name daily-brew        # 卸载并移除任务
-```
-> 支持 `--dry-run` 预览 plist 内容、`--at HH:MM` 定时以及 `--force` 覆盖，安装态默认把任务日志写入 `~/Library/Logs/macos-scripts/jobs/`。
 
 ### Homebrew 日常维护
 
@@ -77,4 +62,4 @@ cd maintain
 ```
 > 脚本为关键命令记录耗时，并使用锁避免并发冲突；通过 `macos-scripts` 安装态运行时，日志默认写入 `~/Library/Logs/macos-scripts/macos-installer.log`。
 
-更多见[安装与配置](installation.md)、[定时任务](jobs.md)、[发布指南](releasing.md)。
+更多见[安装与配置](installation.md)、[发布指南](releasing.md)。
