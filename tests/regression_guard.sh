@@ -4,10 +4,8 @@
 #
 # 覆盖（每条都对应一个曾经在 main 上真实存在的缺陷）：
 #   1. lib/colors.sh 的 info/success/warning/error 必须写 stderr
-#      —— 写 stdout 会污染 $(...) 返回值（job create --disabled 失效、
-#      job_paths 错误信息被吞）
+#      —— 写 stdout 会污染 $(...) 返回值
 #   2. setup/lib/setup_runtime.sh 成功路径不得返回非零（tail 位置 && 缺陷）
-#   3. job/lib/job_plist.sh 校验失败必须保留原文件、不留临时文件
 #   4. maintain/lib/macos_installer_flow.sh 陈旧锁必须能自动接管
 #   5. maintain/lib/release_publish_flow.sh release_status 三态语义
 #   6. lib/utils.sh first_line 不引入 | head 的 SIGPIPE 风险
@@ -81,7 +79,7 @@ test_log_functions_write_stderr() {
   # 关键回归：命令替换只应拿到函数自身输出，不能被日志文本污染
   local captured
   captured="$(warning "不应被捕获" 2> /dev/null; printf '1')"
-  assert_eq "$captured" "1" "命令替换不被 warning 污染（--disabled 回归）"
+  assert_eq "$captured" "1" "命令替换不被 warning 污染"
 
   # print_header 等面向用户的输出仍应走 stdout
   stdout_file2="$(mktemp "${TMPDIR:-/tmp}/regression-stdout2.XXXXXX")"
@@ -166,39 +164,6 @@ test_setup_scripts_no_unbound_vars() {
   assert_not_contains "$(cat "$err_file")" "parameter not set" "无未定义变量报错（BOLD 回归）"
 
   rm -f "$out_file" "$err_file"
-  return 0
-}
-
-# ===== 3. plist 原子写入 =====
-test_plist_atomic_write() {
-  local sandbox target
-  sandbox="$(mktemp -d "${TMPDIR:-/tmp}/regression-plist.XXXXXX")"
-  target="$sandbox/test.plist"
-  printf 'ORIGINAL' > "$target"
-
-  # shellcheck disable=SC1091
-  source "$REPO_ROOT/lib/colors.sh"
-  # shellcheck disable=SC1091
-  source "$REPO_ROOT/job/lib/job_plist.sh"
-
-  local rc=0
-  write_plist_file "$target" "this is not a plist" > /dev/null 2>&1 || rc=$?
-  [[ $rc -ne 0 ]] || fail "非法 plist 应写入失败"
-  pass "非法 plist 被拒绝"
-  assert_eq "$(cat "$target")" "ORIGINAL" "校验失败保留原文件"
-  assert_eq "$(find "$sandbox" -name '*.tmp.*' | wc -l | tr -d ' ')" "0" "失败后不留临时文件"
-
-  local valid_plist
-  valid_plist='<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict><key>Label</key><string>com.test.regression</string></dict></plist>'
-
-  write_plist_file "$target" "$valid_plist" > /dev/null 2>&1
-  plutil -lint "$target" > /dev/null 2>&1 || fail "合法 plist 应写入成功"
-  pass "合法 plist 写入成功"
-  assert_eq "$(find "$sandbox" -name '*.tmp.*' | wc -l | tr -d ' ')" "0" "成功写入后不留临时文件"
-
-  rm -rf "$sandbox"
   return 0
 }
 
@@ -339,7 +304,7 @@ test_first_line_helper() {
   local hits
   set +e
   hits="$(grep -rn '| *head' "$REPO_ROOT/lib" "$REPO_ROOT/setup" "$REPO_ROOT/maintain" \
-    "$REPO_ROOT/job" "$REPO_ROOT/bin" "$REPO_ROOT/bootstrap" \
+    "$REPO_ROOT/bin" "$REPO_ROOT/bootstrap" \
     --include='*.sh' 2> /dev/null)" || true
   set -e
   hits="$(printf '%s\n' "$hits" | grep -v 'tests/' | grep -vE ':[0-9]+: *#|:[0-9]+: *//')" || true
@@ -358,7 +323,6 @@ main() {
   test_log_functions_write_stderr
   test_setup_precheck_success_path
   test_setup_scripts_no_unbound_vars
-  test_plist_atomic_write
   test_installer_stale_lock_takeover
   test_release_status_three_states
   test_first_line_helper

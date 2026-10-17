@@ -13,7 +13,7 @@ updated: 2026-10-17
 
 为 `bin/macos-scripts` 及其 `bin/lib/` 下的 CLI 代码建立稳定分层，避免后续迭代重新回到“入口、参数校验、转发拼装、业务分发混写在一起”的状态。
 
-本约定关注的是 **CLI 装配层**，不覆盖 `setup/`、`maintain/`、`job/` 下业务脚本内部实现。
+本约定关注的是 **CLI 装配层**，不覆盖 `setup/`、`maintain/` 下业务脚本内部实现。
 
 ## 当前分层
 
@@ -61,7 +61,6 @@ updated: 2026-10-17
 - `bin/lib/help_setup.sh`
 - `bin/lib/help_maintain.sh`
 - `bin/lib/help_release.sh`
-- `bin/lib/help_job.sh`
 - `bin/lib/help_lint.sh`
 
 职责：
@@ -101,7 +100,7 @@ updated: 2026-10-17
 
 不要做的事：
 
-- 不放 setup/release/job 专属的 forwarding 细节
+- 不放 setup/release 专属的 forwarding 细节
 - 不放大段业务条件分支
 - 不把单个领域的一次性封装硬塞进 runtime
 
@@ -143,7 +142,6 @@ updated: 2026-10-17
 - `bin/lib/validators.sh`
 - `bin/lib/validators_setup.sh`
 - `bin/lib/validators_maintain.sh`
-- `bin/lib/validators_job.sh`
 - `bin/lib/validators_release.sh`
 
 职责：
@@ -175,7 +173,6 @@ updated: 2026-10-17
 - `bin/lib/cli_dispatch_setup.sh`
 - `bin/lib/cli_dispatch_maintain.sh`
 - `bin/lib/cli_dispatch_release.sh`
-- `bin/lib/cli_dispatch_job.sh`
 - `bin/lib/cli_dispatch_lint.sh`
 
 职责：
@@ -248,7 +245,7 @@ updated: 2026-10-17
 
 完整命令清单以[开发与验证](../guides/development.md)为唯一权威源；CLI 改动至少覆盖 syntax、smoke、dispatch 和 validator guard。
 
-如果改动涉及 release、setup、job、maintain 的内部装配逻辑，按需补充对应 guard（清单见 README）。
+如果改动涉及 release、setup、maintain 的内部装配逻辑，按需补充对应 guard（清单见 README）。
 
 ## 何时停止继续抽象
 

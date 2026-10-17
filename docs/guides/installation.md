@@ -2,7 +2,7 @@
 title: 安装与初始化
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # 安装与初始化
@@ -74,7 +74,6 @@ MACOS_SCRIPTS_CONFIG_DIR="$HOME/.config/macos-scripts"
 ```
 
 例如 `macos-scripts maintain brew` 的错误日志默认会写入 `~/Library/Logs/macos-scripts/brew_update_errors.log`。
-`macos-scripts job create` 的默认任务日志会写入 `~/Library/Logs/macos-scripts/jobs/`。
 
 ### 日志位置说明
 

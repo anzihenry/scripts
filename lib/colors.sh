@@ -175,9 +175,8 @@ log_time_end() {
 
 # 带图标的日志函数
 # 注意：四个函数必须写入 stderr（与 log_info/log_warn/log_error 一致）。
-# 若写 stdout，被 $(...) 捕获时会污染返回值（例如 job 的
-# resolve_job_load_behavior 会把 warning 文本当成 no_load_flag），
-# 且在 $(resolve_path ...) 内调用时错误信息会被整个吞掉。
+# 若写 stdout，被 $(...) 捕获时会污染返回值，
+# 因此数据输出与诊断日志必须分离。
 success() {
   echo -e "${COLOR_GREEN}✓${COLOR_NC} $*" >&2
 }

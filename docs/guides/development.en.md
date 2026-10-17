@@ -25,10 +25,10 @@ Run tests from faster checks to slower suites; CI runs them on pushes and pull r
 zsh tests/syntax_guard.sh        # ① 语法：统一 #!/bin/zsh 与 zsh -n
 ./lint/lint_shell.sh             # ② 检查：Zsh shebang 与语法（同一检查入口）
 ./tests/smoke_cli.sh             # ③ CLI：关键成功/失败路径
-zsh tests/e2e/run_all.sh         # ④ 进程级：沙箱 + 命令桩 E2E（8 用例）
+zsh tests/e2e/run_all.sh         # ④ 进程级：沙箱 + 命令桩 E2E（5 用例）
 ```
 
-Smoke and E2E tests override `MACOS_SCRIPTS_LOG_DIR` and `MACOS_SCRIPTS_CONFIG_DIR` with temporary directories; E2E also overrides LaunchAgents to isolate user files.
+Smoke and E2E tests override `MACOS_SCRIPTS_LOG_DIR` and `MACOS_SCRIPTS_CONFIG_DIR` with temporary directories to isolate user files.
 
 Function guards, matching the CI guard step:
 
@@ -37,11 +37,8 @@ zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两�
 zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
 zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
-zsh tests/regression_guard.sh         # Fixed-defect regressions: logs, atomic plist writes, stale locks, release state
+zsh tests/regression_guard.sh         # Fixed-defect regressions: logs, stale locks, release state
 zsh tests/zsh_migration_guard.sh      # Zsh 迁移：交互、数组、安装 helper 与进程隔离
-zsh tests/job_runtime_guard.sh        # job 运行时
-zsh tests/job_scheduler_guard.sh      # job 调度动作
-zsh tests/job_plist_guard.sh          # plist 真实写入 + plutil 校验
 zsh tests/macos_installer_flow_guard.sh # 安装器流程
 zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
@@ -52,7 +49,7 @@ Invoke the listed guards with `zsh tests/<name>.sh`, as documented. Zsh-specific
 
 ### Process-level E2E with sandboxes and command stubs
 
-`tests/e2e/` redirects HOME, configuration, logs, and LaunchAgents into temporary sandboxes. Stubs in `tests/e2e/shims/` intercept brew, launchctl, gh, git, curl, and other external commands. The actual scripts run end to end; assertions inspect produced files, call sequences, and exit codes.
+`tests/e2e/` redirects HOME, configuration, and logs into temporary sandboxes. Stubs in `tests/e2e/shims/` intercept brew, gh, git, curl, and other external commands. The actual scripts run end to end; assertions inspect produced files, call sequences, and exit codes.
 
 ```bash
 zsh tests/e2e/run_all.sh
@@ -60,7 +57,6 @@ zsh tests/e2e/run_all.sh
 
 Coverage:
 
-- `job create/list/disable`: real plist writes, plutil checks, and launchctl call sequences.
 - `release verify/publish`: version consistency and gh create/update/verify-only branches and arguments.
 - `maintain brew`: brew call order and Cask failure logs.
 - `setup brew configure`: configuration dry-run and missing-source regressions.

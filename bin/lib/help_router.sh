@@ -43,18 +43,6 @@ handle_help() {
         *) command_error "未知的 release 帮助主题: $action" print_release_help ;;
       esac
       ;;
-    job)
-      case "$action" in
-        ""|help) print_job_help ;;
-        list) print_job_list_help ;;
-        status) print_job_status_help ;;
-        create) print_job_create_help ;;
-        enable) print_job_enable_help ;;
-        disable) print_job_disable_help ;;
-        delete) print_job_delete_help ;;
-        *) command_error "未知的 job 帮助主题: $action" print_job_help ;;
-      esac
-      ;;
     lint)
       case "$action" in
         ""|help) print_lint_help ;;

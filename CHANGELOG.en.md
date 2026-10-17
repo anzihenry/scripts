@@ -15,6 +15,8 @@ This index collects historical release descriptions. See [version records](docs/
 
 ## Unreleased
 
+- Remove launchd scheduling, the `job` CLI, implementation, dedicated tests, and user guides. Existing user jobs and logs are not removed.
+
 - Standardize repository scripts, libraries, tests, and CI on system Zsh; adapt interactive input, arrays, special parameters, and exit cleanup.
 - Enforce `#!/bin/zsh` and syntax checks without ShellCheck/shfmt; retain `lint fix` as a check-only compatibility entry point.
 - Add Zsh migration regression tests. Upstream Homebrew installers still use Bash as required by upstream.

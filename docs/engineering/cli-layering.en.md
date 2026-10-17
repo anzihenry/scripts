@@ -13,7 +13,7 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 
 ## Goal and scope
 
-Keep `bin/macos-scripts` and `bin/lib/` consistently layered so entry initialization, validation, forwarding, and business dispatch remain separate. These conventions cover CLI assembly, not business-script internals in setup, maintain, or job.
+Keep `bin/macos-scripts` and `bin/lib/` consistently layered so entry initialization, validation, forwarding, and business dispatch remain separate. These conventions cover CLI assembly, not business-script internals in setup or maintain.
 
 ## Assembly order
 
@@ -30,7 +30,7 @@ The entry initializes the environment, exports repository/log/configuration path
 
 ## Help layer
 
-Files: `help.sh`, `help_router.sh`, `help_main.sh`, `help_setup.sh`, `help_maintain.sh`, `help_release.sh`, `help_job.sh`, and `help_lint.sh`, all under `bin/lib/`.
+Files: `help.sh`, `help_router.sh`, `help_main.sh`, `help_setup.sh`, `help_maintain.sh`, `help_release.sh`, `help_lint.sh`, all under `bin/lib/`.
 
 Maintain help text by domain and route `help <topic>`. The router contains routing rather than text. Dispatch calls the appropriate help function for `--help` instead of assembling text. Help must not validate arguments, execute commands, or inspect business-script state.
 
@@ -38,7 +38,7 @@ Maintain help text by domain and route `help <topic>`. The router contains routi
 
 `cli_runtime.sh` provides script runners such as `run_zsh_script` (all internal scripts use Zsh), assembly helpers such as `dispatch_validated_action`, error helpers such as `usage_error` and `command_error`, and general utilities such as `has_help_flag`.
 
-Only cross-domain helpers with little or no domain knowledge belong here. Do not add setup/release/job-specific forwarding, large business branches, or one-off domain wrappers. A helper used in one domain belongs in its dispatch or domain helper. Knowledge of specific help text, tags, or defaults usually signals a domain-specific function.
+Only cross-domain helpers with little or no domain knowledge belong here. Do not add setup/release-specific forwarding, large business branches, or one-off domain wrappers. A helper used in one domain belongs in its dispatch or domain helper. Knowledge of specific help text, tags, or defaults usually signals a domain-specific function.
 
 ## Argument forwarding
 
@@ -48,13 +48,13 @@ Keep forwarding here rather than in dispatch. Expose assembly-friendly `load_*_f
 
 ## Validation layer
 
-Files: `validators.sh`, `validators_setup.sh`, `validators_maintain.sh`, `validators_job.sh`, and `validators_release.sh`, under `bin/lib/`.
+Files: `validators.sh`, `validators_setup.sh`, `validators_maintain.sh`, `validators_release.sh`, under `bin/lib/`.
 
 Check argument legality and use `usage_error` for consistent errors/help. Split by domain and keep acceptance checks separate from default argument assembly. Validators must not invoke script runners, route commands, or fill forwarded defaults. Missing values, bounds, and allowed flags belong here.
 
 ## Dispatch layer
 
-Files: `cli_dispatch.sh`, `cli_dispatch_setup.sh`, `cli_dispatch_maintain.sh`, `cli_dispatch_release.sh`, `cli_dispatch_job.sh`, and `cli_dispatch_lint.sh`, under `bin/lib/`.
+Files: `cli_dispatch.sh`, `cli_dispatch_setup.sh`, `cli_dispatch_maintain.sh`, `cli_dispatch_release.sh`, `cli_dispatch_lint.sh`, under `bin/lib/`.
 
 Route commands and orchestrate `help -> validate -> forward -> run`. The main dispatch routes top-level commands; each domain maintains its own assembly boundary.
 
@@ -77,7 +77,7 @@ Choose help files for help text/routing; validators for legality checks; forward
 
 ## Regression requirements
 
-The [development guide](../guides/development.en.md) is authoritative. CLI changes cover syntax, smoke, dispatch, and validator guards. Changes inside release, setup, job, or maintain assembly also require the corresponding guards.
+The [development guide](../guides/development.en.md) is authoritative. CLI changes cover syntax, smoke, dispatch, and validator guards. Changes inside release, setup, or maintain assembly also require the corresponding guards.
 
 ## When to stop abstracting
 

@@ -35,12 +35,6 @@ run_release_script() {
   run_zsh_script "maintain/github_release_publish.sh" "$@"
 }
 
-run_scheduler_action() {
-  local action="$1"
-  shift
-  run_zsh_script "job/scheduler.sh" "$action" "$@"
-}
-
 run_maintain_installer_action() {
   local action="$1"
   shift
@@ -96,15 +90,6 @@ is_help_arg() {
 has_help_flag() {
   local arg
   for arg in "$@"; do
-    is_help_arg "$arg" && return 0
-  done
-  return 1
-}
-
-has_help_flag_before_separator() {
-  local arg
-  for arg in "$@"; do
-    [[ "$arg" == "--" ]] && return 1
     is_help_arg "$arg" && return 0
   done
   return 1

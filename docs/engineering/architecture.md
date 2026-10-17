@@ -16,7 +16,6 @@ updated: 2026-10-17
 - `bin/lib/`：统一 CLI 分层模块（帮助文案、参数校验、参数转发、命令分发、共享运行时）
 - `setup/lib/`：setup 运行时、配置写入、语言环境、安装后校验模块
 - `maintain/lib/`：Homebrew 更新与安装器/USB 制作的参数解析与流程编排模块
-- `job/lib/`：launchd 任务的参数解析、plist 生成与运行时模块
 - `lib/utils.sh`：日志路径解析、运行时 helper、依赖检查
 - `tests/`：语法护栏、smoke、函数级 guard 与沙箱 E2E 四层测试
 

@@ -8,9 +8,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 CASES=(
-  job_create
-  job_list
-  job_disable
   release_verify
   release_publish
   maintain_brew

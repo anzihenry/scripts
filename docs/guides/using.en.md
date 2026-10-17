@@ -25,11 +25,10 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 ./bin/macos-scripts release verify v0.5.0
 ./bin/macos-scripts release publish v0.5.0 --yes
 
-./bin/macos-scripts job list
 ./bin/macos-scripts lint check
 ```
 
-`bin/macos-scripts` is the unified entry point. Scripts in `setup/`, `maintain/`, `job/`, and `lint/` remain internal executors. The entry point and `bin/lib/*.sh` separate help and validation from dispatch.
+`bin/macos-scripts` is the unified entry point. Scripts in `setup/`, `maintain/`, and `lint/` remain internal executors. The entry point and `bin/lib/*.sh` separate help and validation from dispatch.
 
 ## Common tools
 
@@ -41,21 +40,6 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 ```
 
 No extra dependencies are required. All repository scripts use Zsh; lint validates the shebang and runs `zsh -n`. ShellCheck/shfmt do not support Zsh. See the [development guide](development.en.md) for runtime tests.
-
-### Launchd jobs
-
-```bash
-cd job
-./scheduler.sh list                                 # 查看当前以 com.biucing.scripts.job.* 命名的任务
-./scheduler.sh create \
-    --job-name daily-brew \
-    --script ../maintain/formulaes_casks_updater.sh \
-    --interval 720                                   # 每 12 小时执行脚本
-./scheduler.sh status --job-name daily-brew        # 查看任务加载状态
-./scheduler.sh delete --job-name daily-brew        # 卸载并移除任务
-```
-
-Supports `--dry-run` plist previews, scheduling with `--at HH:MM`, and replacement with `--force`. Installed-mode logs default to `~/Library/Logs/macos-scripts/jobs/`.
 
 ### Homebrew maintenance
 
@@ -83,4 +67,4 @@ cd maintain
 
 The script times key commands and uses locks to prevent concurrent conflicts. USB creation requires sudo; `--force` allows replacement and `--yes` skips interaction. Installed CLI logs default to `~/Library/Logs/macos-scripts/macos-installer.log`.
 
-See [installation and configuration](installation.en.md), [jobs](jobs.en.md), and [releasing](releasing.en.md).
+See [installation and configuration](installation.en.md) and [releasing](releasing.en.md).

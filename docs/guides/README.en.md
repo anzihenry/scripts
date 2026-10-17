@@ -2,7 +2,7 @@
 title: Operational guides
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # Operational guides
@@ -13,6 +13,5 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 
 - [Installation and setup](installation.en.md)
 - [Usage and maintenance](using.en.md)
-- [Scheduled jobs](jobs.en.md)
 - [Development and validation](development.en.md): the single maintained source for test commands.
 - [Release operations](releasing.en.md)

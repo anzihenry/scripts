@@ -113,20 +113,6 @@ test_validator_failures() {
     "release verify 不支持参数: --bogus" \
     validate_release_verify_args v0.3.0 --bogus
 
-  run_expect_failure_contains \
-    "job status requires job name" \
-    "job status 需要提供 --job-name" \
-    validate_job_name_action_args status print_job_status_help false
-
-  run_expect_failure_contains \
-    "job create rejects weekday without at" \
-    "--weekday 需要配合 --at 使用" \
-    validate_job_create_args --job-name demo --script ./lint/lint_shell.sh --interval 5 --weekday 1
-
-  run_expect_failure_contains \
-    "job create rejects weekday out of range" \
-    "--weekday 取值范围为 0-6" \
-    validate_job_create_args --job-name demo --script ./lint/lint_shell.sh --at 12:00 --weekday 7
 }
 
 test_help_topics() {
@@ -145,10 +131,6 @@ test_help_topics() {
     "macos-scripts release publish" \
     handle_help release
 
-  run_expect_success_contains \
-    "help job create topic documents schedule args" \
-    "--interval <分钟>" \
-    handle_help job create
 }
 
 main() {

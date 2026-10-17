@@ -1,5 +1,5 @@
 class MacosScripts < Formula
-  desc "Unified macOS automation CLI for setup, maintenance, jobs, and lint"
+  desc "Unified macOS automation CLI for setup, maintenance, releases, and lint"
   homepage "https://github.com/anzihenry/scripts"
   url "https://github.com/anzihenry/scripts/archive/refs/tags/v0.5.0.tar.gz"
   # Homebrew infers the stable version from the tag URL.
@@ -9,7 +9,7 @@ class MacosScripts < Formula
   head "https://github.com/anzihenry/scripts.git", branch: "main"
 
   def install
-    libexec.install "bin", "bootstrap", "job", "lib", "lint", "maintain", "setup", "VERSION", "README.md", "README.en.md", "CHANGELOG.md", "CHANGELOG.en.md", "docs", "LICENSE"
+    libexec.install "bin", "bootstrap", "lib", "lint", "maintain", "setup", "VERSION", "README.md", "README.en.md", "CHANGELOG.md", "CHANGELOG.en.md", "docs", "LICENSE"
     bin.install_symlink libexec/"bin/macos-scripts"
   end
 
@@ -20,7 +20,6 @@ class MacosScripts < Formula
       常用命令：
         macos-scripts --help
         macos-scripts maintain brew --dry-run
-        macos-scripts job list
 
       默认日志目录：
         ~/Library/Logs/macos-scripts
@@ -40,6 +39,6 @@ class MacosScripts < Formula
   test do
     assert_match "macos-scripts v", shell_output("#{bin}/macos-scripts --version")
     assert_match "macos-scripts setup git", shell_output("#{bin}/macos-scripts help setup git")
-    assert_match "macos-scripts job create", shell_output("#{bin}/macos-scripts help job create")
+    assert_match "macos-scripts maintain brew", shell_output("#{bin}/macos-scripts help maintain brew")
   end
 end
