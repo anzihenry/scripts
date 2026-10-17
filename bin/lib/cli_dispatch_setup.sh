@@ -37,7 +37,7 @@ handle_setup_brew() {
 handle_setup_git() {
   has_help_flag "$@" && { print_setup_git_help; return 0; }
   validate_setup_git_args "$@" || return 1
-  run_bash_script "setup/git_forge_ssh_setup.sh" "$@"
+  run_zsh_script "setup/git_forge_ssh_setup.sh" "$@"
 }
 
 handle_setup_github() {

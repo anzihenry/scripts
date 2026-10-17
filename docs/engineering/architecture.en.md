@@ -2,7 +2,7 @@
 title: Architecture and modules
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # Architecture and modules
@@ -11,7 +11,7 @@ updated: 2026-10-10
 
 Translation of the Chinese primary version. Commands and historical log excerpts retain their original language where applicable.
 
-The target environment is macOS 14+, system Bash 3.2, and Zsh.
+The target environment is macOS 14+, system Zsh.
 
 ## Current modules
 

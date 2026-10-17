@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/bootstrap_install.sh
 # E2E: bootstrap/install.sh 真实流程（brew / curl / macos-scripts 命令桩）。
 # 断言 tap + install 调用、日志文件写入与整体退出码。

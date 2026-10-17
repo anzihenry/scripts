@@ -11,19 +11,19 @@ description: "Shell 脚本通用规范"
 - 目标：
 	- 生成/修改脚本时保持幂等，支持重复执行与显式的 `--force` 等开关。
 	- 输出统一的彩色日志，便于定位执行步骤与耗时。
-	- 代码易读、易测，方便在 Bash 与 Zsh 之间迁移。
+	- 代码易读、易测，统一采用系统 Zsh。
 
 ## 适用范围
 - 文件/目录：所有 `*.sh` 文件（包含 `setup/`、`maintain/`、`lint/` 等）。
 - 关键约束：
 	- macOS 版本：兼容 macOS 14 及以上系统自带工具。
-	- Shell 类型：根据现有脚本 shebang 选择 `bash` (macOS 3.2) 或 `zsh`，保持兼容。 
+	- Shell 类型：统一使用系统 `zsh`。
 	- 权限限制：默认以普通用户执行，如需 `sudo` 必须先提醒风险。
 
 ## 代码风格要求
 ### 头部与基础设置
-- Shebang：保留原 shebang；新文件按目录指引选择 `#!/bin/bash` 或 `#!/bin/zsh`，并补充 `# filepath: ...`。
-- 严格模式：默认启用 `set -euo pipefail`（Bash 3.x 不支持 `-o pipefail` 时需解释并提供替代处理）。临时关闭严格模式需注释原因并及时恢复。
+- Shebang：统一为 `#!/bin/zsh`，并补充 `# filepath: ...`。
+- 严格模式：默认启用 `set -euo pipefail`。临时关闭严格模式需注释原因并及时恢复。
 
 ### 日志与输出
 - 统一引入：`source "$SCRIPT_DIR/../lib/colors.sh"` 或等效相对路径。
@@ -53,7 +53,7 @@ description: "Shell 脚本通用规范"
 - 长耗时任务：提供进度提示（当前步骤/总步骤），必要时记录耗时或指引用户保持终端激活。
 
 ## 验证与交付
-- 语法检查：根据 shebang 运行 `zsh -n <script>` 或 `bash -n <script>`。
+- 语法检查：运行 `zsh -n <script>`。
 - 快速护栏：优先运行 `./tests/syntax_guard.sh`，统一覆盖仓库内 shebang 级语法检查。
 - Lint：使用 `./lint/lint_shell.sh`（必要时追加 `--fix`）。
 - 其他：根据脚本职能补充手动验证或回归步骤。

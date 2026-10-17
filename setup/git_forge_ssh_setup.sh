@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: setup/git_forge_ssh_setup.sh
 
 set -euo pipefail
@@ -48,7 +48,8 @@ get_git_email() {
   while [[ ! "$email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
     # read 在 EOF（非交互 stdin，如 `curl | zsh` 或 </dev/null）时返回非零
     # 且不会修改 email，条件恒真 -> 死循环。必须显式处理失败。
-    if ! read -r -p "$(highlight '请输入有效的Git全局邮箱地址: ')" email; then
+    printf '%s' "$(highlight '请输入有效的Git全局邮箱地址: ')" >&2
+    if ! read -r email; then
       log_error "无法读取邮箱输入（stdin 已结束）；请先执行 git config --global user.email <邮箱>"
       return 1
     fi
@@ -71,7 +72,8 @@ generate_ssh_key() {
 
   if [[ -f "$key_path" && "$force" != "true" ]]; then
     log_info "检测到现有密钥: $key_path"
-    read -p "$(highlight '是否覆盖？(y/N): ')" -n 1 -r
+    printf '%s' "$(highlight '是否覆盖？(y/N): ')" >&2
+    read -r -k 1 -u 0 REPLY
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
       cat "$pub_key_path"
@@ -319,7 +321,8 @@ host_alias="$(update_ssh_config "$domain" "$usage_type" "$HOME/.ssh/id_ed25519_$
 # 3. GitHub公钥上传
 if [[ "$skip_upload" != "true" && "$domain" == "github.com" ]]; then
   print_header "GitHub公钥上传"
-  read -r -s -p "$(highlight 'GitHub访问令牌（需admin:public_key权限）: ')" token
+  printf '%s' "$(highlight 'GitHub访问令牌（需admin:public_key权限）: ')" >&2
+  read -r -s token
   echo
   title="$(hostname) [$usage_type] $(date +%Y-%m-%d)"
   upload_github_key "$pub_key" "$title" "$token" || log_warn "GitHub配置未完成，但SSH配置已更新"

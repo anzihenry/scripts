@@ -7,7 +7,7 @@ description: "维护脚本规范"
 ## 背景与目标
 - 背景：`maintain/` 目录包含 Homebrew 更新、安装器制作等日常维护脚本，需要在现有环境上安全运行。
 - 目标：
-	- 保持与脚本现有 shebang 一致，并继续兼容 macOS 自带工具，避免 GNU-only 特性。
+	- 统一采用 `#!/bin/zsh`，并继续兼容 macOS 自带工具，避免 GNU-only 特性。
 	- 在批量或耗时操作中提供序号、进度与耗时提示，必要时写入错误日志。
 	-支持可选参数（`--force`、`--dry-run`、`--yes`）以便非交互式运行。
 
@@ -15,12 +15,12 @@ description: "维护脚本规范"
 - 文件/目录：`maintain/` 及其子目录（如 `formulaes_casks_updater.sh`、`macos_sys_usb_maker.sh`）。
 - 关键约束：
 	- macOS 版本：14+。
-	- Shell 类型：按现有 shebang 保持实现一致；当前核心维护脚本以 `zsh` 为主。
+	- Shell 类型：统一使用系统 `zsh`。
 	- 权限：默认无需 `sudo`，若必须则提前提示并要求确认。
 
 ## 代码风格要求
 ### 头部与基础设置
-- Shebang：遵循既有脚本 shebang，保留 `# filepath:` 注释。
+- Shebang：统一为 `#!/bin/zsh`，保留 `# filepath:` 注释。
 - 严格模式：优先保持 `set -euo pipefail` 或现有等效写法；如因 shell 约束无法完整启用，需说明并使用替代检查逻辑。
 
 ### 日志与输出
@@ -50,14 +50,14 @@ description: "维护脚本规范"
 - 长耗时任务显示进度、支持中断或恢复（例如可重复执行同一脚本）。
 
 ## 验证与交付
-- 语法检查：按 shebang 使用 `zsh -n` 或 `bash -n`。
+- 语法检查：使用 `zsh -n`。
 - 快速护栏：`./tests/syntax_guard.sh`。
 - Lint：`./lint/lint_shell.sh`。
 - 手动测试：按脚本用途提供示例命令（例如 `./maintain/formulaes_casks_updater.sh --dry-run`）。
 
 ## 推荐 Prompt
 - “基于《Maintain 目录脚本指南》，为 `maintain/formulaes_casks_updater.sh` 增加批量更新日志与错误记录。”
-- “请按指南为新脚本实现 `--dry-run`，并确保兼容 Bash 3.x。”
+- “请按指南为新脚本实现 `--dry-run`，并确保兼容系统 Zsh。”
 - “依据该指南优化长耗时任务的进度输出和失败重试提示。”
 
 ## 维护说明

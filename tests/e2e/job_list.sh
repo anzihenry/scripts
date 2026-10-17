@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/job_list.sh
 # E2E: job list 真实流程。
 # 先通过 job create --no-load 在沙箱中写入 plist，再断言 job list 能发现该任务。

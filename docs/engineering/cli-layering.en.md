@@ -2,7 +2,7 @@
 title: CLI layering conventions
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # CLI layering conventions
@@ -36,7 +36,7 @@ Maintain help text by domain and route `help <topic>`. The router contains routi
 
 ## Shared runtime
 
-`cli_runtime.sh` provides script runners such as `run_zsh_script` and `run_bash_script`, assembly helpers such as `dispatch_validated_action`, error helpers such as `usage_error` and `command_error`, and general utilities such as `has_help_flag`.
+`cli_runtime.sh` provides script runners such as `run_zsh_script` (all internal scripts use Zsh), assembly helpers such as `dispatch_validated_action`, error helpers such as `usage_error` and `command_error`, and general utilities such as `has_help_flag`.
 
 Only cross-domain helpers with little or no domain knowledge belong here. Do not add setup/release/job-specific forwarding, large business branches, or one-off domain wrappers. A helper used in one domain belongs in its dispatch or domain helper. Knowledge of specific help text, tags, or defaults usually signals a domain-specific function.
 

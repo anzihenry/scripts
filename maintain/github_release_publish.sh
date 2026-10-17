@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: maintain/github_release_publish.sh
 
 set -euo pipefail
@@ -42,12 +42,12 @@ usage() {
   -h, --help                显示帮助
 
 示例:
-  bash maintain/github_release_publish.sh \
+  zsh maintain/github_release_publish.sh \
     --tag v0.3.0 \
     --notes-file docs/releases/0.3.0/README.md \
     --yes
 
-  bash maintain/github_release_publish.sh \
+  zsh maintain/github_release_publish.sh \
     --tag v0.3.0 \
     --notes-file docs/releases/0.3.0/README.md \
     --verify-only

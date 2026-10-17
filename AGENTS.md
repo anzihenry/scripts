@@ -5,8 +5,8 @@
 
 ## 工作区背景
 - 仓库类型：macOS 自动化 Shell 脚本，覆盖初始化 (`setup/`)、维护 (`maintain/`) 与工具 (`lint/`, `lib/`).
-- 语言约束：主要为 `bash` (macOS 3.x) 与 `zsh`，需兼容 macOS 14+ 自带工具，不依赖 GNU 特性。
-- 目标：生成符合 Bash 3.x / Zsh 语法、可在系统自带工具上运行的脚本；优先保证幂等、安全与可回滚；默认输出彩色日志并记录关键步骤耗时。
+- 语言约束：统一为系统 `zsh`，需兼容 macOS 14+ 自带工具，不依赖 GNU 特性。
+- 目标：生成符合 Zsh 语法、可在系统自带工具上运行的脚本；优先保证幂等、安全与可回滚；默认输出彩色日志并记录关键步骤耗时。
 - 配置来源：
   - `/.github/instructions/*.instructions.md`：目录/任务专项规范。
   - `docs/guides/development.md`「运行验证」：测试命令唯一权威源（语法/lint/smoke/guard/E2E）。

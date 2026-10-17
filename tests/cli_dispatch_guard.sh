@@ -67,14 +67,6 @@ source "$REPO_ROOT/bin/lib/cli_dispatch_job.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_dispatch_maintain.sh"
 
-RUN_BASH_SCRIPT_PATH=""
-typeset -ga RUN_BASH_SCRIPT_ARGS=()
-run_bash_script() {
-  RUN_BASH_SCRIPT_PATH="$1"
-  shift
-  RUN_BASH_SCRIPT_ARGS=("$@")
-}
-
 RUN_ZSH_SCRIPT_PATH=""
 typeset -ga RUN_ZSH_SCRIPT_ARGS=()
 run_zsh_script() {
@@ -84,9 +76,9 @@ run_zsh_script() {
 }
 
 test_setup_github_adds_defaults() {
-  RUN_BASH_SCRIPT_ARGS=()
+  RUN_ZSH_SCRIPT_ARGS=()
   handle_setup_github --force
-  assert_eq "${RUN_BASH_SCRIPT_ARGS[*]}" "--domain github.com --type personal --force" "setup github forwards default domain and type"
+  assert_eq "${RUN_ZSH_SCRIPT_ARGS[*]}" "--domain github.com --type personal --force" "setup github forwards default domain and type"
 }
 
 test_setup_brew_configure_uses_validator() {

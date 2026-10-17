@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/maintain_brew.sh
 # E2E: maintain brew 真实流程（brew 命令桩）。
 # 成功路径断言 brew 调用顺序；失败路径断言错误日志写入与退出码。

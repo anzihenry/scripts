@@ -9,6 +9,10 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: /bin/zsh -euo pipefail {0}
+
 jobs:
   e2e-gate:
     name: Pre-release E2E gate
@@ -18,22 +22,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install lint dependencies
-        run: brew install shellcheck shfmt
-
-      - name: Syntax guard (shebang-level)
+      - name: Zsh interpreter and syntax guard
         run: zsh tests/syntax_guard.sh
 
-      - name: Lint + format check
+      - name: Zsh checks
         run: ./lint/lint_shell.sh
 
       - name: CLI smoke tests
-        run: bash tests/smoke_cli.sh
+        run: zsh tests/smoke_cli.sh
 
       - name: Guard tests (zsh)
         run: |
           for t in bootstrap_guard cli_dispatch_guard cli_validators_guard \
-                   version_consistency_guard regression_guard \
+                   version_consistency_guard regression_guard zsh_migration_guard \
                    job_runtime_guard job_scheduler_guard job_plist_guard \
                    macos_installer_flow_guard release_publish_guard \
                    setup_runtime_guard maintain_runtime_guard; do
@@ -41,7 +42,7 @@ jobs:
           done
 
       - name: E2E L1 (sandbox + command stubs)
-        run: bash tests/e2e/run_all.sh
+        run: zsh tests/e2e/run_all.sh
 
       - name: Release verify (real gh, non-destructive)
         env:

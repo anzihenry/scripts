@@ -2,7 +2,7 @@
 title: Changelog
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # Changelog
@@ -12,6 +12,12 @@ updated: 2026-10-10
 Translation of the Chinese primary version. Commands and historical log excerpts retain their original language where applicable.
 
 This index collects historical release descriptions. See [version records](docs/releases/README.en.md) for publication status.
+
+## Unreleased
+
+- Standardize repository scripts, libraries, tests, and CI on system Zsh; adapt interactive input, arrays, special parameters, and exit cleanup.
+- Enforce `#!/bin/zsh` and syntax checks without ShellCheck/shfmt; retain `lint fix` as a check-only compatibility entry point.
+- Add Zsh migration regression tests. Upstream Homebrew installers still use Bash as required by upstream.
 
 ## 0.5.0
 

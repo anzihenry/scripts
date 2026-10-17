@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/release_verify.sh
 # E2E: release verify 真实流程。
 # 验证版本一致性检查（VERSION + Formula）与 gh 命令桩的 verify-only 链路。

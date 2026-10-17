@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: maintain/lib/release_publish_context.sh
 
 # 本文件是被 source 的共享状态模块：变量在此初始化，

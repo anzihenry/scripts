@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: maintain/lib/release_publish_flow.sh
 
 # 查询 release 状态，区分「确定不存在」(404) 与「查询失败」（网络/鉴权/限流）。

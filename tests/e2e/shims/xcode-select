@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 set -u
 # filepath: tests/e2e/shims/xcode-select
 # xcode-select 命令桩：记录调用，模拟 Xcode CLI 已就绪（-p 返回 0）。

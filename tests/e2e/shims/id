@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 set -u
 # filepath: tests/e2e/shims/id
 # id 命令桩：固定输出 uid 501，保证 launchctl 会话 gui/501 可确定性断言。
