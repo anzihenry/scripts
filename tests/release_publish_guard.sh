@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/release_publish_guard.sh
 
 set -euo pipefail

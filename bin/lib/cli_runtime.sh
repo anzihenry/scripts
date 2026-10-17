@@ -9,13 +9,7 @@
 run_zsh_script() {
   local relative_path="$1"
   shift
-  zsh "$REPO_ROOT/$relative_path" "$@"
-}
-
-run_bash_script() {
-  local relative_path="$1"
-  shift
-  bash "$REPO_ROOT/$relative_path" "$@"
+  /bin/zsh "$REPO_ROOT/$relative_path" "$@"
 }
 
 load_forwarded_args() {
@@ -38,7 +32,7 @@ load_forwarded_args() {
 }
 
 run_release_script() {
-  run_bash_script "maintain/github_release_publish.sh" "$@"
+  run_zsh_script "maintain/github_release_publish.sh" "$@"
 }
 
 run_scheduler_action() {

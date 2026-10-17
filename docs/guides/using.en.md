@@ -2,7 +2,7 @@
 title: Usage and maintenance
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # Usage and maintenance
@@ -36,11 +36,11 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 ### Shell lint and formatting
 
 ```bash
-./lint/lint_shell.sh           # 仅检查（先按 shebang 做语法检查）
-./lint/lint_shell.sh --fix     # 自动使用 shfmt 格式化
+./lint/lint_shell.sh           # 检查 Zsh shebang 与语法
+./lint/lint_shell.sh --fix     # 兼容入口，仅检查并提示不自动格式化
 ```
 
-Requires `shellcheck` and `shfmt`, available through Homebrew. Zsh scripts receive `zsh -n` syntax checks; Bash/sh scripts also receive ShellCheck and shfmt checks.
+No extra dependencies are required. All repository scripts use Zsh; lint validates the shebang and runs `zsh -n`. ShellCheck/shfmt do not support Zsh. See the [development guide](development.en.md) for runtime tests.
 
 ### Launchd jobs
 

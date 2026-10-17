@@ -207,7 +207,7 @@ test_outdated_casks_filters_non_cask_output() {
   local fakebin
   fakebin="$(mktemp -d "${TMPDIR:-/tmp}/maintain-fakebrew.XXXXXX")"
   cat > "$fakebin/brew" <<'EOF'
-#!/bin/bash
+#!/bin/zsh
 if [[ "${1:-}" == "outdated" ]]; then
   # 模拟 stdout 混入空行和 Homebrew 环境提示。
   printf '\nHOMEBREW_BREW_GIT_REMOTE: https://example.invalid\nvisual-studio-code\niterm2\n'

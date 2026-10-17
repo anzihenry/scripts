@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/zsh
+# filepath: lib/utils.sh
 # 通用工具库：日志 fallback、运行时辅助、命令检查、Xcode CLI 安装
 # 用法: source "$(dirname "$0")/../lib/utils.sh"
 

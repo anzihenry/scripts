@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/job_disable.sh
 # E2E: job disable 真实流程。
 # 断言 launchctl 命令桩被调用（disable），且输出任务已禁用。

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/job_create.sh
 # E2E: job create 真实流程。
 # 在沙箱中真实写入 plist、经 plutil -lint 校验，并调用 launchctl 命令桩

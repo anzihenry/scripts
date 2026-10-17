@@ -2,7 +2,7 @@
 title: CLI 分层约定
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # CLI 分层约定
@@ -89,7 +89,7 @@ updated: 2026-10-10
 
 职责：
 
-- 提供脚本运行 helper，例如 `run_zsh_script`、`run_bash_script`
+- 提供脚本运行 helper，例如 `run_zsh_script`（内部脚本统一使用 Zsh）
 - 提供共享分发骨架，例如 `dispatch_validated_action`
 - 提供通用 CLI 错误输出 helper，例如 `usage_error`、`command_error`
 - 提供纯通用的小工具，例如 `has_help_flag`

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/setup_brew_configure.sh
 # E2E: setup brew configure --dry-run 真实流程。
 # 回归护栏：homebrew-setup.sh 必须完整 source config_writer.sh，

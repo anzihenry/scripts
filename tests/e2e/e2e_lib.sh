@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/e2e_lib.sh
 # E2E 共享辅助库：沙箱隔离、命令桩 PATH、transcript 记录与断言。
 #
@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-E2E_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+E2E_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
 REPO_ROOT="$(cd "$E2E_DIR/../.." && pwd)"
 E2E_SHIMS_DIR="$E2E_DIR/shims"
 
@@ -52,7 +52,6 @@ e2e_begin() {
   export PATH="$E2E_SHIMS_DIR:$PATH"
 
   : > "$E2E_TRANSCRIPT"
-  trap e2e_teardown EXIT
 }
 
 e2e_teardown() {
@@ -145,51 +144,51 @@ e2e_assert_not_contains() {
 }
 
 e2e_assert_file() {
-  local path="$1"
+  local target_path="$1"
   local name="$2"
-  if [[ -f "$path" ]]; then
+  if [[ -f "$target_path" ]]; then
     e2e_pass "$name"
   else
-    printf 'missing file: %s\n' "$path" >&2
+    printf 'missing file: %s\n' "$target_path" >&2
     e2e_fail "$name"
   fi
 }
 
 e2e_assert_not_file() {
-  local path="$1"
+  local target_path="$1"
   local name="$2"
-  if [[ ! -f "$path" ]]; then
+  if [[ ! -f "$target_path" ]]; then
     e2e_pass "$name"
   else
-    printf 'unexpected file: %s\n' "$path" >&2
+    printf 'unexpected file: %s\n' "$target_path" >&2
     e2e_fail "$name"
   fi
 }
 
 e2e_assert_dir() {
-  local path="$1"
+  local target_path="$1"
   local name="$2"
-  if [[ -d "$path" ]]; then
+  if [[ -d "$target_path" ]]; then
     e2e_pass "$name"
   else
-    printf 'missing dir: %s\n' "$path" >&2
+    printf 'missing dir: %s\n' "$target_path" >&2
     e2e_fail "$name"
   fi
 }
 
 e2e_assert_file_contains() {
-  local path="$1"
+  local target_path="$1"
   local needle="$2"
   local name="$3"
-  if [[ ! -f "$path" ]]; then
-    printf 'missing file: %s\n' "$path" >&2
+  if [[ ! -f "$target_path" ]]; then
+    printf 'missing file: %s\n' "$target_path" >&2
     e2e_fail "$name"
     return
   fi
-  if grep -qF -- "$needle" "$path"; then
+  if grep -qF -- "$needle" "$target_path"; then
     e2e_pass "$name"
   else
-    printf 'missing substring in %s: %s\n' "$path" "$needle" >&2
+    printf 'missing substring in %s: %s\n' "$target_path" "$needle" >&2
     e2e_fail "$name"
   fi
 }
@@ -243,3 +242,6 @@ e2e_summary() {
   printf '\n[%s] PASS=%d FAIL=%d\n' "$E2E_TEST_NAME" "$E2E_PASS_COUNT" "$E2E_FAIL_COUNT"
   [[ "$E2E_FAIL_COUNT" -eq 0 ]]
 }
+
+# Zsh 的函数内 EXIT trap 会在函数返回时触发；必须在脚本作用域登记。
+trap e2e_teardown EXIT

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 set -u
 # filepath: tests/e2e/shims/gh
 # gh 命令桩：记录调用，并用 $E2E_GH_STATE_DIR/release_created 标记模拟

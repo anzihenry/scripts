@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: maintain/lib/command_runtime.sh
 
 command_preview() {

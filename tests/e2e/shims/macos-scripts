@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 set -u
 # filepath: tests/e2e/shims/macos-scripts
 # macos-scripts 命令桩：供 bootstrap/install.sh 实装后验证 CLI 可用性（command -v）。

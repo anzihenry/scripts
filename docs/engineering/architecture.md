@@ -2,14 +2,14 @@
 title: 架构与模块
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # 架构与模块
 
 [English](architecture.en.md)
 
-目标环境为 macOS 14+、系统 Bash 3.2 与 Zsh。
+目标环境为 macOS 14+、系统 Zsh。
 
 ## 🧱 当前模块结构
 

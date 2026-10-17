@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/smoke_cli.sh
 
 set -euo pipefail
@@ -51,10 +51,10 @@ run_expect_failure_contains() {
 
   set +e
   output="$("$@" 2>&1)"
-  local status=$?
+  local command_status=$?
   set -e
 
-  if [[ $status -eq 0 ]]; then
+  if [[ $command_status -eq 0 ]]; then
     printf '%s\n' "$output" >&2
     fail "$name"
   fi

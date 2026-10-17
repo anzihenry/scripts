@@ -2,7 +2,7 @@
 title: Development and validation
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # Development and validation
@@ -11,7 +11,9 @@ updated: 2026-10-10
 
 Translation of the Chinese primary version. Commands and historical log excerpts retain their original language where applicable.
 
-Requires macOS 14+, Bash 3.2, Zsh, `shellcheck`, and `shfmt`. Run all commands from the repository root.
+Requires macOS 14+ and its system Zsh; no ShellCheck/shfmt installation is needed. Run all commands from the repository root.
+
+Repository scripts, tests, and stubs use `#!/bin/zsh`. ShellCheck/shfmt do not support Zsh, so lint checks interpreter policy and syntax; guards and E2E cover runtime semantics. `lint --fix` remains a compatibility alias that reports it does not format Zsh. Downloaded upstream Homebrew installers still run with `/bin/bash`.
 
 ## Run validation
 
@@ -20,10 +22,10 @@ This guide is the single maintained source for test commands; other documents li
 Run tests from faster checks to slower suites; CI runs them on pushes and pull requests:
 
 ```bash
-zsh tests/syntax_guard.sh        # ① 语法：shebang 级 zsh -n / bash -n
-./lint/lint_shell.sh             # ② 静态：bash/sh 的 shellcheck + shfmt
+zsh tests/syntax_guard.sh        # ① 语法：统一 #!/bin/zsh 与 zsh -n
+./lint/lint_shell.sh             # ② 检查：Zsh shebang 与语法（同一检查入口）
 ./tests/smoke_cli.sh             # ③ CLI：关键成功/失败路径
-bash tests/e2e/run_all.sh        # ④ 进程级：沙箱 + 命令桩 E2E（8 用例）
+zsh tests/e2e/run_all.sh         # ④ 进程级：沙箱 + 命令桩 E2E（8 用例）
 ```
 
 Smoke and E2E tests override `MACOS_SCRIPTS_LOG_DIR` and `MACOS_SCRIPTS_CONFIG_DIR` with temporary directories; E2E also overrides LaunchAgents to isolate user files.
@@ -36,6 +38,7 @@ zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
 zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
 zsh tests/regression_guard.sh         # Fixed-defect regressions: logs, atomic plist writes, stale locks, release state
+zsh tests/zsh_migration_guard.sh      # Zsh 迁移：交互、数组、安装 helper 与进程隔离
 zsh tests/job_runtime_guard.sh        # job 运行时
 zsh tests/job_scheduler_guard.sh      # job 调度动作
 zsh tests/job_plist_guard.sh          # plist 真实写入 + plutil 校验
@@ -52,7 +55,7 @@ Invoke the listed guards with `zsh tests/<name>.sh`, as documented. Zsh-specific
 `tests/e2e/` redirects HOME, configuration, logs, and LaunchAgents into temporary sandboxes. Stubs in `tests/e2e/shims/` intercept brew, launchctl, gh, git, curl, and other external commands. The actual scripts run end to end; assertions inspect produced files, call sequences, and exit codes.
 
 ```bash
-bash tests/e2e/run_all.sh
+zsh tests/e2e/run_all.sh
 ```
 
 Coverage:
@@ -63,7 +66,7 @@ Coverage:
 - `setup brew configure`: configuration dry-run and missing-source regressions.
 - `bootstrap/install.sh`: tap/install calls and log writes.
 
-E2E scripts use Bash. The `.github/workflows/release.yml` gate runs for `v*` tags and includes actual Formula installation on macOS.
+E2E scripts use Zsh. The `.github/workflows/release.yml` gate runs for `v*` tags and includes actual Formula installation on macOS.
 
 ## Contributing
 

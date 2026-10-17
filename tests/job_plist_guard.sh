@@ -21,7 +21,7 @@ source "$REPO_ROOT/job/lib/job_paths.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/job/lib/job_plist.sh"
 
-# 测试所需的日志函数（colors.sh 中同名函数为 zsh/bash 兼容实现）
+# 测试所需的日志函数（colors.sh 中同名函数为 Zsh 实现）
 info() { printf 'INFO:%s\n' "$*"; }
 warning() { printf 'WARN:%s\n' "$*"; }
 error() { printf 'ERROR:%s\n' "$*" >&2; }

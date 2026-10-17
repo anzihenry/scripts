@@ -2,14 +2,14 @@
 title: macOS 高效自动化脚本库
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # macOS 高效自动化脚本库
 
 [English](README.en.md)
 
-面向 macOS 14+ 的 Shell 自动化工具，提供开发环境初始化、Homebrew 维护、macOS 安装器制作和 launchd 定时任务。使用系统 Bash 3.2 与 Zsh，统一 CLI 提供彩色日志、耗时统计、幂等检查和 dry-run。当前源码版本见 [VERSION](VERSION)。
+面向 macOS 14+ 的 Shell 自动化工具，提供开发环境初始化、Homebrew 维护、macOS 安装器制作和 launchd 定时任务。使用系统 Zsh，统一 CLI 提供彩色日志、耗时统计、幂等检查和 dry-run。当前源码版本见 [VERSION](VERSION)。
 
 ## 快速开始
 

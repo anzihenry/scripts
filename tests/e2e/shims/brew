@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 set -u
 # filepath: tests/e2e/shims/brew
 # brew 命令桩：记录调用并按子命令返回可预测输出，供

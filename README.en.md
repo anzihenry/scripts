@@ -2,7 +2,7 @@
 title: macOS Automation Scripts
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # macOS Automation Scripts
@@ -11,7 +11,7 @@ updated: 2026-10-10
 
 Translation of the Chinese primary version. Commands and historical log excerpts retain their original language where applicable.
 
-Shell automation for macOS 14+: developer environment setup, Homebrew maintenance, macOS installer creation, and launchd jobs. The unified CLI uses the system Bash 3.2 and Zsh and provides colored logs, timing, idempotent checks, and dry-run support. See [VERSION](VERSION) for the source version.
+Shell automation for macOS 14+: developer environment setup, Homebrew maintenance, macOS installer creation, and launchd jobs. The unified CLI uses the system Zsh and provides colored logs, timing, idempotent checks, and dry-run support. See [VERSION](VERSION) for the source version.
 
 ## Quick start
 

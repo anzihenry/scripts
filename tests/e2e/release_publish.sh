@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # filepath: tests/e2e/release_publish.sh
 # E2E: release publish 真实流程（gh 命令桩）。
 # 覆盖 dry-run（打印不执行）、创建路径、更新路径三类关键分支。

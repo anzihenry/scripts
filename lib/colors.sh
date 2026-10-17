@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/zsh
+# filepath: lib/colors.sh
 # 通用颜色输出库
 # 使用方法: source "$(dirname "$0")/../lib/colors.sh"
 
@@ -268,21 +269,22 @@ confirm() {
 select_option() {
   local prompt="$1"
   shift
-  local options=("$@")
+  local menu_options=("$@")
+  local i choice
 
   echo -e "${COLOR_BOLD}$prompt${COLOR_NC}"
-  for i in "${!options[@]}"; do
-    echo -e "  ${COLOR_CYAN}$((i + 1)))${COLOR_NC} ${options[i]}"
+  for ((i = 1; i <= ${#menu_options[@]}; i++)); do
+    echo -e "  ${COLOR_CYAN}${i})${COLOR_NC} ${menu_options[i]}"
   done
 
   while true; do
-    echo -ne "${COLOR_YELLOW}请选择 (1-${#options[@]}): ${COLOR_NC}"
+    echo -ne "${COLOR_YELLOW}请选择 (1-${#menu_options[@]}): ${COLOR_NC}"
     read -r choice
-    if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#options[@]})); then
+    if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#menu_options[@]})); then
       echo $((choice - 1))
       return 0
     fi
-    error "无效选择，请输入 1-${#options[@]} 之间的数字"
+    error "无效选择，请输入 1-${#menu_options[@]} 之间的数字"
   done
 }
 
@@ -353,7 +355,7 @@ EOF
 export COLORS_LIB_LOADED=true
 
 # 如果直接执行此文件，运行测试
-if [[ -n "${BASH_VERSION:-}" && "${BASH_SOURCE[0]}" == "${0}" ]]; then
+if [[ "$ZSH_EVAL_CONTEXT" == "toplevel" ]]; then
   case "${1:-test}" in
     test) test_colors ;;
     help) show_color_help ;;

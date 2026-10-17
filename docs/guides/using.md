@@ -2,7 +2,7 @@
 title: 使用与维护
 status: current
 owner: project-maintainers
-updated: 2026-10-10
+updated: 2026-10-17
 ---
 
 # 使用与维护
@@ -35,10 +35,10 @@ updated: 2026-10-10
 ### Shell 脚本 Lint & 格式化
 
 ```bash
-./lint/lint_shell.sh           # 仅检查（先按 shebang 做语法检查）
-./lint/lint_shell.sh --fix     # 自动使用 shfmt 格式化
+./lint/lint_shell.sh           # 检查 Zsh shebang 与语法
+./lint/lint_shell.sh --fix     # 兼容入口，仅检查并提示不自动格式化
 ```
-> 依赖 `shellcheck` 与 `shfmt`（可通过 Homebrew 安装）。zsh 脚本当前会执行 `zsh -n` 语法检查；bash/sh 脚本会额外执行 shellcheck 与 shfmt。
+> 无需额外依赖。仓库统一使用 Zsh，执行 shebang 校验与 `zsh -n`。ShellCheck/shfmt 不支持 Zsh，运行时验证见[开发指南](development.md)。
 
 ### Launchd 定时任务工具
 

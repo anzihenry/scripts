@@ -126,10 +126,10 @@ bh_install_packages() {
 
   set +e
   bh__install_command "$bulk_mode" "$type" "${to_install[@]}"
-  local status=$?
+  local command_status=$?
   set -e
 
-  if [[ $status -eq 0 ]]; then
+  if [[ $command_status -eq 0 ]]; then
     BH_INSTALLED_ITEMS+=("${to_install[@]}")
     success "$label：批量处理成功（${#to_install[@]} 项）"
     return 0
