@@ -51,6 +51,16 @@ dispatch_macos_installer_command() {
   case "${1:-}" in
     list)
       shift
+      local list_option
+      for list_option in "$@"; do
+        case "$list_option" in
+          -h|--help|help) usage; return 0 ;;
+          -v|--verbose) VERBOSE=true ;;
+          *) die "未知参数: $list_option" ;;
+        esac
+      done
+      initialize_macos_installer_logging
+      require_supported_macos || return 1
       sub_list "$@"
       ;;
     download)

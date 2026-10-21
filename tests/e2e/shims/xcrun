@@ -1,0 +1,8 @@
+#!/bin/zsh
+# filepath: tests/e2e/shims/xcrun
+# 仅模拟工具定位，不调用真实编译器或系统安装流程。
+set -u
+source "${0:A:h}/_recorder.sh"
+record_invocation "$@"
+[[ "${1:-}" == --find && "${2:-}" == clang ]] || exit 127
+printf '/Library/Developer/CommandLineTools/usr/bin/clang\n'

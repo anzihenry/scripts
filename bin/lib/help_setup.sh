@@ -23,6 +23,8 @@ print_setup_brew_help() {
 
 说明:
   仅校准 Homebrew 镜像、shellenv 和当前 shell 环境。
+  默认配置 USTC，修改前备份 .zshrc 和 Git 配置；成功删除本次备份，失败时恢复并保留备份。
+  仅验证镜像连通性，不重置仓库；实际更新请用 maintain brew。
   该命令面向已具备 Homebrew 的系统，不承担新机首次安装职责；
   若系统尚未安装 Homebrew，请先运行 bootstrap/install.sh。
 

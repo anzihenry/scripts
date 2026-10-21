@@ -17,8 +17,17 @@ source "$SCRIPT_DIR/lib/setup_lang_env.sh"
 source "$SCRIPT_DIR/lib/setup_postcheck.sh"
 
 main() {
+    case "${1:-}" in
+        -h|--help|help)
+            printf '用法: macos-setup.sh\n说明: 安装开发环境和软件包；需要 macOS 14+。\n'
+            return 0
+            ;;
+        '') ;;
+        *) error "未知参数: $1"; return 1 ;;
+    esac
+    require_supported_macos || exit 1
     initialize_setup_context
     run_setup_workflow
 }
 
-main
+main "$@"

@@ -31,6 +31,7 @@ main() {
       handle_help "$@"
       ;;
     version|--version|-v)
+      reject_extra_args print_main_help "$@" || return 1
       printf 'macos-scripts v%s\n' "$MACOS_SCRIPTS_VERSION"
       ;;
     *)

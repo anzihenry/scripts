@@ -14,8 +14,6 @@ initialize_brew_updater_context() {
         "chatgpt"
     )
 
-    ERROR_LOG="$(prepare_log_file_path "brew_update_errors.log" "$SCRIPT_DIR/brew_update_errors.log")"
-
     DRY_RUN="false"
     ASSUME_YES="false"
     FORCE_CASKS="false"
@@ -59,4 +57,10 @@ parse_brew_updater_args() {
         esac
         shift
     done
+}
+
+initialize_brew_updater_logging() {
+    ERROR_LOG="$(prepare_log_file_path "brew_update_errors.log")" || return 1
+    BREW_UPDATE_LOG_STARTED=false
+    BREW_UPDATE_RUN_STARTED_AT="$(date '+%Y-%m-%d %H:%M:%S %z')"
 }

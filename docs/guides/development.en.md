@@ -2,7 +2,7 @@
 title: Development and validation
 status: current
 owner: project-maintainers
-updated: 2026-10-17
+updated: 2026-10-21
 ---
 
 # Development and validation
@@ -33,7 +33,7 @@ Smoke and E2E tests override `MACOS_SCRIPTS_LOG_DIR` and `MACOS_SCRIPTS_CONFIG_D
 Function guards, matching the CI guard step:
 
 ```bash
-zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两种模式
+zsh tests/bootstrap_guard.sh          # bootstrap 双入口：root 保护、架构、运行锁/并发/中断、PTY 确认、CLT、Homebrew 换源/dry-run
 zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
 zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
@@ -44,6 +44,10 @@ zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 ```
+
+Query regressions cover CLI and standalone help, CLI versions, piped bootstrap help, fresh directories, unusable paths, and existing logs and locks. Command stubs verify that queries do not check the system or network, create directories, rotate logs, or modify locks.
+
+Bootstrap root tests fix the effective-UID condition only in a temporary script copy; they do not run sudo or change the real UID. They verify early rejection without writes and help access for root.
 
 Invoke the listed guards with `zsh tests/<name>.sh`, as documented. Zsh-specific guards fail when invoked with Bash.
 
@@ -59,7 +63,7 @@ Coverage:
 
 - `release verify/publish`: version consistency and gh create/update/verify-only branches and arguments.
 - `maintain brew`: brew call order and Cask failure logs.
-- `setup brew configure`: configuration dry-run and missing-source regressions.
+- `setup brew configure`: dry-run, real temporary Git configuration, repeated execution, staged failure/interruption rollback, backups, and locking.
 - `bootstrap/install.sh`: tap/install calls and log writes.
 
 E2E scripts use Zsh. The `.github/workflows/release.yml` gate runs for `v*` tags and includes actual Formula installation on macOS.

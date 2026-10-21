@@ -5,7 +5,6 @@ set -euo pipefail
 
 if [[ -n "${MACOS_SCRIPTS_CONFIG_DIR:-}" ]]; then
   SSH_BACKUP_DIR="$MACOS_SCRIPTS_CONFIG_DIR/backups"
-  mkdir -p "$SSH_BACKUP_DIR"
 else
   SSH_BACKUP_DIR=""
 fi
@@ -16,9 +15,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/utils.sh"
-
-SETUP_LOG_FILE="$(prepare_log_file_path "setup-git.log" "$SCRIPT_DIR/setup-git.log")"
-enable_log_capture "$SETUP_LOG_FILE"
 
 # ========== 工具函数 ==========
 sanitize_domain() {
@@ -303,6 +299,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+SETUP_LOG_FILE="$(prepare_log_file_path "setup-git.log")"
+enable_log_capture "$SETUP_LOG_FILE"
+
+require_supported_macos || exit 1
+[[ -z "$SSH_BACKUP_DIR" ]] || mkdir -p "$SSH_BACKUP_DIR"
 if [[ "$debug" == "true" ]]; then
   set -x
 fi

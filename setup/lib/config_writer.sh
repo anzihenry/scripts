@@ -24,11 +24,11 @@ write_managed_block() {
         return 0
     fi
 
-    ensure_parent_dir "$target_file"
-    touch "$target_file"
+    ensure_parent_dir "$target_file" || return 1
+    touch "$target_file" || return 1
 
     if grep -Fq "$start_marker" "$target_file"; then
-        sed -i '' "\\|$start_marker|,\\|$end_marker|d" "$target_file"
+        sed -i '' "\\|$start_marker|,\\|$end_marker|d" "$target_file" || return 1
     fi
 
     {
@@ -36,7 +36,7 @@ write_managed_block() {
         echo "$start_marker"
         echo "$content"
         echo "$end_marker"
-    } >> "$target_file"
+    } >> "$target_file" || return 1
 }
 
 write_managed_file() {
@@ -51,8 +51,8 @@ write_managed_file() {
         return 0
     fi
 
-    ensure_parent_dir "$target_file"
-    printf '%s\n' "$content" > "$target_file"
+    ensure_parent_dir "$target_file" || return 1
+    printf '%s\n' "$content" > "$target_file" || return 1
 
     if [[ -n "$mode" ]]; then
         chmod "$mode" "$target_file"

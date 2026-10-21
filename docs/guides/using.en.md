@@ -2,7 +2,7 @@
 title: Usage and maintenance
 status: current
 owner: project-maintainers
-updated: 2026-10-17
+updated: 2026-10-21
 ---
 
 # Usage and maintenance
@@ -11,6 +11,8 @@ updated: 2026-10-17
 
 Translation of the Chinese primary version. Commands and historical log excerpts retain their original language where applicable.
 
+> The new logging, precheck, and read-only query rules in this guide describe current unreleased source. Stable installations pinned to `v0.5.0` do not automatically acquire these changes. See the [installation guide](installation.en.md) for version scope and local inspection.
+
 ## Unified CLI
 
 ```bash
@@ -18,7 +20,7 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 ./bin/macos-scripts setup brew configure
 ./bin/macos-scripts setup packages
 ./bin/macos-scripts setup git --domain gitlab.company.com --type work
-./bin/macos-scripts setup github --force
+./bin/macos-scripts setup github
 
 ./bin/macos-scripts maintain brew --dry-run
 ./bin/macos-scripts maintain installer list
@@ -29,6 +31,10 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 ```
 
 `bin/macos-scripts` is the unified entry point. Scripts in `setup/`, `maintain/`, and `lint/` remain internal executors. The entry point and `bin/lib/*.sh` separate help and validation from dispatch.
+
+Help and CLI version queries are read-only: `macos-scripts --help`, `macos-scripts help <topic>`, subcommand help flags, and `macos-scripts version` / `--version` / `-v` return directly without creating directories, writing or rotating logs, acquiring locks, or checking the OS, architecture, or network. Standalone script help follows the same rule. Unusable log paths and invalid log policies do not block these queries. Runtime initialization starts only when executing a feature, including dry-run. Unknown commands, invalid arguments, and extra version-query arguments return a nonzero status with guidance.
+
+GitHub setup examples omit `--force`. Add it explicitly only when you intend to recreate an existing SSH key.
 
 ## Common tools
 

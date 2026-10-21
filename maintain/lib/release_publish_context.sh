@@ -7,8 +7,6 @@
 # 因此文件级禁用 SC2034 以消除误报。
 # shellcheck disable=SC2034
 initialize_release_publish_context() {
-  RELEASE_LOG_FILE="$(prepare_log_file_path "github-release-publish.log" "$SCRIPT_DIR/github-release-publish.log")"
-  enable_log_capture "$RELEASE_LOG_FILE"
 
   REPO_SLUG="anzihenry/scripts"
   TAG=""
@@ -19,4 +17,9 @@ initialize_release_publish_context() {
   DRY_RUN="false"
   VERIFY_ONLY="false"
   UPDATE_EXISTING="false"
+}
+
+initialize_release_publish_logging() {
+  RELEASE_LOG_FILE="$(prepare_log_file_path "github-release-publish.log")" || return 1
+  enable_log_capture "$RELEASE_LOG_FILE" "$(get_log_run_mode "$@")" || return 1
 }

@@ -42,7 +42,7 @@ die() { log_fatal "$@"; }
 # （acquire_installer_lock 只登记到 INSTALLER_LOCK_DIRS，不再自设 trap）
 cleanup_installer_locks() {
   local lock_dir
-  for lock_dir in "${INSTALLER_LOCK_DIRS[@]:-}"; do
+  for lock_dir in "${INSTALLER_LOCK_DIRS[@]}"; do
     rm -rf "$lock_dir"
   done
 }
@@ -75,7 +75,6 @@ main() {
 
   [ $# -ge 1 ] || { usage; exit 1; }
 
-  log_info "日志文件位置: $MAINTAIN_LOG_FILE"
   dispatch_macos_installer_command "$@"
 }
 

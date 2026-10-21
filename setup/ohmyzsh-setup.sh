@@ -3,7 +3,6 @@
 
 if [[ -n "${MACOS_SCRIPTS_CONFIG_DIR:-}" ]]; then
     ZSHRC_BACKUP_DIR="$MACOS_SCRIPTS_CONFIG_DIR/backups"
-    mkdir -p "$ZSHRC_BACKUP_DIR"
 else
     ZSHRC_BACKUP_DIR="$HOME"
 fi
@@ -18,8 +17,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/utils.sh"
 
 # ===== 初始化配置 =====
-SETUP_LOG_FILE="$(prepare_log_file_path "setup-shell.log" "$SCRIPT_DIR/setup-shell.log")"
-enable_log_capture "$SETUP_LOG_FILE"
 
 # ===== Oh My Zsh 安装 =====
 install_oh_my_zsh() {
@@ -199,6 +196,18 @@ final_instructions() {
 
 # ===== 主执行流程 =====
 main() {
+    case "${1:-}" in
+        -h|--help|help)
+            printf '用法: ohmyzsh-setup.sh\n说明: 配置 Oh My Zsh、主题、插件和字体；需要 macOS 14+。\n'
+            return 0
+            ;;
+        '') ;;
+        *) error "未知参数: $1"; return 1 ;;
+    esac
+    require_supported_macos || exit 1
+    SETUP_LOG_FILE="$(prepare_log_file_path "setup-shell.log")"
+    enable_log_capture "$SETUP_LOG_FILE"
+    [[ "$ZSHRC_BACKUP_DIR" == "$HOME" ]] || mkdir -p "$ZSHRC_BACKUP_DIR"
     ensure_xcode_cli_installed
     install_oh_my_zsh
     install_p10k_theme
@@ -209,4 +218,4 @@ main() {
 }
 
 # 启动主流程
-main
+main "$@"

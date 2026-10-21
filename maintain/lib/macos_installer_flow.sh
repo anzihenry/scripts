@@ -106,8 +106,10 @@ verify_downloaded_installer() {
 }
 
 prepare_download_context() {
-  require_command softwareupdate
   parse_download_args "$@"
+  initialize_macos_installer_logging
+  require_supported_macos || exit 1
+  require_command softwareupdate
   acquire_installer_lock "download_${DOWNLOAD_VERSION}"
 }
 
@@ -222,6 +224,8 @@ print_create_completion() {
 
 prepare_create_context() {
   parse_create_args "$@"
+  initialize_macos_installer_logging
+  require_supported_macos || exit 1
 }
 
 validate_create_prerequisites() {

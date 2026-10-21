@@ -40,6 +40,8 @@ EOF
 main() {
     initialize_brew_updater_context
     parse_brew_updater_args "$@"
+    initialize_brew_updater_logging
+    require_supported_macos || exit 1
     require_command brew
 
     announce_brew_updater_context

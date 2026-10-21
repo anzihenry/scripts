@@ -55,8 +55,10 @@ EOF
 }
 
 main() {
-  initialize_release_publish_context
+  initialize_release_publish_context "$@"
   parse_release_publish_args "$@"
+  initialize_release_publish_logging "$@"
+  require_supported_macos || exit 1
   check_release_prerequisites
   print_release_state || true
 

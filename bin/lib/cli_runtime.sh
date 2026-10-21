@@ -9,6 +9,7 @@
 run_zsh_script() {
   local relative_path="$1"
   shift
+  mkdir -p "$MACOS_SCRIPTS_LOG_DIR" "$MACOS_SCRIPTS_CONFIG_DIR" || return 1
   /bin/zsh "$REPO_ROOT/$relative_path" "$@"
 }
 
@@ -88,9 +89,19 @@ is_help_arg() {
 }
 
 has_help_flag() {
-  local arg
-  for arg in "$@"; do
-    is_help_arg "$arg" && return 0
+  # 参数值中的 help/--help 仍是普通值，例如 --title help。
+  while (( $# > 0 )); do
+    case "$1" in
+      -d|--domain|-t|--type|--notes-file|--target|--title|--repo|--volume|--installer-path|--version)
+        (( $# >= 2 )) || return 1
+        shift 2
+        ;;
+      --) return 1 ;;
+      *)
+        is_help_arg "$1" && return 0
+        shift
+        ;;
+    esac
   done
   return 1
 }

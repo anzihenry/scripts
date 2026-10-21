@@ -108,12 +108,12 @@ env HOME="$SANDBOX/home with space" PATH="$SANDBOX/shims:$PATH" \
 [[ -f "$SANDBOX/uploaded" ]] || fail 'SSH 令牌输入'
 pass 'SSH 静默读取令牌并通过模拟 API 完成上传'
 
-if env HOME="$SANDBOX/home with space" PATH="$SANDBOX/shims:$PATH" \
+if ssh_eof_output="$(env HOME="$SANDBOX/home with space" PATH="$SANDBOX/shims:$PATH" \
   MACOS_SCRIPTS_LOG_DIR="$SANDBOX/logs" MACOS_SCRIPTS_CONFIG_DIR="$SANDBOX/config" \
-  /bin/zsh "$REPO_ROOT/setup/git_forge_ssh_setup.sh" --type eof --skip-upload < /dev/null > "$SANDBOX/ssh-eof-output" 2>&1; then
+  /bin/zsh "$REPO_ROOT/setup/git_forge_ssh_setup.sh" --type eof --skip-upload < /dev/null 2>&1)"; then
   fail 'SSH EOF 未返回失败'
 fi
-grep -q '无法读取邮箱输入' "$SANDBOX/ssh-eof-output" || fail 'SSH EOF 诊断'
+[[ "$ssh_eof_output" == *'无法读取邮箱输入'* ]] || fail 'SSH EOF 诊断'
 pass 'SSH stdin 结束时返回失败并给出诊断'
 
 # 安装 helper 的成功/重试路径不得给 Zsh 只读变量 status 赋值。

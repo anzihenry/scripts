@@ -6,7 +6,14 @@ append_brew_update_error_log() {
     local message="$2"
     local timestamp
     timestamp="$(date "+%Y-%m-%d %H:%M:%S")"
-    printf '%s 更新失败: %s (%s)\n' "$timestamp" "$cask" "$message" >> "$ERROR_LOG"
+    # 成功运行不创建错误日志；首次失败时才写入本次运行的分隔信息。
+    if [[ "${BREW_UPDATE_LOG_STARTED:-false}" != true ]]; then
+        local mode="实际执行"
+        [[ "${DRY_RUN:-false}" != true ]] || mode="dry-run"
+        ml_append_log "$ERROR_LOG" "$(write_log_run_header "$mode" "${ZSH_ARGZERO:t}" "${BREW_UPDATE_RUN_STARTED_AT:-}")"$'\n' || return 1
+        BREW_UPDATE_LOG_STARTED=true
+    fi
+    ml_append_log "$ERROR_LOG" "$timestamp 更新失败: $cask ($message)"$'\n'
 }
 
 get_outdated_casks() {

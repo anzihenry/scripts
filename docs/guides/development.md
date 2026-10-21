@@ -2,7 +2,7 @@
 title: 开发与验证
 status: current
 owner: project-maintainers
-updated: 2026-10-17
+updated: 2026-10-21
 ---
 
 # 开发与验证
@@ -31,7 +31,7 @@ zsh tests/e2e/run_all.sh         # ④ 进程级：沙箱 + 命令桩 E2E（5 �
 函数级 guard 测试（zsh 运行，与 CI 的 guard 步骤一致）：
 
 ```bash
-zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两种模式
+zsh tests/bootstrap_guard.sh          # bootstrap 双入口：root 保护、架构、运行锁/并发/中断、PTY 确认、CLT、Homebrew 换源/dry-run
 zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
 zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
@@ -42,6 +42,10 @@ zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 ```
+
+> 查询回归覆盖 CLI/独立脚本帮助、CLI 版本、独立管道入口，以及新目录、不可写路径和已有日志/锁；命令桩验证不触发系统/网络检查、目录创建、日志轮转或锁修改。
+
+> bootstrap 的 root 用例只在临时脚本副本中固定有效 UID 判断结果，不执行 sudo 或修改真实 UID；覆盖提前退出无写入及 root 帮助。
 
 > 以上 guard 均为 zsh 脚本，请用 `zsh tests/<name>.sh` 调用（用 bash 运行会因 zsh 语法报错）。
 
@@ -57,7 +61,7 @@ zsh tests/e2e/run_all.sh
 
 - `release verify` / `release publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
 - `maintain brew`：brew 调用顺序、Cask 失败错误日志
-- `setup brew configure`：配置流程 dry-run，防缺失 source 依赖回归
+- `setup brew configure`：dry-run、真实临时 Git 配置、重复执行、分阶段故障/中断回滚、备份和锁保护
 - `bootstrap/install.sh`：tap + install 调用与日志写入
 
 > E2E 用例均为 Zsh 脚本，用 `zsh tests/e2e/run_all.sh` 调用。发布门禁见 `.github/workflows/release.yml`（打 `v*` tag 时自动执行，含真实 macOS 上的 Formula 实装校验）。

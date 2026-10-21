@@ -33,11 +33,21 @@ build_release_forwarded_args() {
   local release_mode="$1"
   shift
 
-  local tag
-  tag="$(normalize_release_tag "$1")"
-  shift || true
+  local tag="" notes_file=""
+  local -a options=()
+  # 参数校验允许选项放在 tag 前；成对消费选项，不能把标题当成 tag。
+  while (( $# > 0 )); do
+    case "$1" in
+      --notes-file|--target|--title|--repo)
+        [[ "$1" != --notes-file ]] || notes_file="$2"
+        options+=("$1" "$2")
+        shift 2
+        ;;
+      -*) options+=("$1"); shift ;;
+      *) tag="$(normalize_release_tag "$1")"; shift ;;
+    esac
+  done
 
-  local notes_file=""
   local default_flag=""
   case "$release_mode" in
     publish) default_flag="--update-existing" ;;
@@ -48,21 +58,7 @@ build_release_forwarded_args() {
       ;;
   esac
 
-  local -a forwarded_args=(--tag "$tag" "$default_flag")
-
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --notes-file)
-        notes_file="$2"
-        forwarded_args+=("$1" "$2")
-        shift 2
-        ;;
-      *)
-        forwarded_args+=("$1")
-        shift
-        ;;
-    esac
-  done
+  local -a forwarded_args=(--tag "$tag" "$default_flag" "${options[@]}")
 
   if [[ -z "$notes_file" ]]; then
     forwarded_args+=(--notes-file "$(infer_release_notes_file "$tag")")

@@ -2,8 +2,8 @@
 # filepath: setup/lib/setup_runtime.sh
 
 initialize_setup_context() {
-    SETUP_LOG_FILE="$(prepare_log_file_path "macos-setup.log" "$SCRIPT_DIR/setup.log")"
-    enable_log_capture "$SETUP_LOG_FILE"
+    SETUP_LOG_FILE="$(prepare_log_file_path "macos-setup.log")" || return 1
+    enable_log_capture "$SETUP_LOG_FILE" || return 1
 
     DEFAULT_BREW_CONFIG_FILE="${SCRIPT_DIR}/brew.conf.sh"
 
@@ -57,7 +57,7 @@ ensure_setup_brew_config_ready() {
 }
 
 verify_setup_platform_requirements() {
-    require_macos_min_version "1015" "需要 macOS Catalina (10.15) 或更高版本"
+    require_supported_macos || return 1
 
     local free_space
     free_space="$(df -g / | tail -1 | awk '{print $4}')"
@@ -81,8 +81,8 @@ verify_setup_brew_command_available() {
 precheck() {
     print_header "系统环境预检"
 
-    ensure_setup_brew_config_ready
     verify_setup_platform_requirements
+    ensure_setup_brew_config_ready
     verify_setup_network_access
     verify_setup_brew_command_available
 
