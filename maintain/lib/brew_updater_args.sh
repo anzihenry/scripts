@@ -14,6 +14,7 @@ initialize_brew_updater_context() {
         "chatgpt"
     )
 
+    CASK_CHECK_FAILED=false
     DRY_RUN="false"
     ASSUME_YES="false"
     FORCE_CASKS="false"

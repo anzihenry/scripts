@@ -9,7 +9,7 @@ print_setup_shell_help() {
 说明:
   初始化 zsh / oh-my-zsh / powerlevel10k / 常用插件 / 字体。
   安装态日志默认写入 ~/Library/Logs/macos-scripts/setup-shell.log。
-  安装态下 .zshrc 备份默认写入 ~/.config/macos-scripts/backups/。
+  保留已有 .zshrc 和自定义主题/插件；健康仓库、字体不重复安装。
 
 参数:
   当前不接受额外参数。
@@ -24,7 +24,7 @@ print_setup_brew_help() {
 说明:
   仅校准 Homebrew 镜像、shellenv 和当前 shell 环境。
   默认配置 USTC，修改前备份 .zshrc 和 Git 配置；成功删除本次备份，失败时恢复并保留备份。
-  仅验证镜像连通性，不重置仓库；实际更新请用 maintain brew。
+  已符合目标状态时跳过备份和写入；需要改动时验证镜像连通性，不重置仓库。
   该命令面向已具备 Homebrew 的系统，不承担新机首次安装职责；
   若系统尚未安装 Homebrew，请先运行 bootstrap/install.sh。
 
@@ -54,7 +54,8 @@ print_setup_git_help() {
 说明:
   为任意 Git forge 配置 SSH 密钥、SSH config、公钥上传和连接测试。
   安装态日志默认写入 ~/Library/Logs/macos-scripts/setup-git.log。
-  安装态下 SSH config 备份默认写入 ~/.config/macos-scripts/backups/。
+  已有匹配密钥直接复用；配置相同不重写，缺失公钥可从未加密私钥恢复。
+  --force 替换的旧密钥备份保留在 ~/.config/macos-scripts/backups/。
 
 选项:
   -d, --domain <domain>         Git 平台域名，默认 github.com

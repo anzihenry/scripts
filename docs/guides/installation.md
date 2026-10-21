@@ -69,6 +69,8 @@ curl -fsSL "https://raw.githubusercontent.com/anzihenry/scripts/${BOOTSTRAP_TAG}
 
 ### Homebrew 配置失败恢复
 
+重复执行时先比较受管理配置块与 remote；都已符合目标状态时跳过备份和写入。其他脚本的重复执行约定见[使用指南](using.md#重复执行约定)。
+
 bootstrap 默认继续执行 USTC 配置；`--skip-configure` 可跳过。配置修改前，备份 `.zshrc` 和现有 brew/core 仓库的 Git 配置到 `~/.config/macos-scripts/backups/homebrew-config.<随机标识>/`（可由 `MACOS_SCRIPTS_CONFIG_DIR` 覆盖），备份目录仅当前用户可访问。
 
 写入、镜像验证失败，或收到可捕获的中断信号时，恢复本次修改并返回非零；原来不存在的 `.zshrc` 会恢复为不存在，已有符号链接及目标文件权限保留。已安装的 Homebrew 和 CLI 不卸载。配置成功后自动删除本次备份；失败时保留备份，输出会给出具体路径，此后的成功运行不会删除此前失败的备份。若清理备份失败，会提示手动删除，不影响已成功的配置；若恢复自身失败，按该目录的 `manifest.tsv` 中路径与编号备份文件手动恢复，不会提示“已全部恢复”。

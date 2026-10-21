@@ -139,7 +139,8 @@ report_core_software_result() {
     bh_print_summary "核心软件安装报告"
 
     if [[ "$install_failed" == "true" ]]; then
-        warning "部分 Homebrew 包安装失败，请查看上方失败列表并手动处理。"
+        warning "部分 Homebrew 包安装失败，请查看上方失败列表并重新运行。"
+        return 1
     else
         success "核心软件安装完成"
     fi

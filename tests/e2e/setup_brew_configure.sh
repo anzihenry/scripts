@@ -85,7 +85,12 @@ if [[ "$E2E_CONFIG_FAIL_STAGE" == restore-failure && "${argv[-1]}" == *'.zshrc.r
 if [[ "$E2E_CONFIG_FAIL_STAGE" == backup-failure && "${argv[-1]}" == */2 ]]; then exit 1; fi
 exec /bin/cp "$@"
 SHIM
-chmod +x "$TEST_BIN/"git "$TEST_BIN/"sleep "$TEST_BIN/"sed "$TEST_BIN/"cp
+cat > "$TEST_BIN/mv" <<'SHIM'
+#!/bin/zsh
+if [[ "$E2E_CONFIG_FAIL_STAGE" == write-rc && "${argv[-2]}" == *'.zshrc.write.'* ]]; then exit 1; fi
+exec /bin/mv "$@"
+SHIM
+chmod +x "$TEST_BIN/"git "$TEST_BIN/"sleep "$TEST_BIN/"sed "$TEST_BIN/"cp "$TEST_BIN/"mv
 export PATH="$TEST_BIN:$PATH"
 export E2E_CONFIG_FAIL_STAGE=none
 
@@ -127,9 +132,17 @@ e2e_assert_eq "$("$REAL_GIT" -C "$CORE_REPO" remote get-url origin)" https://mir
 e2e_assert_transcript_not_contains 'update-reset' "配置不重置仓库内容"
 backup_dirs=("$E2E_CONFIG_DIR/backups/"homebrew-config.*(N))
 e2e_assert_eq "${#backup_dirs[@]}" 0 "成功配置删除本次备份"
+cp -p "$E2E_HOME/.zshrc" "$E2E_TMP_ROOT/stable-zshrc"
+no_change_inode="$(stat -f %i "$E2E_HOME/.zshrc")"
+: > "$E2E_TRANSCRIPT"
 e2e_run_expect_success "重复配置仍成功" /bin/zsh bin/macos-scripts setup brew configure
 e2e_assert_eq "$(grep -c '^# >>> Homebrew Basic ' "$E2E_HOME/.zshrc")" 1 "重复运行不叠加 Basic 配置块"
 e2e_assert_eq "$(grep -c '^# >>> Homebrew Mirror ' "$E2E_HOME/.zshrc")" 1 "重复运行不叠加 Mirror 配置块"
+cmp -s "$E2E_HOME/.zshrc" "$E2E_TMP_ROOT/stable-zshrc" && e2e_pass "重复配置文件逐字节一致" || e2e_fail "重复配置修改了文件"
+e2e_assert_eq "$(stat -f %i "$E2E_HOME/.zshrc")" "$no_change_inode" "无变化时不替换配置文件"
+e2e_assert_transcript_not_contains 'remote set-url' "无变化时不重写 Git remote"
+e2e_assert_contains "$E2E_RUN_OUTPUT" '跳过备份和写入' "满足目标状态时直接跳过"
+
 
 for stage in write-rc brew-remote core-remote verify-brew verify-core interrupt; do
   export E2E_CONFIG_FAIL_STAGE="$stage"

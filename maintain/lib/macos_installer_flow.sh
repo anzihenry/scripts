@@ -101,7 +101,8 @@ verify_downloaded_installer() {
   if [ -n "$after" ]; then
     success "下载完成: $after (版本: ${after_ver:-unknown})"
   else
-    warning "未自动定位到安装器，但下载命令已成功返回。请在 /Applications 中手动确认 'Install macOS *.app'"
+    error "未找到版本匹配且通过完整性检查的安装器，请检查 /Applications 后重试。"
+    return 1
   fi
 }
 
@@ -109,8 +110,8 @@ prepare_download_context() {
   parse_download_args "$@"
   initialize_macos_installer_logging
   require_supported_macos || exit 1
-  require_command softwareupdate
-  acquire_installer_lock "download_${DOWNLOAD_VERSION}"
+  require_commands softwareupdate hdiutil
+  acquire_installer_lock download_full_installer
 }
 
 check_existing_installer_before_download() {
@@ -165,13 +166,22 @@ resolve_create_installer_path() {
     [ -n "$CREATE_INSTALLER_PATH" ] || die "未找到安装器。请先执行 'list' 和 'download'，或用 --installer-path 指定"
   fi
   [ -d "$CREATE_INSTALLER_PATH" ] || die "安装器路径无效: $CREATE_INSTALLER_PATH"
+  installer_is_complete "$CREATE_INSTALLER_PATH" || die "安装器不完整或磁盘映像校验失败，请重新下载: $CREATE_INSTALLER_PATH"
 }
 
 prepare_createinstallmedia_context() {
   CREATEINSTALLMEDIA_PATH="$CREATE_INSTALLER_PATH/Contents/Resources/createinstallmedia"
   [ -x "$CREATEINSTALLMEDIA_PATH" ] || die "缺少 createinstallmedia: $CREATEINSTALLMEDIA_PATH"
 
-  CREATE_APP_VERSION="$(get_installer_short_ver "$CREATE_INSTALLER_PATH" || echo "unknown")"
+  CREATE_APP_VERSION="$(get_installer_short_ver "$CREATE_INSTALLER_PATH")"
+  [[ -n "$CREATE_APP_VERSION" ]] || die "无法读取安装器版本"
+  CREATE_DEVICE="$(installer_volume_value "$CREATE_VOLUME" DeviceIdentifier)" || die "无法确认目标卷设备"
+  if [[ -n "$CREATE_VERSION" ]]; then
+    local source_os
+    source_os="$(get_installer_os_version "$CREATE_INSTALLER_PATH")" || die "无法读取安装载荷的 macOS 版本"
+    installer_version_matches "$source_os" "$CREATE_VERSION" || die "指定安装器与请求的 macOS 版本不匹配"
+  fi
+  CREATE_SOURCE_ID="$(installer_source_identity "$CREATE_INSTALLER_PATH")" || die "无法校验安装器身份"
   CREATE_APP_NAME="$(basename "$CREATE_INSTALLER_PATH")"
   CREATE_APP_LABEL="$(get_installer_label "$CREATE_INSTALLER_PATH")"
 
@@ -186,13 +196,13 @@ ensure_create_target_is_ready() {
   if [ -n "$vol_app" ]; then
     vol_ver="$(get_installer_short_ver "$vol_app")"
     log_info "卷上检测到安装器: $(basename "$vol_app") (版本: ${vol_ver:-unknown})"
-    if [ -n "$vol_ver" ] && { [ "$vol_ver" = "$CREATE_APP_VERSION" ] || [[ "$vol_ver" == "$CREATE_APP_VERSION"* ]]; }; then
+    if [[ "$CREATE_FORCE" != yes && "$vol_ver" == "$CREATE_APP_VERSION" ]] && volume_creation_current; then
       success "目标卷已是同版本可启动安装器（$vol_ver），跳过制作。"
       return 1
     fi
 
     if [ "$CREATE_FORCE" != "yes" ]; then
-      die "目标卷包含不同版本的安装器（$vol_ver）。使用 --force 覆盖，或更换目标卷。"
+      die "目标卷包含不同版本或没有可信完成记录的安装器（$vol_ver）。使用 --force 覆盖，或更换目标卷。"
       return 1
     fi
 
@@ -250,7 +260,6 @@ check_create_target_readiness() {
 }
 
 acquire_create_lock_and_confirm() {
-  acquire_installer_lock "create_$(sanitize_key "$CREATE_VOLUME")"
 
   print_step 4 6 "确认将抹掉目标卷数据"
   confirm_create_target_wipe
@@ -259,6 +268,7 @@ acquire_create_lock_and_confirm() {
 run_create_execution() {
   print_step 5 6 "执行 createinstallmedia"
   run_createinstallmedia
+  record_volume_creation || { error "制作命令成功，但无法记录完成状态，请检查目标卷后重试。"; return 1; }
 
   print_step 6 6 "收尾与提示"
   print_create_completion
@@ -270,6 +280,8 @@ sub_create() {
   print_header "制作 macOS USB 启动盘"
   validate_create_prerequisites
   resolve_create_inputs
+  acquire_installer_lock "create_$(sanitize_key "$CREATE_DEVICE")"
+  [[ "$(installer_volume_value "$CREATE_VOLUME" DeviceIdentifier)" == "$CREATE_DEVICE" ]] || die "目标卷设备已变化，已中止，请重新运行。"
   check_create_target_readiness || return 0
   acquire_create_lock_and_confirm
   run_create_execution

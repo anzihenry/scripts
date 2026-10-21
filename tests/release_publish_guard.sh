@@ -106,6 +106,7 @@ test_update_release_path() {
   local recorded_command=""
 
   release_status() { return 0; }
+  release_content_matches() { return 1; }
   run_logged_command() {
     recorded_description="$1"
     shift
@@ -121,6 +122,19 @@ test_update_release_path() {
   create_or_update_release > /dev/null
   assert_eq "$recorded_description" "更新 GitHub Release: $TAG" "update path uses edit description"
   assert_eq "$recorded_command" "gh release edit $TAG --repo $REPO_SLUG --title $TITLE --notes-file $NOTES_FILE" "update path forwards edit command"
+}
+
+test_identical_release_skips() {
+  local calls=0 rc=0
+  release_status() { return 0; }
+  release_content_matches() { return 0; }
+  run_logged_command() { calls=$((calls+1)); }
+  create_or_update_release >/dev/null
+  assert_eq "$calls" 0 "same release content skips all writes"
+  release_content_matches() { return 2; }
+  create_or_update_release >/dev/null 2>&1 || rc=$?
+  assert_eq "$rc" 1 "content query failure is not treated as a difference"
+  assert_eq "$calls" 0 "content query failure never edits release"
 }
 
 test_query_failure_aborts_publish() {
@@ -167,6 +181,7 @@ main() {
   test_confirm_publish_short_circuit
   test_create_release_path
   test_update_release_path
+  test_identical_release_skips
   test_query_failure_aborts_publish
   test_verify_release_dry_run
 

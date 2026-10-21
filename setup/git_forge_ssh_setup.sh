@@ -15,6 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/utils.sh"
+source "$SCRIPT_DIR/lib/config_writer.sh"
 
 # ========== 工具函数 ==========
 sanitize_domain() {
@@ -31,11 +32,33 @@ sanitize_domain() {
   echo "$domain"
 }
 
+ssh_identity_component() {
+  local domain="$1" usage_type="$2" legacy="${1%%.*}"
+  local owner=""
+  if [[ -f "$HOME/.ssh/config" ]]; then
+    owner="$(awk -v alias="$legacy-$usage_type" 'tolower($1)=="host"{active=(NF==2 && $2==alias)} active && tolower($1)=="hostname"{print $2;exit}' "$HOME/.ssh/config")"
+  fi
+  if [[ -n "$owner" && "$owner" != "$domain" ]]; then
+    printf '%s' "$domain"
+  elif [[ "$domain" == github.com || "$domain" == gitlab.com ]]; then
+    printf '%s' "$legacy"
+  elif [[ -f "$HOME/.ssh/config" ]] && awk -v alias="$legacy-$usage_type" -v domain="$domain" '
+    tolower($1)=="host" { active=(NF==2 && $2==alias) }
+    active && tolower($1)=="hostname" && $2==domain { found=1 }
+    END { exit !found }
+  ' "$HOME/.ssh/config"; then
+    printf '%s' "$legacy"
+  else
+    printf '%s' "$domain"
+  fi
+}
+
 generate_host_alias() {
-  local domain="$1" usage_type="$2"
-  local domain_part="${domain%%.*}"
-  domain_part="${domain_part//[^a-z0-9]/}"
-  echo "${domain_part}-${usage_type}"
+  printf '%s-%s' "$(ssh_identity_component "$1" "$2")" "$2"
+}
+
+ssh_key_path() {
+  printf '%s/.ssh/id_ed25519_%s_%s' "$HOME" "$(ssh_identity_component "$1" "$2")" "$2"
 }
 
 get_git_email() {
@@ -56,93 +79,105 @@ get_git_email() {
   echo "$email"
 }
 
-generate_ssh_key() {
-  local domain="$1" usage_type="$2" force="$3"
-  local ssh_dir="$HOME/.ssh"
-  local domain_part="${domain%%.*}"
-  local key_path="$ssh_dir/id_ed25519_${domain_part}_${usage_type}"
-  local pub_key_path="${key_path}.pub"
-
-  mkdir -p "$ssh_dir"
-  chmod 700 "$ssh_dir"
-
-  if [[ -f "$key_path" && "$force" != "true" ]]; then
-    log_info "检测到现有密钥: $key_path"
-    printf '%s' "$(highlight '是否覆盖？(y/N): ')" >&2
-    read -r -k 1 -u 0 REPLY
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      cat "$pub_key_path"
-      return 0
-    fi
-    rm -f "$key_path" "$pub_key_path"
-  fi
-
-  local email comment
-  email="$(get_git_email)"
-  comment="$email [$usage_type@$domain]"
-
-  log_info "生成SSH密钥: $key_path"
-  ssh-keygen -t ed25519 -C "$comment" -f "$key_path" -N "" -q || log_fatal "密钥生成失败"
-  chmod 600 "$key_path"
-  chmod 644 "$pub_key_path"
-  cat "$pub_key_path"
-}
-
-backup_ssh_config() {
-  local config_file="$1"
-  [[ ! -f "$config_file" ]] && return 0
-  local backup_file
-  if [[ -n "$SSH_BACKUP_DIR" ]]; then
-    backup_file="${SSH_BACKUP_DIR}/ssh-config.$(date +%Y%m%d%H%M%S).bak"
-  else
-    backup_file="${config_file}.bak.$(date +%Y%m%d%H%M%S)"
-  fi
-  cp "$config_file" "$backup_file" && log_info "创建配置备份: $backup_file"
-}
-
-update_ssh_config() {
-  local domain="$1" usage_type="$2" key_path="$3"
-  local ssh_dir="$HOME/.ssh"
-  local config_file="$ssh_dir/config"
-  local host_alias
-  host_alias="$(generate_host_alias "$domain" "$usage_type")"
-
-  backup_ssh_config "$config_file"
-
-  # 过滤掉同名Host
-  local tmp_file
-  tmp_file="$(mktemp)"
-  local in_block=0
-  if [[ -f "$config_file" ]]; then
-    while IFS= read -r line; do
-      if [[ "$line" =~ ^Host[[:space:]]+$host_alias ]]; then
-        in_block=1
-        continue
+generate_ssh_key() (
+  local domain="$1" usage_type="$2" force="$3" key_path pub_key_path derived email staging backup=""
+  key_path="$(ssh_key_path "$domain" "$usage_type")" || return 1
+  pub_key_path="$key_path.pub"
+  mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh" || return 1
+  [[ ! -L "$key_path" && ! -L "$pub_key_path" ]] || { error "密钥路径为符号链接，已保留，请先检查。"; return 1; }
+  [[ ( ! -e "$key_path" || -f "$key_path" ) && ( ! -e "$pub_key_path" || -f "$pub_key_path" ) ]] || { error "密钥路径不是普通文件，已保留。"; return 1; }
+  if [[ -f "$key_path" && "$force" != true ]]; then
+    if [[ ! -e "$pub_key_path" ]]; then
+      derived="$(ssh-keygen -y -P '' -f "$key_path")" || { error "无法自动恢复公钥；私钥可能已加密，已保留，请解锁后手动导出公钥: $key_path"; return 1; }
+      write_managed_file "$pub_key_path" "$derived" false 644 || return 1
+    else
+      local private_fingerprint public_fingerprint
+      private_fingerprint="$(ssh-keygen -l -f "$key_path" | awk '{print $2}')" || return 1
+      public_fingerprint="$(ssh-keygen -l -f "$pub_key_path" | awk '{print $2}')" || return 1
+      if [[ -z "$private_fingerprint" || "$private_fingerprint" != "$public_fingerprint" ]]; then
+        error "公私钥不匹配，已保留；请检查: $key_path"
+        return 1
       fi
-      [[ $in_block -eq 1 && "$line" =~ ^Host[[:space:]] ]] && in_block=0
-      [[ $in_block -eq 0 ]] && echo "$line" >> "$tmp_file"
-    done < "$config_file"
+    fi
+    chmod 600 "$key_path" || return 1
+    cat "$pub_key_path"
+    return 0
   fi
+  [[ ! -e "$pub_key_path" || "$force" == true ]] || { error "仅存在公钥，已保留；请恢复私钥或显式使用 --force。"; return 1; }
+  email="$(get_git_email)" || return 1
+  staging="$(mktemp -d "$HOME/.ssh/.key.XXXXXXXX")" || return 1
+  trap 'rm -rf "$staging"' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM HUP
+  ssh-keygen -t ed25519 -C "$email [$usage_type@$domain]" -f "$staging/key" -N '' -q || return 1
+  if [[ -e "$key_path" || -e "$pub_key_path" ]]; then
+    local backup_root="${MACOS_SCRIPTS_CONFIG_DIR:-$HOME/.config/macos-scripts}/backups"
+    mkdir -p "$backup_root" || return 1
+    backup="$(mktemp -d "$backup_root/ssh-key.XXXXXXXX")" || return 1
+    [[ ! -f "$key_path" ]] || cp -p "$key_path" "$backup/private" || return 1
+    [[ ! -f "$pub_key_path" ]] || cp -p "$pub_key_path" "$backup/public" || return 1
+    warning "已备份被强制替换的密钥，请妥善保管: $backup"
+  fi
+  if ! { mv -f "$staging/key" "$key_path" && mv -f "$staging/key.pub" "$pub_key_path"; }; then
+    if [[ -n "$backup" ]]; then
+      [[ ! -f "$backup/private" ]] || cp -p "$backup/private" "$key_path"
+      [[ ! -f "$backup/public" ]] || cp -p "$backup/public" "$pub_key_path"
+    fi
+    return 1
+  fi
+  chmod 600 "$key_path" && chmod 644 "$pub_key_path" || return 1
+  cat "$pub_key_path"
+)
 
-  # 新配置块
-  {
-    echo "# Auto-config: $(date +%Y-%m-%d)"
-    echo "Host $host_alias"
-    echo "    HostName $domain"
-    echo "    User git"
-    echo "    AddKeysToAgent yes"
-    echo "    UseKeychain yes"
-    echo "    PubkeyAuthentication yes"
-    echo "    IdentityFile $key_path"
-    echo
-  } >> "$tmp_file"
-
-  mv "$tmp_file" "$config_file"
-  chmod 600 "$config_file"
-  log_success "SSH配置已更新: $config_file"
-  echo "$host_alias"
-}
+update_ssh_config() (
+  local domain="$1" usage_type="$2" key_path="$3" host_alias config_file="$HOME/.ssh/config" candidate content
+  [[ ! -L "$config_file" || -e "$config_file" ]] || { error "SSH 配置是失效链接"; return 1; }
+  config_file="${config_file:A}"
+  host_alias="$(generate_host_alias "$domain" "$usage_type")" || return 1
+  candidate="$(mktemp "$HOME/.ssh/.config.XXXXXXXX")" || return 1
+  trap 'rm -f "$candidate"' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM HUP
+  if [[ -f "$config_file" ]]; then
+    # 已管理的块由公共写入器原位更新；首次迁移旧单 Host 块。
+    if grep -Fqx "# >>> SSH $host_alias (managed by macos-scripts) >>>" "$config_file"; then
+      cp -p "$config_file" "$candidate" || return 1
+    else
+      awk -v alias="$host_alias" '
+        function flush() { if (pending!="") print pending; pending="" }
+        tolower($1)=="host" || tolower($1)=="match" {
+          skip=0
+          if (tolower($1)=="host") for (i=2;i<=NF;i++) if ($i==alias) { if (NF!=2) {bad=1; exit 1}; skip=1 }
+          if (skip) pending=""; else flush()
+        }
+        skip { next }
+        /^# Auto-config:/ { flush(); pending=$0; next }
+        { flush(); print }
+        END { if (bad) exit 1; flush() }
+      ' "$config_file" > "$candidate" || { error "同名 Host 包含多个别名，未修改，请手动拆分。"; return 1; }
+    fi
+  fi
+  content="$(printf 'Host %s\n    HostName %s\n    User git\n    AddKeysToAgent yes\n    UseKeychain yes\n    PubkeyAuthentication yes\n    IdentityFile "%s"' "$host_alias" "$domain" "$key_path")"
+  write_managed_block "$candidate" "SSH $host_alias" macos-scripts "$content" || return 1
+  /usr/bin/ssh -G -F "$candidate" "$host_alias" >/dev/null 2>&1 || { error "SSH 配置校验失败，原文件未修改。"; return 1; }
+  if [[ -f "$config_file" ]] && cmp -s "$candidate" "$config_file"; then
+    printf '%s' "$host_alias"
+    return 0
+  fi
+  local backup=""
+  if [[ -f "$config_file" ]]; then
+    backup="$(mktemp "$HOME/.ssh/.config-backup.XXXXXXXX")" || return 1
+    cp -p "$config_file" "$backup" || return 1
+  fi
+  if ! commit_config_candidate "$config_file" "$candidate" 600; then
+    if [[ -n "$backup" ]]; then
+      if cp -p "$backup" "$config_file"; then rm -f "$backup"; else error "SSH 配置恢复失败，请保留备份手动恢复: $backup"; fi
+    fi
+    return 1
+  fi
+  [[ -z "$backup" ]] || rm -f "$backup"
+  printf '%s' "$host_alias"
+)
 
 # 幂等清理 upload_github_key 的临时目录（内含 Authorization token）。
 # 供 EXIT/INT/TERM/HUP trap 调用，也可在正常路径手动调用。
@@ -154,7 +189,7 @@ _cleanup_github_key_tmpdir() {
   trap - EXIT INT TERM HUP
 }
 
-upload_github_key() {
+upload_github_key() (
   local pub_key="$1" title="$2" token="$3"
   log_info "上传公钥到GitHub..."
 
@@ -177,16 +212,39 @@ upload_github_key() {
     echo 'url = "https://api.github.com/user/keys"'
     echo 'header = "Accept: application/vnd.github+json"'
     echo "header = \"Authorization: token $token\""
-    echo "data = @$tmpdir/payload.json"
   } > "$tmpdir/curl.conf"
 
+  local lookup lookup_code lookup_body lookup_state lookup_count page=1
+  while true; do
+    lookup="$(curl -sS --get --data-urlencode per_page=100 --data-urlencode "page=$page" --connect-timeout 10 --max-time 120 -w "\n%{http_code}" --config "$tmpdir/curl.conf")" || return 1
+    lookup_code="${lookup##*$'\n'}"
+    lookup_body="${lookup%$'\n'*}"
+    [[ "$lookup_code" == 200 ]] || { error "无法查询已有 GitHub 公钥（HTTP $lookup_code），未上传。"; return 1; }
+    lookup_state=0
+    lookup_count="$(printf '%s' "$lookup_body" | python3 -c 'import json,sys
+try:
+ keys=json.load(sys.stdin)
+ desired=" ".join(sys.argv[1].split()[:2])
+ print(len(keys))
+ sys.exit(0 if any(" ".join(k["key"].split()[:2])==desired for k in keys) else 1)
+except Exception:
+ sys.exit(2)' "$pub_key")" || lookup_state=$?
+    if [[ "$lookup_state" == 0 ]]; then
+      success "GitHub 公钥已存在，跳过上传。"
+      return 0
+    fi
+    [[ "$lookup_state" == 1 && "$lookup_count" == <-> ]] || { error "无法解析 GitHub 公钥列表，未上传。"; return 1; }
+    (( lookup_count >= 100 )) || break
+    page=$((page+1))
+  done
+  printf 'data = @%s/payload.json\n' "$tmpdir" >> "$tmpdir/curl.conf" || return 1
   local resp http_code
   # 必须用 set +e 捕获 curl 状态：在 set -e 下，裸赋值 `resp=$(curl ...)`
   # 会直接继承 curl 的非零状态并立即退出，导致下面的清理与错误分支成为
   # 死代码，含 Authorization token 的 $tmpdir 残留在 /tmp。
   local curl_status=0
   set +e
-  resp=$(curl -s -w "\n%{http_code}" --config "$tmpdir/curl.conf")
+  resp=$(curl -s --connect-timeout 10 --max-time 120 -w "\n%{http_code}" --config "$tmpdir/curl.conf")
   curl_status=$?
   set -e
 
@@ -209,7 +267,7 @@ upload_github_key() {
     log_error "GitHub API错误 ($http_code): $body"
     return 1
   fi
-}
+)
 
 test_ssh_connection() {
   local host_alias="$1"
@@ -308,25 +366,47 @@ if [[ "$debug" == "true" ]]; then
   set -x
 fi
 
+[[ "$usage_type" == personal || "$usage_type" == work ]] || { error "--type 仅支持 personal 或 work"; exit 1; }
 domain="$(sanitize_domain "$domain")"
 host_alias="$(generate_host_alias "$domain" "$usage_type")"
 
 print_header "SSH密钥管理及Git平台自动配置工具"
 
+mkdir -p "$HOME/.ssh"
+SSH_SETUP_LOCK="$HOME/.ssh/.macos-scripts.lock"
+if ! (umask 077; mkdir "$SSH_SETUP_LOCK") 2>/dev/null; then
+  error "另一个 SSH 配置可能正在运行；确认结束后再清理锁: $SSH_SETUP_LOCK"
+  exit 1
+fi
+trap 'rmdir "$SSH_SETUP_LOCK"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
 # 1. 生成密钥对
-pub_key="$(generate_ssh_key "$domain" "$usage_type" "$force")"
+pub_key="$(generate_ssh_key "$domain" "$usage_type" "$force")" || exit $?
 
 # 2. 更新SSH配置
-host_alias="$(update_ssh_config "$domain" "$usage_type" "$HOME/.ssh/id_ed25519_${domain%%.*}_${usage_type}")"
+host_alias="$(update_ssh_config "$domain" "$usage_type" "$(ssh_key_path "$domain" "$usage_type")")" || exit $?
 
 # 3. GitHub公钥上传
 if [[ "$skip_upload" != "true" && "$domain" == "github.com" ]]; then
   print_header "GitHub公钥上传"
   printf '%s' "$(highlight 'GitHub访问令牌（需admin:public_key权限）: ')" >&2
-  read -r -s token
-  echo
+  [[ "$debug" != true ]] || set +x
+  token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+  if [[ -z "$token" ]] && command -v gh >/dev/null 2>&1; then
+    token="$(gh auth token 2>/dev/null)" || token=""
+  fi
+  if [[ -z "$token" ]]; then
+    read -r -s token || { error "无法读取令牌；可设置 GH_TOKEN 或使用 --skip-upload。"; exit 1; }
+    echo
+  fi
   title="$(hostname) [$usage_type] $(date +%Y-%m-%d)"
-  upload_github_key "$pub_key" "$title" "$token" || log_warn "GitHub配置未完成，但SSH配置已更新"
+  upload_state=0
+  upload_github_key "$pub_key" "$title" "$token" || upload_state=$?
+  unset token
+  [[ "$debug" != true ]] || set -x
+  [[ "$upload_state" == 0 ]] || { error "公钥上传未完成，已有密钥和 SSH 配置保留，可安全重试。"; exit "$upload_state"; }
 fi
 
 # 4. 连接测试

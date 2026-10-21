@@ -131,7 +131,9 @@ EOF
     return 0
   }
 
-  install_core_software > "$output_file"
+  local rc=0
+  install_core_software > "$output_file" || rc=$?
+  assert_eq "$rc" 1 "partial package failure returns nonzero"
   output="$(cat "$output_file")"
   rm -f "$output_file"
   rm -rf "$temp_root"

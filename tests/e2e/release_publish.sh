@@ -48,6 +48,10 @@ e2e_run_expect_success \
   "release publish 更新已存在" \
   zsh bin/macos-scripts release publish "$CURRENT_TAG" --yes --notes-file "$NOTES_FILE"
 
+e2e_assert_contains "$E2E_RUN_OUTPUT" '标题和正文一致' "相同 Release 跳过更新"
+e2e_assert_transcript_not_contains 'gh release edit' "重复发布不调用 edit"
+printf 'Changed release notes\n' > "$NOTES_FILE"
+e2e_run_expect_success "正文有变化时更新" zsh bin/macos-scripts release publish "$CURRENT_TAG" --yes --notes-file "$NOTES_FILE"
 e2e_assert_transcript_contains \
   "gh release edit $CURRENT_TAG --repo anzihenry/scripts --title $CURRENT_TAG --notes-file $NOTES_FILE" \
   "gh release edit 更新调用参数正确"

@@ -138,6 +138,10 @@ bh_install_packages() {
   warning "$label：批量处理失败，开始逐项安装（重试 ${retries} 次）"
   local failed=()
   for item in "${to_install[@]}"; do
+    if [[ "$force" != true ]] && bh__is_installed "$type" "$item"; then
+      BH_SKIPPED_ITEMS+=("$item")
+      continue
+    fi
     local attempt=1
     local ok=false
     while (( attempt <= retries )); do

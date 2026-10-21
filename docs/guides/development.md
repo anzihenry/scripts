@@ -41,6 +41,7 @@ zsh tests/macos_installer_flow_guard.sh # 安装器流程
 zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
+zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
 ```
 
 > 查询回归覆盖 CLI/独立脚本帮助、CLI 版本、独立管道入口，以及新目录、不可写路径和已有日志/锁；命令桩验证不触发系统/网络检查、目录创建、日志轮转或锁修改。

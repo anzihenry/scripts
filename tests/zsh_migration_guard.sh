@@ -52,6 +52,8 @@ EOF
 cat > "$SANDBOX/shims/ssh-keygen" <<'EOF'
 #!/bin/zsh
 set -euo pipefail
+[[ "${1:-}" != -l ]] || { printf '256 SHA256:FAKE comment\n'; exit 0; }
+[[ "${1:-}" != -y ]] || { printf 'ssh-ed25519 FAKE\n'; exit 0; }
 while (( $# > 0 )); do
   if [[ "$1" == -f ]]; then
     printf private > "$2"
@@ -79,11 +81,12 @@ env HOME="$SANDBOX/home with space" PATH="$SANDBOX/shims:$PATH" \
   MACOS_SCRIPTS_LOG_DIR="$SANDBOX/logs" MACOS_SCRIPTS_CONFIG_DIR="$SANDBOX/config" \
   /bin/zsh "$REPO_ROOT/setup/git_forge_ssh_setup.sh" --skip-upload <<< 'N' > "$SANDBOX/ssh-reuse-output" 2>&1
 [[ "$(<"$SANDBOX/home with space/.ssh/id_ed25519_github_personal")" == private ]] || fail 'SSH 密钥复用'
-pass 'SSH 覆盖提示从 stdin 读取并保留现有密钥'
+pass 'SSH 重复执行直接复用现有密钥'
 
 # 令牌静默输入也必须使用 Zsh read 语义；全部外部请求使用桩。
 cat > "$SANDBOX/shims/python3" <<'EOF'
 #!/bin/zsh
+if [[ "$*" == *'keys=json.load'* ]]; then printf '0\n'; exit 1; fi
 printf '{"key":"ssh-ed25519 FAKE","title":"migration"}'
 EOF
 cat > "$SANDBOX/shims/curl" <<'EOF'
@@ -92,8 +95,12 @@ set -euo pipefail
 while (( $# > 0 )); do
   if [[ "$1" == --config ]]; then
     grep -q 'Authorization: token fake-migration-token' "$2"
-    : > "$MIGRATION_UPLOAD_MARKER"
-    printf '\n201'
+    if grep -q '^data =' "$2"; then
+      : > "$MIGRATION_UPLOAD_MARKER"
+      printf '\n201'
+    else
+      printf '[]\n200'
+    fi
     exit 0
   fi
   shift
@@ -108,9 +115,9 @@ env HOME="$SANDBOX/home with space" PATH="$SANDBOX/shims:$PATH" \
 [[ -f "$SANDBOX/uploaded" ]] || fail 'SSH 令牌输入'
 pass 'SSH 静默读取令牌并通过模拟 API 完成上传'
 
-if ssh_eof_output="$(env HOME="$SANDBOX/home with space" PATH="$SANDBOX/shims:$PATH" \
+if ssh_eof_output="$(env HOME="$SANDBOX/eof-home" PATH="$SANDBOX/shims:$PATH" \
   MACOS_SCRIPTS_LOG_DIR="$SANDBOX/logs" MACOS_SCRIPTS_CONFIG_DIR="$SANDBOX/config" \
-  /bin/zsh "$REPO_ROOT/setup/git_forge_ssh_setup.sh" --type eof --skip-upload < /dev/null 2>&1)"; then
+  /bin/zsh "$REPO_ROOT/setup/git_forge_ssh_setup.sh" --type personal --skip-upload < /dev/null 2>&1)"; then
   fail 'SSH EOF 未返回失败'
 fi
 [[ "$ssh_eof_output" == *'无法读取邮箱输入'* ]] || fail 'SSH EOF 诊断'

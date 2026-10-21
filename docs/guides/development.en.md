@@ -43,6 +43,7 @@ zsh tests/macos_installer_flow_guard.sh # 安装器流程
 zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
+zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
 ```
 
 Query regressions cover CLI and standalone help, CLI versions, piped bootstrap help, fresh directories, unusable paths, and existing logs and locks. Command stubs verify that queries do not check the system or network, create directories, rotate logs, or modify locks.

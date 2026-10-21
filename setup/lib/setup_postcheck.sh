@@ -3,7 +3,10 @@
 
 post_verification() {
     print_header "安装后验证"
-    source ~/.zshrc
+    # 只加载脚本管理的环境块，避免重复执行用户 .zshrc 中的任意命令。
+    local managed
+    managed="$(awk '/^# >>> .*\(managed by macos-setup\) >>>$/ {active=1;next} /^# <<< .*\(managed by macos-setup\) <<<$/{active=0;next} active{print}' "$HOME/.zshrc")" || return 1
+    eval "$managed" || return 1
 
     local has_warning=false
     local critical_cmds=(git brew node npm ruby go python pip python3 pip3)
@@ -25,6 +28,7 @@ post_verification() {
         success "基础环境验证通过"
     else
         error "部分环境验证失败，请检查日志"
+        return 1
     fi
 }
 

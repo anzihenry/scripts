@@ -120,7 +120,8 @@ run_cask_upgrades() {
     outdated_status=$?
     set -e
     if [[ $outdated_status -ne 0 ]]; then
-        warning "Cask 更新检测失败，跳过本步骤（其余维护步骤继续）"
+        CASK_CHECK_FAILED=true
+        warning "Cask 更新检测失败，跳过本步骤（其余维护步骤继续，最终返回失败）"
         return 0
     fi
 

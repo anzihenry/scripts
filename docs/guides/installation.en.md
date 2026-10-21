@@ -65,6 +65,8 @@ Bootstrap logs default to `~/Library/Logs/macos-scripts/bootstrap.log`. These pu
 
 ### Recovering from Homebrew configuration failure
 
+Repeated configuration first compares managed blocks and remotes; matching target state skips backups and writes. See [repeated execution](using.en.md#repeated-execution) for the other scripts.
+
 Bootstrap still configures USTC by default; `--skip-configure` skips configuration. Before changes, it backs up `.zshrc` and existing brew/core Git configuration files in `~/.config/macos-scripts/backups/homebrew-config.<random>/` (overridable with `MACOS_SCRIPTS_CONFIG_DIR`). Backup directories are accessible only to the current user.
 
 Write or mirror verification failures and catchable interruption signals restore these files and return nonzero. An originally absent `.zshrc` is removed on rollback; existing symlinks and target permissions are preserved. Installed Homebrew and the CLI remain installed. Success removes only the current run's backup; failures retain backups and print their paths. Later successful runs preserve backups from earlier failures. Cleanup failures prompt manual deletion without failing an otherwise successful configuration. If restoration itself fails, use `manifest.tsv` to map numbered backups to their original paths for manual recovery; the command does not claim complete restoration.

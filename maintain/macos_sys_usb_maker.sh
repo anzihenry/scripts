@@ -57,8 +57,8 @@ usage() {
 
 说明:
   list        列出可用完整安装器版本 (softwareupdate --list-full-installers)
-  download    幂等：若指定版本安装器已在 /Applications 中则跳过；--force 可强制重新下载
-  create      幂等：若目标卷已是同版本可启动安装器则跳过；不同版本需 --force 才覆盖（会抹掉分区）
+  download    幂等：若指定系统版本安装器已通过完整性检查则跳过；--force 可强制重新下载
+  create      幂等：校验卷 UUID、安装器摘要、完成记录及引导文件后跳过；--force 显式重做（会抹掉分区）
   日志        默认写入 ${MAINTAIN_LOG_FILE}
 示例:
   $SCRIPT_NAME list

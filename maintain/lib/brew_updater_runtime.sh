@@ -97,6 +97,11 @@ print_summary() {
         warning "已排除的 Cask: ${SKIPPED_CASKS[*]}"
     fi
 
+    if [[ "${CASK_CHECK_FAILED:-false}" == true ]]; then
+        error "Cask 更新检测未完成，请检查网络/Homebrew 后重新运行。"
+        return 1
+    fi
+
     if [[ ${#FAILED_CASKS[@]} -gt 0 ]]; then
         error "以下 Cask 更新失败: ${FAILED_CASKS[*]}"
         return 1

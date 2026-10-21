@@ -115,6 +115,11 @@ run_homebrew_config_transaction() (
     trap 'exit 143' TERM
     trap 'exit 129' HUP
     printf '%s\n' "$$" > "$HBC_LOCK_DIR/pid" || return 1
+    validate_homebrew_managed_blocks || return 1
+    if homebrew_configuration_current "$brew_bin"; then
+        success "Homebrew 配置已符合目标状态，跳过备份和写入。"
+        return 0
+    fi
     HBC_BACKUP_DIR="$(umask 077; mktemp -d "$backup_root/homebrew-config.XXXXXXXX")" || return 1
     info "Homebrew 配置备份: $HBC_BACKUP_DIR"
 

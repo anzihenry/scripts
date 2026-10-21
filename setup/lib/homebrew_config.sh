@@ -27,6 +27,7 @@ activate_homebrew_environment() {
     local brew_prefix
     brew_prefix="$($brew_bin --prefix)" || return 1
 
+    typeset -gU path PATH
     export PATH="${brew_prefix}/bin:${brew_prefix}/sbin:$PATH"
     local shellenv_content
     shellenv_content="$($brew_bin shellenv)" || return 1
@@ -52,6 +53,38 @@ export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
 EOF
 }
 
+get_homebrew_shellenv_config() {
+    local brew_prefix="$1"
+    cat <<EOF
+typeset -U path PATH
+export PATH="${brew_prefix}/bin:${brew_prefix}/sbin:\$PATH"
+eval "\$("${brew_prefix}/bin/brew" shellenv)"
+EOF
+}
+
+homebrew_block_matches() {
+    local section="$1" expected="$2"
+    [[ -f "$HOME/.zshrc" ]] || return 1
+    local actual
+    actual="$(awk -v begin="# >>> $section (managed by homebrew-config) >>>" -v end="# <<< $section (managed by homebrew-config) <<<" '
+      $0==begin { active=1; count++; next }
+      $0==end { active=0; next }
+      active {print}
+      END {if (active || count!=1) exit 1}
+    ' "$HOME/.zshrc")" || return 1
+    [[ "$actual" == "$expected" ]]
+}
+
+homebrew_configuration_current() {
+    local brew_bin="$1" prefix repo core
+    prefix="$("$brew_bin" --prefix)" && repo="$("$brew_bin" --repo)" || return 1
+    homebrew_block_matches 'Homebrew Basic' "$(get_homebrew_shellenv_config "$prefix")" || return 1
+    homebrew_block_matches 'Homebrew Mirror' "$(get_homebrew_mirror_config)" || return 1
+    [[ "$(git -C "$repo" remote get-url origin)" == https://mirrors.ustc.edu.cn/brew.git ]] || return 1
+    core="$repo/Library/Taps/homebrew/homebrew-core"
+    [[ ! -d "$core" ]] || [[ "$(git -C "$core" remote get-url origin)" == https://mirrors.ustc.edu.cn/homebrew-core.git ]]
+}
+
 configure_homebrew_shellenv() {
     local brew_bin="$1"
     local dry_run="${2:-false}"
@@ -59,11 +92,7 @@ configure_homebrew_shellenv() {
     local shellenv_content
 
     brew_prefix="$($brew_bin --prefix)" || return 1
-    shellenv_content=$(cat <<EOF
-export PATH="${brew_prefix}/bin:${brew_prefix}/sbin:\$PATH"
-eval "\$(${brew_prefix}/bin/brew shellenv)"
-EOF
-)
+    shellenv_content="$(get_homebrew_shellenv_config "$brew_prefix")" || return 1
 
     update_managed_zsh_config "Homebrew Basic" "homebrew-config" "$shellenv_content" "$dry_run" || return 1
     if [[ "$dry_run" == "true" ]]; then

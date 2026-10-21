@@ -15,6 +15,8 @@ This index collects historical release descriptions. See [version records](docs/
 
 ## Unreleased
 
+- Make repeated runs converge: atomic in-place config blocks, preserved shell settings/repos, staged validated downloads, reusable domain-specific SSH identities and paginated key queries, no implicit language upgrades, merged pip settings and unique PATH. Skip unchanged Homebrew config transactions and fail on incomplete package/detection results. Validate installer payload OS versions/integrity and device-locked UUID/digest USB completion records; skip matching Release content. Add an idempotence guard to CI/release checks.
+
 - Audit fixes: use a waitable logger and drain it before exit without replacing business exit codes; reject log symlinks before opening; preserve release options before the tag and custom tap URLs in fresh-machine previews; clarify Formula-selected stable versions and distinguish unreleased source from v0.5.0 examples.
 
 - Make help and CLI version queries side-effect free: skip directories, logging, rotation, locks, and environment checks, even with unusable log paths. Parse bootstrap and executor arguments before logging, and reject extra version-query arguments.

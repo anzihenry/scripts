@@ -86,6 +86,7 @@ test_resolve_create_installer_path_uses_discovery() {
   discovered_app="$temp_root/Install macOS Sonoma.app"
   mkdir -p "$discovered_app"
 
+  installer_is_complete() { return 0; }
   CREATE_INSTALLER_PATH=""
   CREATE_VERSION="14.6"
   find_installer_app() {
@@ -101,6 +102,7 @@ test_ensure_create_target_is_ready_same_version_skips() {
   CREATE_VOLUME="/Volumes/TestUSB"
   CREATE_APP_VERSION="14.6.1"
   CREATE_FORCE="no"
+  volume_creation_current() { return 0; }
 
   detect_volume_installer_app() {
     printf '/Volumes/TestUSB/Install macOS Sonoma.app'
@@ -138,7 +140,7 @@ test_ensure_create_target_is_ready_requires_force_for_different_version() {
   set -e
 
   assert_eq "$rc" "1" "different installer version without force fails fast"
-  assert_contains "$output" "DIE:目标卷包含不同版本的安装器" "different version path asks for force"
+  assert_contains "$output" "DIE:目标卷包含不同版本或没有可信完成记录的安装器" "different version path asks for force"
 }
 
 test_sub_download_keeps_phase_order() {
@@ -155,6 +157,9 @@ test_sub_download_keeps_phase_order() {
 
 test_sub_create_keeps_phase_order() {
   local calls=()
+  CREATE_DEVICE=fake-device
+  installer_volume_value() { print fake-device; }
+  acquire_installer_lock() { calls+=("lock"); }
   prepare_create_context() { calls+=("prepare:$*"); }
   print_header() { calls+=("header:$1"); }
   validate_create_prerequisites() { calls+=("validate"); }
@@ -164,12 +169,13 @@ test_sub_create_keeps_phase_order() {
   run_create_execution() { calls+=("execute"); }
 
   sub_create --volume /Volumes/TestUSB --version 14.6.1 -y
-  assert_eq "${calls[*]}" "prepare:--volume /Volumes/TestUSB --version 14.6.1 -y header:制作 macOS USB 启动盘 validate resolve ready confirm execute" "sub create keeps expected phase order"
+  assert_eq "${calls[*]}" "prepare:--volume /Volumes/TestUSB --version 14.6.1 -y header:制作 macOS USB 启动盘 validate resolve lock ready confirm execute" "sub create keeps expected phase order"
 }
 
 test_acquire_installer_lock_creates_real_dir() {
   # 端到端写入测试：acquire_installer_lock 应创建真实锁目录，
   # 且重复获取（并发场景）应通过 die 报错。
+  source "$REPO_ROOT/maintain/lib/macos_installer_flow.sh"
   local lock_key="guard-$$-$(date +%s)"
   SCRIPT_NAME="macos_installer_guard"
   local lock_dir="/tmp/${SCRIPT_NAME}.${lock_key}.lock"

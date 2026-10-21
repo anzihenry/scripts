@@ -70,6 +70,13 @@ confirm_publish() {
   [[ "$reply" =~ ^[Yy]$ ]]
 }
 
+release_content_matches() {
+  local current_title current_body
+  current_title="$(env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" --jq '.name // ""')" || return 2
+  current_body="$(env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" --jq '.body // ""')" || return 2
+  [[ "$current_title" == "$TITLE" && "$current_body" == "$(<"$NOTES_FILE")" ]]
+}
+
 create_or_update_release() {
   print_header "执行 GitHub Release"
 
@@ -82,6 +89,15 @@ create_or_update_release() {
   fi
 
   if [[ $release_state -eq 0 ]]; then
+    local content_state=0
+    release_content_matches || content_state=$?
+    if [[ "$content_state" == 0 ]]; then
+      success "Release 标题和正文一致，跳过更新。"
+      return 0
+    elif [[ "$content_state" == 2 ]]; then
+      error "无法读取已有 Release 内容，未执行更新，请检查网络/权限后重试。"
+      return 1
+    fi
     if [[ "$UPDATE_EXISTING" != "true" ]]; then
       error "Release 已存在。如需更新，请追加 --update-existing。"
       exit 1
