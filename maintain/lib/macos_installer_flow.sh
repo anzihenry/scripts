@@ -1,11 +1,8 @@
 #!/bin/zsh
 # filepath: maintain/lib/macos_installer_flow.sh
 
-# 已获取的锁目录登记表，由入口脚本（macos_sys_usb_maker.sh）的
-# 全局 trap 在脚本退出时统一清理。不要在函数内设置 EXIT trap：
-# zsh 的函数级 trap 会在函数返回时立即触发，锁会被提前删除，
-# 导致并发互斥保护失效。
-INSTALLER_LOCK_DIRS=()
+# 跳过和失败使用不同状态，调用方只将已就绪状态转换为成功。
+INSTALLER_ALREADY_CURRENT=10
 
 # 判断锁目录的持有进程是否仍存活。只认明确的「进程不存在」；
 # 任何不确定情况（无 ps、读取失败、仅剩僵尸/孤儿目录）都保守视为存活，
@@ -39,31 +36,15 @@ _installer_lock_owner_alive() {
 }
 
 acquire_installer_lock() {
-  local key
-  key="$(sanitize_key "$1")"
-  LOCK_DIR="/tmp/${SCRIPT_NAME}.${key}.lock"
-
-  if ! mkdir "$LOCK_DIR" 2> /dev/null; then
-    # 陈旧锁接管：SIGKILL / 断电等异常退出会留下锁目录，
-    # 若不做存活判断将导致后续运行永久阻塞。
-    if _installer_lock_owner_alive "$LOCK_DIR"; then
-      local owner_pid=""
-      owner_pid="$(<"$LOCK_DIR/pid" 2> /dev/null || true)"
-      warning "另一个相同操作正在进行中（PID ${owner_pid:-未知}，锁: $LOCK_DIR）。"
-      die "请等待其结束；若确认进程已不存在，可手动删除该锁目录后重试。"
-    fi
-
-    warning "检测到陈旧锁（持有进程已退出），自动接管: $LOCK_DIR"
-    rm -rf "$LOCK_DIR"
-    if ! mkdir "$LOCK_DIR" 2> /dev/null; then
-      die "另一个相同操作正在进行中（锁: $LOCK_DIR）。稍后重试。"
-    fi
+  local key legacy
+  key="$(sanitize_key "$1")" || return 1
+  legacy="/tmp/${SCRIPT_NAME}.${key}.lock"
+  if [[ -e "$legacy" ]] && _installer_lock_owner_alive "$legacy"; then
+    error "旧版安装器锁仍存在且无法确认已结束，请检查后重试: $legacy"
+    return 1
   fi
-
-  INSTALLER_LOCK_DIRS+=("$LOCK_DIR")
-  # best-effort 写入持有者 PID，供下次启动做陈旧判断；写入失败不影响互斥。
-  printf '%s' "$$" > "$LOCK_DIR/pid" 2> /dev/null || true
-  log_debug "已获取锁: $LOCK_DIR (pid $$)"
+  # 资源名不依赖入口脚本名称；锁由内核释放，不删除陈旧目录或锁文件。
+  resource_lock_acquire "macos-installer:$key"
 }
 
 sub_list() {
@@ -78,7 +59,7 @@ sub_list() {
   if ! softwareupdate --list-full-installers; then
     log_time_end "list_full_installers" "softwareupdate 列表查询" "error"
     log_error "softwareupdate 列表查询失败"
-    exit 1
+    return 1
   fi
   log_time_end "list_full_installers" "softwareupdate 列表查询"
 
@@ -107,11 +88,11 @@ verify_downloaded_installer() {
 }
 
 prepare_download_context() {
-  parse_download_args "$@"
-  initialize_macos_installer_logging
-  require_supported_macos || exit 1
-  require_commands softwareupdate hdiutil
-  acquire_installer_lock download_full_installer
+  parse_download_args "$@" || return $?
+  initialize_macos_installer_logging || return $?
+  require_supported_macos || return 1
+  require_commands softwareupdate hdiutil || return 1
+  acquire_installer_lock download_full_installer || return $?
 }
 
 check_existing_installer_before_download() {
@@ -120,7 +101,7 @@ check_existing_installer_before_download() {
   existing="$(resolve_existing_installer_for_download)"
   if should_skip_installer_download "$existing"; then
     success "已存在版本 ${DOWNLOAD_VERSION} 的安装器：$existing，跳过下载（使用 --force 可强制重下）。"
-    return 1
+    return "$INSTALLER_ALREADY_CURRENT"
   fi
   [ -n "$existing" ] && warning "检测到已存在安装器: $existing，将按 --force 重新下载。"
   return 0
@@ -133,7 +114,7 @@ run_installer_download() {
   if ! softwareupdate --fetch-full-installer --full-installer-version "${DOWNLOAD_VERSION}"; then
     log_time_end "download_${DOWNLOAD_VERSION}" "macOS 安装器下载" "error"
     log_error "下载失败，请检查版本号是否有效、网络是否可用，或先执行 '$SCRIPT_NAME list' 查看可用版本。"
-    exit 1
+    return 1
   fi
   log_time_end "download_${DOWNLOAD_VERSION}" "macOS 安装器下载"
 }
@@ -144,17 +125,20 @@ complete_installer_download() {
 }
 
 sub_download() {
-  prepare_download_context "$@"
+  prepare_download_context "$@" || return $?
 
   print_header "下载 macOS 安装器"
-  check_existing_installer_before_download || return 0
-  run_installer_download
-  complete_installer_download
+  local check_code=0
+  check_existing_installer_before_download || check_code=$?
+  (( check_code != INSTALLER_ALREADY_CURRENT )) || return 0
+  (( check_code == 0 )) || return "$check_code"
+  run_installer_download || return $?
+  complete_installer_download || return $?
 }
 
 validate_create_target_volume() {
-  [ -n "$CREATE_VOLUME" ] || die "必须通过 --volume 指定目标卷，例如 --volume /Volumes/MyUSB"
-  [ -d "$CREATE_VOLUME" ] || die "卷不存在: $CREATE_VOLUME"
+  [ -n "$CREATE_VOLUME" ] || { error "必须通过 --volume 指定目标卷，例如 --volume /Volumes/MyUSB"; return 1; }
+  [ -d "$CREATE_VOLUME" ] || { error "卷不存在: $CREATE_VOLUME"; return 1; }
   if [[ "$CREATE_VOLUME" != /Volumes/* ]]; then
     warning "目标卷不在 /Volumes 下，确保这是一个可抹写的可移动介质。"
   fi
@@ -163,25 +147,25 @@ validate_create_target_volume() {
 resolve_create_installer_path() {
   if [ -z "$CREATE_INSTALLER_PATH" ]; then
     CREATE_INSTALLER_PATH="$(find_installer_app "$CREATE_VERSION" || true)"
-    [ -n "$CREATE_INSTALLER_PATH" ] || die "未找到安装器。请先执行 'list' 和 'download'，或用 --installer-path 指定"
+    [ -n "$CREATE_INSTALLER_PATH" ] || { error "未找到安装器。请先执行 'list' 和 'download'，或用 --installer-path 指定"; return 1; }
   fi
-  [ -d "$CREATE_INSTALLER_PATH" ] || die "安装器路径无效: $CREATE_INSTALLER_PATH"
-  installer_is_complete "$CREATE_INSTALLER_PATH" || die "安装器不完整或磁盘映像校验失败，请重新下载: $CREATE_INSTALLER_PATH"
+  [ -d "$CREATE_INSTALLER_PATH" ] || { error "安装器路径无效: $CREATE_INSTALLER_PATH"; return 1; }
+  installer_is_complete "$CREATE_INSTALLER_PATH" || { error "安装器不完整或磁盘映像校验失败，请重新下载: $CREATE_INSTALLER_PATH"; return 1; }
 }
 
 prepare_createinstallmedia_context() {
   CREATEINSTALLMEDIA_PATH="$CREATE_INSTALLER_PATH/Contents/Resources/createinstallmedia"
-  [ -x "$CREATEINSTALLMEDIA_PATH" ] || die "缺少 createinstallmedia: $CREATEINSTALLMEDIA_PATH"
+  [ -x "$CREATEINSTALLMEDIA_PATH" ] || { error "缺少 createinstallmedia: $CREATEINSTALLMEDIA_PATH"; return 1; }
 
   CREATE_APP_VERSION="$(get_installer_short_ver "$CREATE_INSTALLER_PATH")"
-  [[ -n "$CREATE_APP_VERSION" ]] || die "无法读取安装器版本"
-  CREATE_DEVICE="$(installer_volume_value "$CREATE_VOLUME" DeviceIdentifier)" || die "无法确认目标卷设备"
+  [[ -n "$CREATE_APP_VERSION" ]] || { error "无法读取安装器版本"; return 1; }
+  CREATE_DEVICE="$(installer_volume_value "$CREATE_VOLUME" DeviceIdentifier)" || { error "无法确认目标卷设备"; return 1; }
   if [[ -n "$CREATE_VERSION" ]]; then
     local source_os
-    source_os="$(get_installer_os_version "$CREATE_INSTALLER_PATH")" || die "无法读取安装载荷的 macOS 版本"
-    installer_version_matches "$source_os" "$CREATE_VERSION" || die "指定安装器与请求的 macOS 版本不匹配"
+    source_os="$(get_installer_os_version "$CREATE_INSTALLER_PATH")" || { error "无法读取安装载荷的 macOS 版本"; return 1; }
+    installer_version_matches "$source_os" "$CREATE_VERSION" || { error "指定安装器与请求的 macOS 版本不匹配"; return 1; }
   fi
-  CREATE_SOURCE_ID="$(installer_source_identity "$CREATE_INSTALLER_PATH")" || die "无法校验安装器身份"
+  CREATE_SOURCE_ID="$(installer_source_identity "$CREATE_INSTALLER_PATH")" || { error "无法校验安装器身份"; return 1; }
   CREATE_APP_NAME="$(basename "$CREATE_INSTALLER_PATH")"
   CREATE_APP_LABEL="$(get_installer_label "$CREATE_INSTALLER_PATH")"
 
@@ -198,11 +182,11 @@ ensure_create_target_is_ready() {
     log_info "卷上检测到安装器: $(basename "$vol_app") (版本: ${vol_ver:-unknown})"
     if [[ "$CREATE_FORCE" != yes && "$vol_ver" == "$CREATE_APP_VERSION" ]] && volume_creation_current; then
       success "目标卷已是同版本可启动安装器（$vol_ver），跳过制作。"
-      return 1
+      return "$INSTALLER_ALREADY_CURRENT"
     fi
 
     if [ "$CREATE_FORCE" != "yes" ]; then
-      die "目标卷包含不同版本或没有可信完成记录的安装器（$vol_ver）。使用 --force 覆盖，或更换目标卷。"
+      error "目标卷包含不同版本或没有可信完成记录的安装器（$vol_ver）。使用 --force 覆盖，或更换目标卷。"
       return 1
     fi
 
@@ -220,7 +204,7 @@ run_createinstallmedia() {
   if ! sudo "$CREATEINSTALLMEDIA_PATH" --volume "$CREATE_VOLUME" --nointeraction; then
     log_time_end "createinstallmedia_${CREATE_VOLUME}" "createinstallmedia 执行" "error"
     log_error "createinstallmedia 执行失败。请检查 USB 是否可写、容量是否足够（建议 ≥ 16GB），或查看系统日志。"
-    exit 1
+    return 1
   fi
   log_time_end "createinstallmedia_${CREATE_VOLUME}" "createinstallmedia 执行"
 }
@@ -233,29 +217,29 @@ print_create_completion() {
 }
 
 prepare_create_context() {
-  parse_create_args "$@"
-  initialize_macos_installer_logging
-  require_supported_macos || exit 1
+  parse_create_args "$@" || return $?
+  initialize_macos_installer_logging || return $?
+  require_supported_macos || return 1
 }
 
 validate_create_prerequisites() {
   print_step 1 6 "校验参数与环境"
 
-  validate_create_target_volume
+  validate_create_target_volume || return $?
 
   require_command sudo
-  require_command diskutil
+  require_commands diskutil hdiutil plutil shasum || return 1
 }
 
 resolve_create_inputs() {
   print_step 2 6 "解析安装器路径与版本"
-  resolve_create_installer_path
-  prepare_createinstallmedia_context
+  resolve_create_installer_path || return $?
+  prepare_createinstallmedia_context || return $?
 }
 
 check_create_target_readiness() {
   print_step 3 6 "幂等性检查"
-  ensure_create_target_is_ready || return 1
+  ensure_create_target_is_ready || return $?
   return 0
 }
 
@@ -267,7 +251,7 @@ acquire_create_lock_and_confirm() {
 
 run_create_execution() {
   print_step 5 6 "执行 createinstallmedia"
-  run_createinstallmedia
+  run_createinstallmedia || return $?
   record_volume_creation || { error "制作命令成功，但无法记录完成状态，请检查目标卷后重试。"; return 1; }
 
   print_step 6 6 "收尾与提示"
@@ -275,16 +259,19 @@ run_create_execution() {
 }
 
 sub_create() {
-  prepare_create_context "$@"
+  prepare_create_context "$@" || return $?
 
   print_header "制作 macOS USB 启动盘"
-  validate_create_prerequisites
-  resolve_create_inputs
-  acquire_installer_lock "create_$(sanitize_key "$CREATE_DEVICE")"
-  [[ "$(installer_volume_value "$CREATE_VOLUME" DeviceIdentifier)" == "$CREATE_DEVICE" ]] || die "目标卷设备已变化，已中止，请重新运行。"
-  check_create_target_readiness || return 0
-  acquire_create_lock_and_confirm
-  run_create_execution
+  validate_create_prerequisites || return $?
+  resolve_create_inputs || return $?
+  acquire_installer_lock "create_$(sanitize_key "$CREATE_DEVICE")" || return $?
+  [[ "$(installer_volume_value "$CREATE_VOLUME" DeviceIdentifier)" == "$CREATE_DEVICE" ]] || { error "目标卷设备已变化，已中止，请重新运行。"; return 1; }
+  local check_code=0
+  check_create_target_readiness || check_code=$?
+  (( check_code != INSTALLER_ALREADY_CURRENT )) || return 0
+  (( check_code == 0 )) || return "$check_code"
+  acquire_create_lock_and_confirm || return $?
+  run_create_execution || return $?
 }
 
 confirm_create_target_wipe() {
@@ -294,7 +281,8 @@ confirm_create_target_wipe() {
       warning "已指定 --force，将覆盖可能存在的旧安装器或其他文件。"
     fi
     if ! confirm "是否继续" "N"; then
-      die "已取消"
+      warning "已取消"
+      return 1
     fi
   else
     log_info "已通过 -y/--yes，跳过交互确认"

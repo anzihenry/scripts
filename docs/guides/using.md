@@ -2,7 +2,7 @@
 title: 使用与维护
 status: current
 owner: project-maintainers
-updated: 2026-10-21
+updated: 2026-10-22
 ---
 
 # 使用与维护
@@ -31,7 +31,7 @@ updated: 2026-10-21
 > 当前 `bin/macos-scripts` 是统一入口，现有 `setup/`、`maintain/`、`lint/` 脚本继续作为内部执行器保留。
 > 入口本身已拆分为 `bin/macos-scripts` + `bin/lib/*.sh`，帮助文案与参数校验逻辑不再和分发逻辑混在同一个文件里。
 
-帮助和版本查询是纯查询：`macos-scripts --help`、`macos-scripts help <主题>`、子命令 `--help`，以及 `macos-scripts version` / `--version` / `-v` 均直接输出结果，不创建配置或日志目录、不写入或轮转日志、不获取锁，也不检查系统版本、架构或网络。独立脚本的帮助入口遵循相同规则。日志路径不可写或日志轮转参数无效时，仍可查看帮助和版本；只有真正执行功能（包括 dry-run）才初始化运行环境。未知命令、无效参数及版本查询的多余参数返回非零并给出提示。
+帮助和版本查询是纯查询：`macos-scripts --help`、`macos-scripts help <主题>`、子命令 `--help`，以及 `macos-scripts version` / `--version` / `-v` 均直接输出结果，不创建配置或日志目录、不写入或轮转日志、不获取锁，也不检查系统版本、架构或网络。独立脚本的帮助入口遵循相同规则。日志路径不可写或日志轮转参数无效时，仍可查看帮助和版本；实际执行才初始化运行环境；`setup packages` 和 `setup shell` 的 dry-run 同样保持无写入。未知命令、无效参数及版本查询的多余参数返回非零并给出提示。
 
 GitHub 配置默认不带 `--force`；仅在明确需要重建已有 SSH 密钥时显式添加该选项。
 
@@ -57,6 +57,26 @@ SSH `--force` 会把旧密钥保留在配置目录的 `backups/ssh-key.<随机�
 安装器校验会读取完整镜像；读取现代安装载荷元数据时会临时只读挂载并在退出时卸载。USB 完成记录位于配置目录的 `installer-state/<卷 UUID>`；手动制作或旧版本制作的 U 盘没有该记录时，脚本保守地要求 `--force`，不会仅凭同名 `.app` 判定完成。真实安装和抹盘仍需在目标机器上验证。
 
 Node 的显式升级可使用上游 nvm 命令；初始化复用已安装的 LTS。[nvm 用法](https://github.com/nvm-sh/nvm#long-term-support)、[GitHub CLI 查询接口](https://cli.github.com/manual/gh_api)。
+
+## 模块选择、预览与恢复
+
+```zsh
+macos-scripts setup packages --dry-run --modules node,python
+macos-scripts setup packages --modules node,python
+macos-scripts setup shell --dry-run
+```
+
+`--modules` 可选 `node,python,ruby,go,android,packages`，默认全部；重复项去重，未知项在执行前拒绝。`packages` 表示 `brew.conf.sh` 中的 Formulae/Cask 列表，`android` 仅生成 Android/Java 环境配置。选择任意模块仍会校准 Homebrew 并检查 Command Line Tools；安装后只验证选择的语言模块。实际执行按阶段报告耗时，失败显示已完成、失败、未执行阶段和恢复建议。
+
+上述两个初始化入口的 `--dry-run` 只打印计划，不联网、不创建配置/日志/锁、不执行用户的 `brew.conf.sh`。CLI 和独立脚本共享参数解析。其他命令的 dry-run 仍可能查询系统或远端并记录日志，以各命令帮助为准。
+
+默认配置集中在 `setup/lib/setup_defaults.sh`。可用同名环境变量覆盖：`SETUP_NPM_REGISTRY`、`SETUP_PIP_INDEX`、`SETUP_PIP_HOST`、`SETUP_GEM_SOURCE`、`SETUP_GOPROXY`、`SETUP_GOPATH`、`SETUP_JAVA_HOME`、`SETUP_ANDROID_HOME`。Homebrew 仍默认 USTC。pip 的多个键先在候选文件上更新，全部成功才一次提交；失败保留原文件。
+
+所有公共配置写入按实际路径加锁，符号链接与目标共用锁；Homebrew 事务持锁覆盖备份、写入及回滚，防止回滚覆盖其他入口的更新。Homebrew 安装、初始化和维护按 prefix 协调；Bootstrap 调用独立配置 CLI 前释放并由子进程重新获取锁。终端和 SSH 也有业务锁。锁采用系统 Zsh 的 `zsystem flock`，等待默认 10 秒，可用 `MACOS_SCRIPTS_LOCK_TIMEOUT` 设置 0–9999 秒。锁文件保留于 `/tmp/macos-scripts-locks-<UID>/`，进程退出后内核释放锁，**不要删除锁文件**。旧版本残留的目录锁若无法确认安全仍会提示人工检查。
+
+锁仅协调本项目的合作进程，不阻止编辑器或手动命令修改资源。同步嵌套函数可复用父事务锁，禁止在持锁事务中并行派生共享写入。SIGKILL/断电会释放内核锁，但无法执行回滚；已完成安装保留，重新运行会检查当前状态，未完成回滚时保留的备份可用于手动恢复。信号退出码为 INT=130、TERM=143、HUP=129。日志记录器失败会提示日志不完整，保留业务退出码。
+
+公共实现位于 `lib/config_writer.sh`、`lib/command_runtime.sh`、`lib/resource_lock.sh`、`lib/workflow.sh`；旧配置写入器/命令执行器导入路径仍兼容。SSH 入口将身份、配置、GitHub API、连接提示分别放在 `setup/lib/ssh_*.sh` 和 `github_keys.sh`。
 
 ## 🧰 常用工具脚本
 

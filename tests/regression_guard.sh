@@ -189,10 +189,10 @@ test_installer_stale_lock_takeover() {
 
   acquire_installer_lock "stale" > /dev/null 2>&1 || {
     rm -rf "$lock_dir"
-    fail "陈旧锁应被自动接管"
+    fail "陈旧目录不应阻塞新的内核资源锁"
   }
-  pass "陈旧锁被自动接管"
-  assert_eq "$(cat "$lock_dir/pid")" "$$" "接管后写入当前 PID"
+  pass "陈旧目录不阻塞新的内核资源锁"
+  assert_eq "$(cat "$lock_dir/pid")" "999999" "内核锁不改写旧目录的 PID"
 
   rm -rf "$lock_dir"
 

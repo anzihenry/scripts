@@ -2,7 +2,7 @@
 title: Changelog
 status: current
 owner: project-maintainers
-updated: 2026-10-21
+updated: 2026-10-22
 ---
 
 # Changelog
@@ -14,6 +14,8 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 This index collects historical release descriptions. See [version records](docs/releases/README.en.md) for publication status.
 
 ## Unreleased
+
+- Add kernel resource locks, cross-entry configuration coordination, and installer signal exits; fix first_line SIGPIPE and conditional-call error propagation. Share writer/execution components, split SSH responsibilities, add selectable setup modules, write-free previews, stage summaries, and atomic pip batches. Generate bootstrap snippets and add process/signal regressions plus a configurable CI matrix.
 
 - Make repeated runs converge: atomic in-place config blocks, preserved shell settings/repos, staged validated downloads, reusable domain-specific SSH identities and paginated key queries, no implicit language upgrades, merged pip settings and unique PATH. Skip unchanged Homebrew config transactions and fail on incomplete package/detection results. Validate installer payload OS versions/integrity and device-locked UUID/digest USB completion records; skip matching Release content. Add an idempotence guard to CI/release checks.
 

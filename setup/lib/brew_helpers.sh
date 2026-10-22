@@ -124,10 +124,8 @@ bh_install_packages() {
   local bulk_mode="install"
   [[ "$force" = "true" ]] && bulk_mode="reinstall"
 
-  set +e
-  bh__install_command "$bulk_mode" "$type" "${to_install[@]}"
-  local command_status=$?
-  set -e
+  local command_status=0
+  bh__install_command "$bulk_mode" "$type" "${to_install[@]}" || command_status=$?
 
   if [[ $command_status -eq 0 ]]; then
     BH_INSTALLED_ITEMS+=("${to_install[@]}")
@@ -145,10 +143,8 @@ bh_install_packages() {
     local attempt=1
     local ok=false
     while (( attempt <= retries )); do
-      set +e
-      bh__install_command "$bulk_mode" "$type" "$item"
-      local ret=$?
-      set -e
+      local ret=0
+      bh__install_command "$bulk_mode" "$type" "$item" || ret=$?
       if [[ $ret -eq 0 ]]; then
         ok=true
         break

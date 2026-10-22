@@ -2,7 +2,7 @@
 title: 开发与验证
 status: current
 owner: project-maintainers
-updated: 2026-10-21
+updated: 2026-10-22
 ---
 
 # 开发与验证
@@ -20,6 +20,7 @@ updated: 2026-10-21
 按测试层级由快到慢执行（CI 已在每次 push/PR 自动运行全部）：
 
 ```bash
+zsh lint/sync_bootstrap.sh --check # Bootstrap 内嵌代码一致性
 zsh tests/syntax_guard.sh        # ① 语法：统一 #!/bin/zsh 与 zsh -n
 ./lint/lint_shell.sh             # ② 检查：Zsh shebang 与语法（同一检查入口）
 ./tests/smoke_cli.sh             # ③ CLI：关键成功/失败路径
@@ -42,6 +43,7 @@ zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
+zsh tests/reliability_guard.sh      # 多进程配置、回滚互斥、信号、错误传播、预览一致性
 ```
 
 > 查询回归覆盖 CLI/独立脚本帮助、CLI 版本、独立管道入口，以及新目录、不可写路径和已有日志/锁；命令桩验证不触发系统/网络检查、目录创建、日志轮转或锁修改。
@@ -75,3 +77,11 @@ zsh tests/e2e/run_all.sh
 - 按[「运行验证」](#-运行验证)的清单执行回归（语法 / lint / smoke / guard / E2E），命令与说明以该节为唯一权威源。
 
 > 若涉及长耗时任务，建议附带 `log_time_start/_end` 输出截图或日志片段。
+
+## 公共代码与兼容验证
+
+修改日志、资源锁、macOS 检查或 `first_line` 后，运行 `zsh lint/sync_bootstrap.sh` 生成独立 Bootstrap 的内嵌代码，再按上述清单验证。`--check` 已接入 CI 和发布门禁，禁止手动维护副本。
+
+CI 输出系统版本、架构和系统 Zsh 版本。仓库变量 `MACOS_TEST_RUNNERS` 可设置可用 runner 标签的 JSON 数组，默认 `["macos-latest"]`；增加已配置的 Intel/Apple Silicon runner 后，同一套测试将在各环境执行。标签应以实际可用的 GitHub/自托管 runner 为准。
+
+发布前兼容验证清单：macOS 14 + arm64、macOS 14 + x86_64、当前支持的较新 macOS。每个环境执行本文完整清单，记录 OS/架构/Zsh、提交号和结果；未覆盖的组合应明确列为未验证。命令桩测试不能证明真实 Homebrew 安装、镜像挂载或 USB 抹盘成功；这些操作另在可恢复的测试机/测试介质上验证，不能使用日常数据卷。

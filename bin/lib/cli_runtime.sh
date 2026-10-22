@@ -9,7 +9,7 @@
 run_zsh_script() {
   local relative_path="$1"
   shift
-  mkdir -p "$MACOS_SCRIPTS_LOG_DIR" "$MACOS_SCRIPTS_CONFIG_DIR" || return 1
+  # 目录由执行入口按需创建；帮助和预览无需写入运行目录。
   /bin/zsh "$REPO_ROOT/$relative_path" "$@"
 }
 
@@ -92,7 +92,7 @@ has_help_flag() {
   # 参数值中的 help/--help 仍是普通值，例如 --title help。
   while (( $# > 0 )); do
     case "$1" in
-      -d|--domain|-t|--type|--notes-file|--target|--title|--repo|--volume|--installer-path|--version)
+      -d|--domain|-t|--type|--notes-file|--target|--title|--repo|--volume|--installer-path|--version|--modules)
         (( $# >= 2 )) || return 1
         shift 2
         ;;

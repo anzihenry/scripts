@@ -48,6 +48,7 @@ log_info() { printf 'INFO:%s\n' "$*"; }
 log_debug() { printf 'DEBUG:%s\n' "$*"; }
 warning() { printf 'WARN:%s\n' "$*"; }
 success() { printf 'SUCCESS:%s\n' "$*"; }
+error() { printf 'ERROR:%s\n' "$*" >&2; }
 log_error() { printf 'ERROR:%s\n' "$*" >&2; }
 die() {
   printf 'DIE:%s\n' "$*" >&2
@@ -117,7 +118,7 @@ test_ensure_create_target_is_ready_same_version_skips() {
   local rc=$?
   set -e
 
-  assert_eq "$rc" "1" "same installer version short-circuits create flow"
+  assert_eq "$rc" "10" "same installer version short-circuits create flow"
   assert_contains "$output" "SUCCESS:目标卷已是同版本可启动安装器" "same version path reports skip"
 }
 
@@ -140,7 +141,7 @@ test_ensure_create_target_is_ready_requires_force_for_different_version() {
   set -e
 
   assert_eq "$rc" "1" "different installer version without force fails fast"
-  assert_contains "$output" "DIE:目标卷包含不同版本或没有可信完成记录的安装器" "different version path asks for force"
+  assert_contains "$output" "ERROR:目标卷包含不同版本或没有可信完成记录的安装器" "different version path asks for force"
 }
 
 test_sub_download_keeps_phase_order() {
@@ -172,28 +173,14 @@ test_sub_create_keeps_phase_order() {
   assert_eq "${calls[*]}" "prepare:--volume /Volumes/TestUSB --version 14.6.1 -y header:制作 macOS USB 启动盘 validate resolve lock ready confirm execute" "sub create keeps expected phase order"
 }
 
-test_acquire_installer_lock_creates_real_dir() {
-  # 端到端写入测试：acquire_installer_lock 应创建真实锁目录，
-  # 且重复获取（并发场景）应通过 die 报错。
+test_acquire_installer_lock_creates_real_dir() (
+  source "$REPO_ROOT/lib/resource_lock.sh"
   source "$REPO_ROOT/maintain/lib/macos_installer_flow.sh"
-  local lock_key="guard-$$-$(date +%s)"
-  SCRIPT_NAME="macos_installer_guard"
-  local lock_dir="/tmp/${SCRIPT_NAME}.${lock_key}.lock"
-  rm -rf "$lock_dir"
-
-  acquire_installer_lock "$lock_key"
-  [[ -d "$lock_dir" ]] || fail "lock directory created on disk"
-  pass "lock directory created on disk"
-
-  # 第二次获取同一 key 应失败（模拟并发）
-  local die_called=false
-  die() { die_called=true; }
-  acquire_installer_lock "$lock_key" || true
-  [[ "$die_called" == "true" ]] || fail "concurrent lock acquisition reports conflict"
-  pass "concurrent lock acquisition reports conflict"
-
-  rm -rf "$lock_dir"
-}
+  SCRIPT_NAME=macos_installer_guard
+  acquire_installer_lock "guard-$$" || fail "resource lock acquired"
+  acquire_installer_lock "guard-$$" || fail "same call chain is reentrant"
+  pass "resource lock is reentrant in one synchronous call chain"
+)
 
 test_detect_volume_installer_app_real_fs() {
   # 端到端写入测试：在临时目录构造模拟卷 + 安装器 app，

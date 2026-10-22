@@ -40,7 +40,6 @@ update_managed_zsh_config() {
     local config_content="$3"
     local dry_run="${4:-false}"
     local rc_file="$HOME/.zshrc"
-    rc_file="${rc_file:A}"
     write_managed_block "$rc_file" "$section_name" "$manager_name" "$config_content" "$dry_run"
 }
 

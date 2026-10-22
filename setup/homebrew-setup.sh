@@ -87,7 +87,7 @@ precheck() {
 # ===== Homebrew 配置 =====
 configure_homebrew() {
     print_header "配置 Homebrew"
-    configure_homebrew_environment "$BREW_BIN" "$DRY_RUN"
+    configure_homebrew_environment "$BREW_BIN" "$DRY_RUN" || return $?
     if [[ "$DRY_RUN" == "true" ]]; then
         success "Homebrew dry-run 预演完成 (版本: $(first_line "$BREW_BIN" --version))"
     else
@@ -100,8 +100,8 @@ main() {
     parse_args "$@"
     SETUP_LOG_FILE="$(prepare_log_file_path "homebrew-setup.log")"
     enable_log_capture "$SETUP_LOG_FILE" "$(get_log_run_mode "$@")"
-    precheck
-    configure_homebrew
+    precheck || return $?
+    configure_homebrew || return $?
     
     print_header "配置完成!"
     info "日志文件位置: $SETUP_LOG_FILE"

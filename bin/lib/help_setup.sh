@@ -4,7 +4,7 @@
 print_setup_shell_help() {
   cat <<'EOF'
 用法:
-  macos-scripts setup shell
+  macos-scripts setup shell [--dry-run]
 
 说明:
   初始化 zsh / oh-my-zsh / powerlevel10k / 常用插件 / 字体。
@@ -12,7 +12,7 @@ print_setup_shell_help() {
   保留已有 .zshrc 和自定义主题/插件；健康仓库、字体不重复安装。
 
 参数:
-  当前不接受额外参数。
+  --dry-run       仅预览，不联网、不安装、不写入配置。
 EOF
 }
 
@@ -36,13 +36,15 @@ EOF
 print_setup_packages_help() {
   cat <<'EOF'
 用法:
-  macos-scripts setup packages
+  macos-scripts setup packages [--dry-run] [--modules node,python,ruby,go,android,packages]
 
 说明:
   按 setup/brew.conf.sh 批量安装 Formulae、Casks 和语言环境配置。
 
 参数:
-  当前不接受额外参数。
+  --dry-run       仅预览，不联网、不安装、不写入配置。
+  --modules LIST  逗号分隔模块列表，默认全部；可选 node、python、ruby、go、android、packages。
+  选择任意模块仍会校准 Homebrew 并检查开发工具。
 EOF
 }
 
@@ -95,9 +97,9 @@ EOF
 print_setup_help() {
   cat <<'EOF'
 用法:
-  macos-scripts setup shell
+  macos-scripts setup shell [--dry-run]
   macos-scripts setup brew configure
-  macos-scripts setup packages
+  macos-scripts setup packages [--dry-run] [--modules node,python,ruby,go,android,packages]
   macos-scripts setup git [参数]
   macos-scripts setup github [参数]
 

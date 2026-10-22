@@ -6,14 +6,11 @@
 # 旧实现把任意 gh 失败都当成「不存在」，会让 --verify-only 在断网时限流时
 # 打印成功，也可能在状态未知时触发误创建。
 release_status() {
-  local stderr_file release_state
+  local stderr_file release_state=0
   stderr_file="$(mktemp "${TMPDIR:-/tmp}/release-status.XXXXXX")"
 
   # 注意：变量名不能用 status——zsh 中 status/pipestatus 是只读特殊变量。
-  set +e
-  env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" > /dev/null 2> "$stderr_file"
-  release_state=$?
-  set -e
+  env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" > /dev/null 2> "$stderr_file" || release_state=$?
 
   if [[ $release_state -eq 0 ]]; then
     rm -f "$stderr_file"

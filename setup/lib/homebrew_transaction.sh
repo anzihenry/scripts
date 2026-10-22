@@ -77,8 +77,6 @@ homebrew_transaction_cleanup() {
             warning "配置已成功，但备份清理失败，可手动删除: $HBC_BACKUP_DIR"
         fi
     fi
-    rm -f "$HBC_LOCK_DIR/pid"
-    rmdir "$HBC_LOCK_DIR" || error "配置锁清理失败，请检查: $HBC_LOCK_DIR"
     return "$exit_code"
 }
 
@@ -105,8 +103,10 @@ run_homebrew_config_transaction() (
     local -a HBC_TARGETS=() HBC_EXISTED=()
     local brew_repo core_repo
 
+    homebrew_resource_lock "$brew_bin" || return 1
+    resource_lock_acquire "$HOME/.zshrc" || return 1
     mkdir -p "$backup_root" || return 1
-    if ! mkdir "$HBC_LOCK_DIR" 2> /dev/null; then
+    if [[ -e "$HBC_LOCK_DIR" ]]; then
         error "另一个 Homebrew 配置可能正在运行。确认其已结束后，可清理锁目录再重试: $HBC_LOCK_DIR"
         return 1
     fi
@@ -114,7 +114,6 @@ run_homebrew_config_transaction() (
     trap 'exit 130' INT
     trap 'exit 143' TERM
     trap 'exit 129' HUP
-    printf '%s\n' "$$" > "$HBC_LOCK_DIR/pid" || return 1
     validate_homebrew_managed_blocks || return 1
     if homebrew_configuration_current "$brew_bin"; then
         success "Homebrew 配置已符合目标状态，跳过备份和写入。"

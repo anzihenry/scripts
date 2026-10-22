@@ -60,7 +60,9 @@ main() {
   initialize_release_publish_logging "$@"
   require_supported_macos || exit 1
   check_release_prerequisites
-  print_release_state || true
+  local state=0
+  print_release_state || state=$?
+  (( state != 2 )) || return 2
 
   if [[ "$VERIFY_ONLY" == "true" ]]; then
     success "verify-only 检查完成"
@@ -72,7 +74,7 @@ main() {
     exit 0
   fi
 
-  create_or_update_release
+  create_or_update_release || return $?
   verify_release
 }
 

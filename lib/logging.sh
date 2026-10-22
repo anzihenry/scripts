@@ -149,7 +149,11 @@ ml_finish_capture() {
   ML_CAPTURE_ACTIVE=false
   exec 1>&$ML_CAPTURE_STDOUT 2>&$ML_CAPTURE_STDERR
   exec {ML_CAPTURE_STDOUT}>&- {ML_CAPTURE_STDERR}>&-
-  wait "$ML_CAPTURE_PID" || :
+  local capture_code=0
+  wait "$ML_CAPTURE_PID" || capture_code=$?
+  if (( capture_code != 0 )); then
+    printf '运行日志不完整（记录器退出码 %s）；业务退出码仍为 %s，请检查日志目录权限和剩余空间。\n' "$capture_code" "$exit_code" >&2
+  fi
   if [[ -n "${ML_CAPTURE_DIR:-}" ]]; then
     if ! { rm -f "$ML_CAPTURE_DIR/stream" && rmdir "$ML_CAPTURE_DIR"; }; then
       printf '日志通道临时目录未能清理，请检查: %s\n' "$ML_CAPTURE_DIR" >&2

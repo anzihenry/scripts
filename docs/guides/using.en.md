@@ -2,7 +2,7 @@
 title: Usage and maintenance
 status: current
 owner: project-maintainers
-updated: 2026-10-21
+updated: 2026-10-22
 ---
 
 # Usage and maintenance
@@ -97,3 +97,23 @@ cd maintain
 The script times key commands and uses locks to prevent concurrent conflicts. USB creation requires sudo; `--force` allows replacement and `--yes` skips interaction. Installed CLI logs default to `~/Library/Logs/macos-scripts/macos-installer.log`.
 
 See [installation and configuration](installation.en.md) and [releasing](releasing.en.md).
+
+## Module selection, previews, and recovery
+
+```zsh
+macos-scripts setup packages --dry-run --modules node,python
+macos-scripts setup packages --modules node,python
+macos-scripts setup shell --dry-run
+```
+
+Modules are `node,python,ruby,go,android,packages` (all by default). Duplicates are removed and unknown modules fail before execution. `packages` installs the Formulae/Cask lists in `brew.conf.sh`; `android` writes Android/Java environment configuration. Every actual packages run still checks Command Line Tools and configures Homebrew. Postchecks only validate selected language modules. Stage summaries report timing, completed/failed/pending stages, and recovery guidance.
+
+These two setup previews perform no network calls, installations, configuration/log/lock creation, or evaluation of the user package configuration. CLI and standalone entry points share argument parsing. Other commands may query local/remote state and write logs during dry-run; consult their help.
+
+Defaults live in `setup/lib/setup_defaults.sh`. Override with environment variables: `SETUP_NPM_REGISTRY`, `SETUP_PIP_INDEX`, `SETUP_PIP_HOST`, `SETUP_GEM_SOURCE`, `SETUP_GOPROXY`, `SETUP_GOPATH`, `SETUP_JAVA_HOME`, and `SETUP_ANDROID_HOME`. Homebrew keeps USTC defaults. Multiple pip keys are staged together and committed once; failure preserves the original file.
+
+Configuration writes lock the resolved resource path, including symlink targets. Homebrew configuration holds the lock across snapshots, writes, and rollback. Installation, setup, and maintenance coordinate by Homebrew prefix; bootstrap releases its lock before the separate configuration CLI reacquires it. Shell and SSH setup also have operation locks. System Zsh `zsystem flock` releases locks on process exit. The default wait is 10 seconds, configurable with `MACOS_SCRIPTS_LOCK_TIMEOUT` (0–9999). Lock files persist under `/tmp/macos-scripts-locks-<UID>/`; **do not delete them**. Uncertain legacy directory locks require inspection.
+
+Advisory locks coordinate cooperating project processes, not editors or manual commands. Synchronous nested calls may reuse a parent transaction lock; do not fork parallel writers inside a transaction. SIGKILL/power loss releases kernel locks but cannot run rollback. Completed installations remain; retries inspect actual state, and retained backups support manual recovery. Signal exit codes are INT=130, TERM=143, HUP=129. Recorder failures report incomplete logs without replacing the business exit code.
+
+Common implementations live in `lib/config_writer.sh`, `lib/command_runtime.sh`, `lib/resource_lock.sh`, and `lib/workflow.sh`; old writer/command import paths remain compatible. SSH identity, configuration, GitHub API, and connection output are separate setup libraries.

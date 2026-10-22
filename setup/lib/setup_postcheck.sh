@@ -3,33 +3,42 @@
 
 post_verification() {
     print_header "安装后验证"
-    # 只加载脚本管理的环境块，避免重复执行用户 .zshrc 中的任意命令。
-    local managed
-    managed="$(awk '/^# >>> .*\(managed by macos-setup\) >>>$/ {active=1;next} /^# <<< .*\(managed by macos-setup\) <<<$/{active=0;next} active{print}' "$HOME/.zshrc")" || return 1
-    eval "$managed" || return 1
-
+    local module section managed value
     local has_warning=false
-    local critical_cmds=(git brew node npm ruby go python pip python3 pip3)
+    local -a critical_cmds=(git brew)
+    for module in node python ruby go android; do
+        setup_module_enabled "$module" || continue
+        case "$module" in
+            node) section=NVM; critical_cmds+=(node npm) ;;
+            python) section='Python Env'; critical_cmds+=(python pip python3 pip3) ;;
+            ruby) section='Ruby Env'; critical_cmds+=(ruby gem) ;;
+            go) section='Go Env'; critical_cmds+=(go) ;;
+            android) section='Android & Java Env' ;;
+        esac
+        managed="$(awk -v begin="# >>> $section (managed by macos-setup) >>>" -v end="# <<< $section (managed by macos-setup) <<<" '$0==begin {active=1;next} $0==end {active=0;next} active {print}' "$HOME/.zshrc")" || return 1
+        [[ -n "$managed" ]] || { error "缺少配置块: $section"; return 1; }
+        eval "$managed" || return 1
+    done
     local cmd
-
     for cmd in "${critical_cmds[@]}"; do
-        if ! command -v $cmd &>/dev/null; then
+        if ! command -v "$cmd" >/dev/null 2>&1; then
             warning "命令缺失: $cmd"
             has_warning=true
         fi
     done
-
-    [[ -z "$(go env GOPROXY)" ]] && warning "GOPROXY 未正确配置" && has_warning=true
-    [[ "$(npm config get registry)" != "https://registry.npmmirror.com/" ]] && warning "NPM 镜像源未配置" && has_warning=true
-    [[ -z "$(gem sources -l | grep ustc)" ]] && warning "Ruby 镜像源未配置" && has_warning=true
-    [[ "$(pip config get global.index-url)" != "https://mirrors.ustc.edu.cn/pypi/simple" ]] && warning "pip 镜像源未配置" && has_warning=true
-
-    if [[ "$has_warning" == "false" ]]; then
-        success "基础环境验证通过"
-    else
-        error "部分环境验证失败，请检查日志"
-        return 1
+    if setup_module_enabled go; then
+        if ! value="$(go env GOPROXY)" || [[ "$value" != "$SETUP_GOPROXY" ]]; then warning "GOPROXY 未正确配置"; has_warning=true; fi
     fi
+    if setup_module_enabled node; then
+        if ! value="$(npm config get registry)" || [[ "${value%/}" != "${SETUP_NPM_REGISTRY%/}" ]]; then warning "NPM 镜像源未配置"; has_warning=true; fi
+    fi
+    if setup_module_enabled ruby; then
+        if ! value="$(gem sources -l)" || ! printf '%s\n' "$value" | grep -Fxq -- "$SETUP_GEM_SOURCE"; then warning "Ruby 镜像源未配置"; has_warning=true; fi
+    fi
+    if setup_module_enabled python; then
+        if ! value="$(pip config get global.index-url)" || [[ "$value" != "$SETUP_PIP_INDEX" ]]; then warning "pip 镜像源未配置"; has_warning=true; fi
+    fi
+    if [[ "$has_warning" == false ]]; then success "基础环境验证通过"; else error "部分环境验证失败，请检查日志"; return 1; fi
 }
 
 print_setup_completion() {

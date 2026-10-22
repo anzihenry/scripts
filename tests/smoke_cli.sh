@@ -113,7 +113,7 @@ main() {
 
   run_expect_failure_contains \
     "Setup shell rejects extra args" \
-    "该命令不接受额外参数: unexpected" \
+    "未知参数: unexpected" \
     zsh bin/macos-scripts setup shell unexpected
 
   run_expect_failure_contains \

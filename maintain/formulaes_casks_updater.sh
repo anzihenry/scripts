@@ -40,14 +40,15 @@ EOF
 main() {
     initialize_brew_updater_context
     parse_brew_updater_args "$@"
-    initialize_brew_updater_logging
+    initialize_brew_updater_logging || return 1
     require_supported_macos || exit 1
     require_command brew
 
     announce_brew_updater_context
     confirm_run
-    run_brew_updater_workflow
+    homebrew_resource_lock || return 1
+    run_brew_updater_workflow || return $?
     print_summary
 }
 
-main "$@"
+main "$@" || exit $?

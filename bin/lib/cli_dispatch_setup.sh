@@ -1,5 +1,6 @@
 #!/bin/zsh
 # filepath: bin/lib/cli_dispatch_setup.sh
+source "${${(%):-%x}:A:h}/../../setup/lib/setup_options.sh"
 
 dispatch_setup_argless_command() {
   local help_func="$1"
@@ -55,13 +56,17 @@ handle_setup() {
 
   case "$action" in
     shell)
-      dispatch_setup_argless_command print_setup_shell_help "setup/ohmyzsh-setup.sh" "$@"
+      has_help_flag "$@" && { print_setup_shell_help; return 0; }
+      parse_shell_options "$@" || return $?
+      run_zsh_script "setup/ohmyzsh-setup.sh" "$@"
       ;;
     brew)
       handle_setup_brew "$@"
       ;;
     packages)
-      dispatch_setup_argless_command print_setup_packages_help "setup/macos-setup.sh" "$@"
+      has_help_flag "$@" && { print_setup_packages_help; return 0; }
+      parse_setup_options "$@" || return $?
+      run_zsh_script "setup/macos-setup.sh" "$@"
       ;;
     git)
       handle_setup_git "$@"

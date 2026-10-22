@@ -3,6 +3,8 @@
 # 通用工具库：日志 fallback、运行时辅助、命令检查、Xcode CLI 安装
 # 用法: source "$(dirname "$0")/../lib/utils.sh"
 
+source "${${(%):-%x}:A:h}/resource_lock.sh"
+
 # ===== 1. 日志 fallback（colors.sh 不可用时生效）=====
 _utils_has() { typeset -f "$1" > /dev/null 2>&1; }
 
@@ -130,9 +132,11 @@ check_network_reachability() {
 # 用 awk 读完整管道再退出，而不是 `cmd | head -n1`：后者在
 # `set -o pipefail` 下，当 writer 因 head 提前退出收到 SIGPIPE(141) 时，
 # 整个命令替换会被判为失败。
+# BEGIN FIRST LINE
 first_line() {
-  "$@" 2> /dev/null | awk 'NR == 1 { print; exit }'
+  "$@" 2> /dev/null | awk 'NR == 1 { print }'
 }
+# END FIRST LINE
 
 # ===== 3. 命令检查 =====
 require_command() {
