@@ -43,6 +43,7 @@ zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
+zsh tests/template_guard.sh         # 改名生成、带空格路径、离线运行、拒绝覆盖
 zsh tests/zsh_kit_guard.sh          # 独立公共包契约、离线分发、摘要与篡改保护
 zsh tests/reliability_guard.sh      # 多进程配置、回滚互斥、信号、错误传播、预览一致性
 ```

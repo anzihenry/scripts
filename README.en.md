@@ -45,3 +45,7 @@ Agent collaboration rules are in [AGENTS.md](AGENTS.md) (Chinese). Contributors 
 ## License
 
 [MIT](LICENSE).
+
+## Start a new Zsh project
+
+Use `zsh tools/create_zsh_project.sh --name my-tool --description "My macOS tool" /path/to/new-project`. The generator refuses existing destinations and creates an independent CLI with metadata, pinned offline zsh-kit, tests and CI. See [component contracts](packages/zsh-kit/README.md) and the [development guide](docs/guides/development.en.md).
