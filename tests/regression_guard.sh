@@ -367,9 +367,9 @@ test_log_rotation() {
   local MACOS_SCRIPTS_LOG_MAX_BYTES=16 MACOS_SCRIPTS_LOG_BACKUPS=2 MACOS_SCRIPTS_LOG_RETENTION_DAYS=30
   log_file="$sandbox/run.log"
   payload='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-  ml_log_policy
-  sk_locked_write "$log_file" '' true
-  result="$(printf '%s' "$payload" | ml_stream_log "$log_file")"
+  _ms_log_config; _sk_log_policy
+  _sk_locked_write "$log_file" '' true
+  result="$(printf '%s' "$payload" | _sk_stream_log "$log_file")"
   assert_eq "$result" "$payload" "轮转不截断终端输出（长行无换行）"
   assert_eq "$(cat "$log_file.2" "$log_file.1" "$log_file")" "${payload[17,-1]}" "按归档数量保留最近日志且顺序不变"
   for candidate in "$log_file" "$log_file".[0-9]*(N); do
@@ -398,8 +398,8 @@ test_log_rotation() {
   MACOS_SCRIPTS_LOG_BACKUPS=10
   payload='中文🙂无换行'
   log_file="$sandbox/unicode.log"
-  ml_log_policy
-  result="$(printf '%s' "$payload" | ml_stream_log "$log_file")"
+  _ms_log_config; _sk_log_policy
+  result="$(printf '%s' "$payload" | _sk_stream_log "$log_file")"
   assert_eq "$result" "$payload" "UTF-8 终端输出保持原样"
   result=""
   for candidate in "$log_file".[0-9]*(NOn); do result+="$(<"$candidate")"; done
@@ -532,8 +532,8 @@ test_log_capture_exit_and_links() {
 #!/bin/zsh
 set -euo pipefail
 source "$1/lib/utils.sh"
-functions[original_locked_write]="$functions[sk_locked_write]"
-sk_locked_write() {
+functions[original_locked_write]="$functions[_sk_locked_write]"
+_sk_locked_write() {
   if [[ -n "$2" ]]; then
     [[ "$CAPTURE_ENDING" != logger-failure ]] || return 1
     /bin/sleep 0.05

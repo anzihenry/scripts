@@ -80,7 +80,7 @@ sk_write_managed_file() (
     local target_file="$1" content="$2" dry_run="${3:-false}" mode="${4:-}"
     if [[ "$dry_run" == true ]]; then
         sk_info "[dry-run] 将写入文件: $target_file"
-        sk_print_code "$content"
+        _sk_print_code "$content"
         return 0
     fi
     [[ ! -L "$target_file" || -e "$target_file" ]] || { sk_error "配置为失效符号链接: $target_file"; return 1; }
@@ -167,3 +167,17 @@ sk_set_ini_value() {
     (( $# == 4 )) || return 2
     sk_set_ini_values "$1" "$2" "$3" "$4"
 }
+
+# Advanced API: prepare/validate candidate under the target resource lock.
+# This function also locks the commit, but cannot repair a candidate prepared from stale data.
+sk_commit_config_candidate() (
+    (( $# >= 2 && $# <= 3 )) || return 2
+    _sk_required "$1" && _sk_required "$2" && _sk_mode "${3-}" || return 2
+    _sk_uint "${SK_LOCK_TIMEOUT-10}" 0 9999 || return 2
+    [[ ! -L "$2" && -f "$2" && ( ! -L "$1" || -e "$1" ) ]] || return 2
+    local target="${1:A}" candidate="${2:A}"
+    [[ "$target" != "$candidate" && "${target:h}" == "${candidate:h}" ]] || return 2
+    [[ ! -e "$target" || -f "$target" ]] || return 1
+    sk_resource_lock_acquire "$target" || return $?
+    _sk_commit_config_candidate "$target" "$candidate" "${3-}"
+)

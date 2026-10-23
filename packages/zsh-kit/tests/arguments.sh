@@ -43,6 +43,8 @@ check_bad sk_set_ini_values "$SANDBOX/new/config" section key value later $'bad\
 check_bad sk_set_ini_values "$SANDBOX/new/config" section 'bad=key' value
 check_bad sk_append_log '' data
 check_bad sk_start_capture ''
+check_bad sk_start_capture "$SANDBOX/new/log" bad-mode
+check_bad sk_commit_config_candidate '' candidate
 check_bad sk_log
 check_bad sk_time_start ''
 check_bad sk_run_command ''

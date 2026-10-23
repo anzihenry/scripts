@@ -5,6 +5,7 @@ update_ssh_config() (
   local domain="$1" usage_type="$2" key_path="$3" host_alias config_file="$HOME/.ssh/config" candidate content
   [[ ! -L "$config_file" || -e "$config_file" ]] || { error "SSH 配置是失效链接"; return 1; }
   config_file="${config_file:A}"
+  resource_lock_acquire "$config_file" || return 1
   host_alias="$(generate_host_alias "$domain" "$usage_type")" || return 1
   candidate="$(mktemp "$HOME/.ssh/.config.XXXXXXXX")" || return 1
   trap 'rm -f "$candidate"' EXIT

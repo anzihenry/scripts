@@ -21,7 +21,7 @@ sk_run_command() {
     _sk_required "$1" || return 2
     _sk_bool "${SK_DRY_RUN-false}" || return 2
   if [[ "${SK_DRY_RUN:-false}" == "true" ]]; then
-    sk_print_code "$(sk_command_preview "$@")"
+    _sk_print_code "$(sk_command_preview "$@")"
     return 0
   fi
 
@@ -39,7 +39,7 @@ sk_run_logged_command() {
     if [[ -n "$description" ]]; then
       sk_info "[dry-run] $description"
     fi
-    sk_print_code "$(sk_command_preview "$@")"
+    _sk_print_code "$(sk_command_preview "$@")"
     return 0
   fi
 

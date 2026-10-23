@@ -52,6 +52,7 @@ zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
 zsh tests/reuse_acceptance_guard.sh # 独立文件整理示例、故障恢复、兼容升级演练
+zsh tests/api_surface_guard.sh      # 公开接口清单、私有调用边界、旧新消费者行为
 zsh tests/platform_guard.sh         # runner 身份校验逻辑（模拟身份，不计为实机覆盖）
 zsh tests/artifact_tools_guard.sh   # 分发/生成并发、真实路径、中断与恢复
 zsh tests/template_guard.sh         # 改名生成、带空格路径、离线运行、拒绝覆盖

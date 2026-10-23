@@ -26,7 +26,7 @@ app_main() {
     local SK_DRY_RUN="$dry_run"
     if [[ "$dry_run" == false ]]; then
         mkdir -p "$log_dir" || return 1
-        sk_start_capture "$log_dir/run.log" || return 1
+        sk_start_capture "$log_dir/run.log" separate || return 1
     fi
     sk_run_timed_command_or_fail hello '运行示例命令' '示例完成' '示例失败' '检查输出后重试' printf '%s\n' "Hello from $APP_COMMAND" || return $?
     return 0

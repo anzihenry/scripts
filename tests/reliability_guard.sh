@@ -167,7 +167,7 @@ pass '阶段摘要包含已完成、失败和未执行，保留退出码'
 code=0
 output="$(/bin/zsh -c '
     source "$1/lib/utils.sh"
-    sk_locked_write() { [[ "$3" == true ]]; }
+    _sk_locked_write() { [[ "$3" == true ]]; }
     enable_log_capture "$2" || exit 1
     print example
     exit 7

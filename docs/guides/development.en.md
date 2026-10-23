@@ -92,3 +92,5 @@ Run `zsh tests/reuse_acceptance_guard.sh` for the independent file organizer exa
 Run `zsh tests/artifact_tools_guard.sh` for canonical-path overlap, concurrent sync, TERM/KILL recovery, backup retention and generator retry.
 
 Full regression: `zsh tests/run_all.sh --report NEW_DIRECTORY`. CI and release gates use this same ordered runner. Reports retain environment identity, source revision/dirty state, exit codes and per-suite logs. Optional `TEST_EXPECT_OS_MAJOR`/`TEST_EXPECT_ARCH` enforce runner expectations. `platform-validation.yml` accepts configured runners through `MACOS_COMPAT_MATRIX`; unavailable platforms remain unverified. See [platform evidence policy](../engineering/platform-validation.md).
+
+`zsh tests/api_surface_guard.sh` checks private API boundaries and compares unchanged consumer behavior against old and new components. Independent package contracts verify API.txt and opt-in separated stdout/stderr capture.

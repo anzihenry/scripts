@@ -62,6 +62,9 @@ validate_tree "$source_dir"
 mkdir "$work/package"
 # Copy a closed set of distributable roots; never copy .git or local tooling secrets.
 cp -R "$source_dir/lib" "$source_dir/tests" "$source_dir/VERSION" "$source_dir/LICENSE" "$source_dir/README.md" "$work/package/"
+for metadata in API.txt CHANGELOG.md; do
+ [[ ! -f "$source_dir/$metadata" ]] || cp "$source_dir/$metadata" "$work/package/"
+done
 revision=unversioned source_url=local dirty=unknown
 if command -v git >/dev/null && git -C "$source_dir" rev-parse --show-toplevel >/dev/null 2>&1; then
  revision="$(git -C "$source_dir" rev-parse HEAD)"

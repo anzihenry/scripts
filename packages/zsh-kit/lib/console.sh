@@ -17,7 +17,7 @@ sk_info() { sk_log info "$@"; }
 sk_warning() { sk_log warning "$@"; }
 sk_error() { sk_log error "$@"; }
 sk_success() { sk_log success "$@"; }
-sk_print_code() {
+_sk_print_code() {
     if [[ -n "${SK_CODE_SINK:-}" ]]; then "$SK_CODE_SINK" "$@"; else printf '%s\n' "$@"; fi
 }
 sk_time_start() {
