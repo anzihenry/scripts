@@ -82,3 +82,5 @@ After changing logging, resource locks, macOS requirements, or `first_line`, reg
 CI records OS, architecture, and system Zsh versions. Repository variable `MACOS_TEST_RUNNERS` accepts a JSON array of available runner labels, defaulting to `["macos-latest"]`. Configure available Intel/Apple Silicon runners to run the same suite on each; use labels supported by your actual GitHub or self-hosted infrastructure.
 
 Before release, record the commit and results for macOS 14 arm64, macOS 14 x86_64, and a newer supported macOS. Run this full checklist on each and mark unavailable combinations unverified. Stubbed tests do not prove real Homebrew installation, image mounting, or USB creation; validate those separately on recoverable test machines/media.
+
+Reusable package contracts and offline vendoring are covered by `zsh tests/zsh_kit_guard.sh`. This copies the package outside the repository before testing, including repeated loading, errors, atomic writes, cross-project locks, log capture and tamper detection.

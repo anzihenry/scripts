@@ -20,3 +20,13 @@
 锁协议 v1 固定目录 `/tmp/macos-scripts-locks-$EUID`，保留历史名称以协调旧调用方；不按项目名或 TMPDIR 隔离。资源绝对路径规范化后 SHA-256；锁文件永久保留，内核 fcntl 锁随进程退出释放。同步重入可继承父锁；持锁事务内禁止并行派生写入任务。调用方退出或调用 release 释放自己的锁，不释放父事务锁。
 
 依赖均来自系统：Zsh（zsh/system）、awk、sed、stat、shasum、mktemp、cmp、chmod、mv、cp、mkdir、rm、date、tail、mkfifo。没有 Homebrew、Python、网络和业务目录运行依赖。版本与应用 VERSION 分开；0.x 次版本允许审阅后迁移，补丁版本保持公开 API。
+
+## 离线分发与升级
+
+仓库工具 `tools/vendor_zsh_kit.sh` 支持 `--sync SOURCE DEST`、`--diff SOURCE DEST` 和 `--check DEST`。SOURCE 是已获取的本地组件目录，DEST 通常为新项目的 `vendor/zsh-kit`。先 diff 审阅（存在差异返回 1），再 sync，最后执行调用方测试。运行应用时不需要该工具、Git 或网络。
+
+清单 `.zsh-kit-manifest` 记录组件版本、源 URL、源 HEAD、源是否有未提交改动和每个 payload 文件的 SHA-256。dirty=true 表示快照包含未提交内容，revision 不能单独复现它；发布应从干净提交生成。非 Git 来源明确记录 unversioned/local。摘要用于检测本地改动，不是发布者身份签名。检查工具也拒绝符号链接及非普通文件；不覆盖未知目录或已修改的 vendor。需要修改公共库时回到源包修改并升级，不直接编辑 vendor。
+
+同步先在同文件系统准备并校验候选目录，再替换；失败恢复旧副本。升级期间不要运行正在使用该 vendor 的进程。同步完成后 `source` 新库须在新进程中执行，不支持热升级。删除源仓库后 vendored payload 仍可运行及测试。
+
+独立验证入口为 `zsh tests/contract.sh`（在包目录运行），仓库完整命令见 [开发指南](../../docs/guides/development.md)。复制包后该仓库文档链接可能不可用，独立测试不依赖它。
