@@ -30,3 +30,16 @@ jobs:
         with:
           name: validation-${{ matrix.runner }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/validation-${{ github.run_id }}-${{ github.run_attempt }}
+
+  shell-checks:
+    name: Shell checks (macOS)
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every macOS matrix job to pass
+        shell: bash
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        run: test "$TEST_RESULT" = success
