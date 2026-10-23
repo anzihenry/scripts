@@ -9,7 +9,9 @@ class MacosScripts < Formula
   head "https://github.com/anzihenry/scripts.git", branch: "main"
 
   def install
-    libexec.install "bin", "bootstrap", "packages", "lib", "lint", "maintain", "setup", "VERSION", "README.md", "README.en.md", "CHANGELOG.md", "CHANGELOG.en.md", "docs", "LICENSE"
+    libexec.install "bin", "bootstrap", "lib", "lint", "maintain", "setup", "VERSION", "README.md", "README.en.md", "CHANGELOG.md", "CHANGELOG.en.md", "docs", "LICENSE"
+    # Older stable archives predate the reusable component package.
+    libexec.install "packages" if File.directory?("packages")
     bin.install_symlink libexec/"bin/macos-scripts"
   end
 

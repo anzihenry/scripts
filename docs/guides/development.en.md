@@ -86,3 +86,5 @@ Before release, record the commit and results for macOS 14 arm64, macOS 14 x86_6
 Reusable package contracts and offline vendoring are covered by `zsh tests/zsh_kit_guard.sh`. This copies the package outside the repository before testing, including repeated loading, errors, atomic writes, cross-project locks, log capture and tamper detection.
 
 Run `zsh tests/template_guard.sh` to generate a renamed project in a path containing spaces and verify standalone operation, metadata escaping and overwrite protection.
+
+Run `zsh tests/reuse_acceptance_guard.sh` for the independent file organizer example and synthetic compatible patch upgrade. It checks dry-run, repeated execution, conflicts, failure recovery, symlink protection and unchanged business code; all writes remain in temporary directories.
