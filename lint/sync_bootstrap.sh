@@ -27,8 +27,8 @@ sync_region() {
 }
 
 # Standalone bundles contain definitions plus application adapters, with no repo imports.
-{ print '#!/bin/zsh'; print '# generated bundle'; sed '1,2d' "$ROOT/packages/zsh-kit/lib/logging.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$ROOT/lib/logging.sh"; } > "$temporary/logging.sh"
-{ print '#!/bin/zsh'; print '# generated bundle'; sed '1,2d' "$ROOT/packages/zsh-kit/lib/console.sh"; sed '1,2d; /^source /d' "$ROOT/packages/zsh-kit/lib/resource_lock.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$ROOT/lib/resource_lock.sh"; } > "$temporary/resource_lock.sh"
+{ print '#!/bin/zsh'; print '# generated bundle'; sed '1,2d' "$ROOT/packages/zsh-kit/lib/validation.sh"; sed '1,2d; /^source /d' "$ROOT/packages/zsh-kit/lib/logging.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$ROOT/lib/logging.sh"; } > "$temporary/logging.sh"
+{ print '#!/bin/zsh'; print '# generated bundle'; sed '1,2d' "$ROOT/packages/zsh-kit/lib/validation.sh"; sed '1,2d; /^source /d' "$ROOT/packages/zsh-kit/lib/console.sh"; sed '1,2d; /^source /d' "$ROOT/packages/zsh-kit/lib/resource_lock.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$ROOT/lib/resource_lock.sh"; } > "$temporary/resource_lock.sh"
 sync_region 'STANDALONE LOGGING' "$temporary/logging.sh" true
 sync_region 'MACOS REQUIREMENT' "$ROOT/lib/utils.sh" false
 sync_region 'FIRST LINE' "$ROOT/lib/utils.sh" false

@@ -3,6 +3,8 @@
 source "${${(%):-%x}:A:h}/console.sh"
 
 sk_command_preview() {
+  (( $# > 0 )) || return 2
+  _sk_required "$1" || return 2
   local parts=()
   local arg
 
@@ -16,6 +18,8 @@ sk_command_preview() {
 
 sk_run_command() {
     (( $# > 0 )) || return 2
+    _sk_required "$1" || return 2
+    _sk_bool "${SK_DRY_RUN-false}" || return 2
   if [[ "${SK_DRY_RUN:-false}" == "true" ]]; then
     sk_print_code "$(sk_command_preview "$@")"
     return 0
@@ -26,6 +30,8 @@ sk_run_command() {
 
 sk_run_logged_command() {
     (( $# >= 2 )) || return 2
+    _sk_required "$2" || return 2
+    _sk_bool "${SK_DRY_RUN-false}" || return 2
   local description="$1"
   shift
 
@@ -46,6 +52,9 @@ sk_run_logged_command() {
 
 sk_run_timed_command_or_fail() {
     (( $# >= 6 )) || return 2
+    _sk_required "$1" || return 2
+    _sk_required "$6" || return 2
+    _sk_bool "${SK_DRY_RUN-false}" || return 2
   local timer_key="$1"
   local start_message="$2"
   local success_message="$3"

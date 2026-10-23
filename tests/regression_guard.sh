@@ -437,7 +437,7 @@ test_log_rotation() {
   pass "非法轮转参数在写入前失败"
 
   awk '/^# BEGIN STANDALONE LOGGING$/ { active=1; next } /^# END STANDALONE LOGGING$/ { exit } active { print }' "$REPO_ROOT/bootstrap/install.sh" > "$sandbox/embedded"
-  { sed '1,2d' "$REPO_ROOT/packages/zsh-kit/lib/logging.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$REPO_ROOT/lib/logging.sh"; } > "$sandbox/shared"
+  { sed '1,2d' "$REPO_ROOT/packages/zsh-kit/lib/validation.sh"; sed '1,2d; /^source /d' "$REPO_ROOT/packages/zsh-kit/lib/logging.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$REPO_ROOT/lib/logging.sh"; } > "$sandbox/shared"
   cmp -s "$sandbox/embedded" "$sandbox/shared" || fail "独立 bootstrap 日志实现与公共库不同步"
   pass "独立 bootstrap 与公共轮转实现保持一致"
   rm -rf "$sandbox"

@@ -111,23 +111,22 @@ if [[ -r "$REPO_ROOT/lib/logging.sh" ]]; then
   source "$REPO_ROOT/lib/logging.sh"
 else
 # BEGIN STANDALONE LOGGING
+# Pure validation: no filesystem access, logging callbacks or global mutation.
+_sk_argument_error() { printf '参数无效: %s\n' "$*" >&2; return 2; }
+_sk_bool() { [[ "$1" == true || "$1" == false ]] || _sk_argument_error '布尔值必须为 true 或 false'; }
+_sk_required() { [[ -n "$1" ]] || _sk_argument_error '必填值不能为空'; }
+_sk_line() { [[ -n "$1" && "$1" != *$'\n'* && "$1" != *$'\r'* ]] || _sk_argument_error '名称必须是非空单行文本'; }
+_sk_uint() {
+    [[ "$1" == <-> && ${#1} -le 10 ]] || { _sk_argument_error '必须为十进制整数'; return 2; }
+    (( 10#$1 >= $2 && 10#$1 <= $3 )) || _sk_argument_error "整数范围为 $2–$3"
+}
+_sk_mode() { [[ -z "$1" || ( ${#1} -ge 3 && ${#1} -le 4 && "$1" != *[^0-7]* ) ]] || _sk_argument_error '权限必须为三或四位八进制数字'; }
 # 有界日志：按字节轮转，归档清理；系统文件锁协调多个写入进程。
 
 sk_log_policy() {
-  SK_MAX_BYTES="${SK_LOG_MAX_BYTES:-5242880}"
-  SK_BACKUPS="${SK_LOG_BACKUPS:-5}"
-  SK_RETENTION_DAYS="${SK_LOG_RETENTION_DAYS:-30}"
-  local value
-  for value in "$SK_MAX_BYTES" "$SK_BACKUPS" "$SK_RETENTION_DAYS"; do
-    if [[ "$value" != <-> || ${#value} -gt 10 ]] || (( value < 1 )); then
-      printf '日志轮转参数必须为正整数。\n' >&2
-      return 1
-    fi
-  done
-  if (( SK_MAX_BYTES > 1073741824 || SK_BACKUPS > 100 || SK_RETENTION_DAYS > 3650 )); then
-    printf '日志轮转上限：单文件 1 GiB、100 份归档、3650 天。\n' >&2
-    return 1
-  fi
+  local bytes="${SK_LOG_MAX_BYTES-5242880}" backups="${SK_LOG_BACKUPS-5}" days="${SK_LOG_RETENTION_DAYS-30}"
+  _sk_uint "$bytes" 1 1073741824 && _sk_uint "$backups" 1 100 && _sk_uint "$days" 1 3650 || return 2
+  SK_MAX_BYTES=$((10#$bytes)) SK_BACKUPS=$((10#$backups)) SK_RETENTION_DAYS=$((10#$days))
 }
 
 sk_trim_log() {
@@ -205,7 +204,8 @@ sk_locked_write() (
 
 sk_append_log() {
     (( $# == 2 )) || return 2
-  sk_log_policy || return 1
+    _sk_required "$1" || return 2
+  sk_log_policy || return 2
   sk_locked_write "$1" "$2" true
 }
 
@@ -228,8 +228,9 @@ sk_stream_log() {
 
 sk_start_capture() {
     (( $# == 1 )) || return 2
+    _sk_required "$1" || return 2
   [[ "${SK_CAPTURE_ACTIVE:-false}" != true ]] || { print -u2 "日志捕获已启动"; return 2; }
-  sk_log_policy || return 1
+  sk_log_policy || return 2
   sk_locked_write "$1" '' true || return 1
   # Zsh 的进程替换不保证提供 $!；使用私有 FIFO 启动可 wait 的子进程。
   # FIFO 在双方打开后立即删除，正常运行和中断均不留下临时文件。
@@ -259,6 +260,7 @@ sk_start_capture() {
 
 sk_finish_capture() {
   local exit_code=$?
+  (( $# == 0 )) || return 2
   [[ "${SK_CAPTURE_ACTIVE:-false}" == true ]] || return "$exit_code"
   SK_CAPTURE_ACTIVE=false
   exec 1>&$SK_CAPTURE_STDOUT 2>&$SK_CAPTURE_STDERR
@@ -481,7 +483,19 @@ if [[ -r "$REPO_ROOT/lib/resource_lock.sh" ]]; then
   source "$REPO_ROOT/lib/resource_lock.sh"
 else
 # BEGIN RESOURCE LOCK
+# Pure validation: no filesystem access, logging callbacks or global mutation.
+_sk_argument_error() { printf '参数无效: %s\n' "$*" >&2; return 2; }
+_sk_bool() { [[ "$1" == true || "$1" == false ]] || _sk_argument_error '布尔值必须为 true 或 false'; }
+_sk_required() { [[ -n "$1" ]] || _sk_argument_error '必填值不能为空'; }
+_sk_line() { [[ -n "$1" && "$1" != *$'\n'* && "$1" != *$'\r'* ]] || _sk_argument_error '名称必须是非空单行文本'; }
+_sk_uint() {
+    [[ "$1" == <-> && ${#1} -le 10 ]] || { _sk_argument_error '必须为十进制整数'; return 2; }
+    (( 10#$1 >= $2 && 10#$1 <= $3 )) || _sk_argument_error "整数范围为 $2–$3"
+}
+_sk_mode() { [[ -z "$1" || ( ${#1} -ge 3 && ${#1} -le 4 && "$1" != *[^0-7]* ) ]] || _sk_argument_error '权限必须为三或四位八进制数字'; }
 sk_log() {
+    (( $# >= 2 )) || return 2
+    case "$1" in info|warning|warn|error|success|ok|debug) ;; *) return 2 ;; esac
     local level="$1"; shift
     if [[ -n "${SK_LOG_SINK:-}" ]]; then "$SK_LOG_SINK" "$level" "$@"; return $?; fi
     local color='' reset=''
@@ -499,6 +513,8 @@ sk_print_code() {
     if [[ -n "${SK_CODE_SINK:-}" ]]; then "$SK_CODE_SINK" "$@"; else printf '%s\n' "$@"; fi
 }
 sk_time_start() {
+    (( $# <= 2 )) || return 2
+    _sk_required "${1-default}" || return 2
     local key="${1:-default}"
     typeset -gA SK_TIMERS
     SK_TIMERS[$key]="$(date +%s)" || return 1
@@ -506,6 +522,9 @@ sk_time_start() {
     return 0
 }
 sk_time_end() {
+    (( $# <= 3 )) || return 2
+    _sk_required "${1-default}" || return 2
+    case "${3-success}" in info|warning|warn|error|success|ok|debug) ;; *) return 2 ;; esac
     local key="${1:-default}" now
     typeset -gA SK_TIMERS
     [[ -n "${SK_TIMERS[$key]:-}" ]] || return 1
@@ -518,6 +537,8 @@ sk_time_end() {
 
 sk_resource_lock_acquire() {
     (( $# == 1 )) || return 2
+    _sk_required "$1" || return 2
+    _sk_uint "${SK_LOCK_TIMEOUT-10}" 0 9999 || return 2
     typeset -ga SK_RESOURCE_LOCKS SK_RESOURCE_FDS SK_RESOURCE_OWNERS
     local resource="$1" key lock_file lock_fd
     # 不随 CONFIG_DIR/TMPDIR 改变，保证不同入口仍协调同一真实资源。
@@ -546,9 +567,11 @@ sk_resource_lock_acquire() {
 
 sk_with_resource_lock() (
     (( $# >= 2 )) || return 2
+    _sk_required "$1" && _sk_required "$2" || return 2
+    _sk_uint "${SK_LOCK_TIMEOUT-10}" 0 9999 || return 2
     local resource="$1"
     shift
-    sk_resource_lock_acquire "$resource" || return 1
+    sk_resource_lock_acquire "$resource" || return $?
     "$@"
 )
 
@@ -556,6 +579,7 @@ sk_with_resource_lock() (
 
 # 仅释放当前进程获取的锁，不能释放父事务的锁。
 sk_resource_locks_release_owned() {
+    (( $# == 0 )) || return 2
     zmodload zsh/system || return 1
     typeset -ga SK_RESOURCE_LOCKS SK_RESOURCE_FDS SK_RESOURCE_OWNERS
     local index

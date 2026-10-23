@@ -1,22 +1,12 @@
 #!/bin/zsh
 # filepath: packages/zsh-kit/lib/logging.sh
+source "${${(%):-%x}:A:h}/validation.sh"
 # 有界日志：按字节轮转，归档清理；系统文件锁协调多个写入进程。
 
 sk_log_policy() {
-  SK_MAX_BYTES="${SK_LOG_MAX_BYTES:-5242880}"
-  SK_BACKUPS="${SK_LOG_BACKUPS:-5}"
-  SK_RETENTION_DAYS="${SK_LOG_RETENTION_DAYS:-30}"
-  local value
-  for value in "$SK_MAX_BYTES" "$SK_BACKUPS" "$SK_RETENTION_DAYS"; do
-    if [[ "$value" != <-> || ${#value} -gt 10 ]] || (( value < 1 )); then
-      printf '日志轮转参数必须为正整数。\n' >&2
-      return 1
-    fi
-  done
-  if (( SK_MAX_BYTES > 1073741824 || SK_BACKUPS > 100 || SK_RETENTION_DAYS > 3650 )); then
-    printf '日志轮转上限：单文件 1 GiB、100 份归档、3650 天。\n' >&2
-    return 1
-  fi
+  local bytes="${SK_LOG_MAX_BYTES-5242880}" backups="${SK_LOG_BACKUPS-5}" days="${SK_LOG_RETENTION_DAYS-30}"
+  _sk_uint "$bytes" 1 1073741824 && _sk_uint "$backups" 1 100 && _sk_uint "$days" 1 3650 || return 2
+  SK_MAX_BYTES=$((10#$bytes)) SK_BACKUPS=$((10#$backups)) SK_RETENTION_DAYS=$((10#$days))
 }
 
 sk_trim_log() {
@@ -94,7 +84,8 @@ sk_locked_write() (
 
 sk_append_log() {
     (( $# == 2 )) || return 2
-  sk_log_policy || return 1
+    _sk_required "$1" || return 2
+  sk_log_policy || return 2
   sk_locked_write "$1" "$2" true
 }
 
@@ -117,8 +108,9 @@ sk_stream_log() {
 
 sk_start_capture() {
     (( $# == 1 )) || return 2
+    _sk_required "$1" || return 2
   [[ "${SK_CAPTURE_ACTIVE:-false}" != true ]] || { print -u2 "日志捕获已启动"; return 2; }
-  sk_log_policy || return 1
+  sk_log_policy || return 2
   sk_locked_write "$1" '' true || return 1
   # Zsh 的进程替换不保证提供 $!；使用私有 FIFO 启动可 wait 的子进程。
   # FIFO 在双方打开后立即删除，正常运行和中断均不留下临时文件。
@@ -148,6 +140,7 @@ sk_start_capture() {
 
 sk_finish_capture() {
   local exit_code=$?
+  (( $# == 0 )) || return 2
   [[ "${SK_CAPTURE_ACTIVE:-false}" == true ]] || return "$exit_code"
   SK_CAPTURE_ACTIVE=false
   exec 1>&$SK_CAPTURE_STDOUT 2>&$SK_CAPTURE_STDERR

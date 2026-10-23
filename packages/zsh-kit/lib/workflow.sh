@@ -6,6 +6,8 @@ sk_run_stages() {
     local label action code index=0 total=$(($# / 2))
     local -a completed=() pending=()
     (( $# % 2 == 0 )) || return 2
+    local item
+    for item in "$@"; do _sk_required "$item" || return 2; done
     while (( $# > 0 )); do
         label="$1" action="$2"
         shift 2

@@ -28,6 +28,10 @@ _sk_commit_config_candidate() {
 
 sk_write_managed_block() (
     (( $# >= 4 && $# <= 7 )) || return 2
+    _sk_required "$1" || return 2
+    _sk_line "$2" && _sk_line "$3" && _sk_line "${6-managed by}" || return 2
+    _sk_bool "${5-false}" && _sk_bool "${7-false}" || return 2
+    _sk_uint "${SK_LOCK_TIMEOUT-10}" 0 9999 || return 2
     local target_file="$1" section_name="$2" manager_name="$3" content="$4"
     local dry_run="${5:-false}" marker_style="${6:-managed by}"
     local validate_shell="${7:-false}"
@@ -70,6 +74,9 @@ sk_write_managed_block() (
 
 sk_write_managed_file() (
     (( $# >= 2 && $# <= 4 )) || return 2
+    _sk_required "$1" || return 2
+    _sk_bool "${3-false}" && _sk_mode "${4-}" || return 2
+    _sk_uint "${SK_LOCK_TIMEOUT-10}" 0 9999 || return 2
     local target_file="$1" content="$2" dry_run="${3:-false}" mode="${4:-}"
     if [[ "$dry_run" == true ]]; then
         sk_info "[dry-run] 将写入文件: $target_file"
@@ -126,6 +133,15 @@ _sk_update_ini_candidate() (
 # 多键更新在同一个候选文件上完成，仅一次提交；中途失败原文件保持不变。
 sk_set_ini_values() (
     (( $# >= 4 && $# % 2 == 0 )) || return 2
+    _sk_required "$1" && _sk_line "$2" || return 2
+    [[ "$2" != *'['* && "$2" != *']'* ]] || return 2
+    _sk_uint "${SK_LOCK_TIMEOUT-10}" 0 9999 || return 2
+    local index
+    for ((index=3; index<=$#; index+=2)); do
+        _sk_line "${@[index]}" || return 2
+        [[ "${@[index]}" != *'='* && "${@[index]}" != [\#\;\[]* ]] || return 2
+        [[ "${@[index+1]}" != *$'\n'* && "${@[index+1]}" != *$'\r'* ]] || return 2
+    done
     local target="$1" section="$2" candidate
     shift 2
     (( $# > 0 && $# % 2 == 0 )) || return 2
