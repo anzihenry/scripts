@@ -26,10 +26,13 @@ sync_region() {
     mv "$temporary/next" "$temporary/install.sh"
 }
 
-sync_region 'STANDALONE LOGGING' "$ROOT/lib/logging.sh" true
+# Standalone bundles contain definitions plus application adapters, with no repo imports.
+{ print '#!/bin/zsh'; print '# generated bundle'; sed '1,2d' "$ROOT/packages/zsh-kit/lib/logging.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$ROOT/lib/logging.sh"; } > "$temporary/logging.sh"
+{ print '#!/bin/zsh'; print '# generated bundle'; sed '1,2d' "$ROOT/packages/zsh-kit/lib/console.sh"; sed '1,2d; /^source /d' "$ROOT/packages/zsh-kit/lib/resource_lock.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$ROOT/lib/resource_lock.sh"; } > "$temporary/resource_lock.sh"
+sync_region 'STANDALONE LOGGING' "$temporary/logging.sh" true
 sync_region 'MACOS REQUIREMENT' "$ROOT/lib/utils.sh" false
 sync_region 'FIRST LINE' "$ROOT/lib/utils.sh" false
-sync_region 'RESOURCE LOCK' "$ROOT/lib/resource_lock.sh" true
+sync_region 'RESOURCE LOCK' "$temporary/resource_lock.sh" true
 /bin/zsh -n "$temporary/install.sh"
 if cmp -s "$temporary/install.sh" "$ROOT/bootstrap/install.sh"; then
     print 'Bootstrap 内嵌公共代码已同步。'

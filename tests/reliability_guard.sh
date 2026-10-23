@@ -146,7 +146,7 @@ printf '[global]\nindex-url = old\ntrusted-host = old\n' > "$SANDBOX/pip.conf"
 cp "$SANDBOX/pip.conf" "$SANDBOX/pip.before"
 (
     count=0
-    update_ini_candidate() { count=$((count+1)); [[ "$count" != 2 ]] || return 6; print partial > "$1"; }
+    _sk_update_ini_candidate() { count=$((count+1)); [[ "$count" != 2 ]] || return 6; print partial > "$1"; }
     set_ini_values "$SANDBOX/pip.conf" global index-url new trusted-host new && fail '第二键失败未传播'
     true
 )
@@ -167,7 +167,7 @@ pass '阶段摘要包含已完成、失败和未执行，保留退出码'
 code=0
 output="$(/bin/zsh -c '
     source "$1/lib/utils.sh"
-    ml_locked_write() { [[ "$3" == true ]]; }
+    sk_locked_write() { [[ "$3" == true ]]; }
     enable_log_capture "$2" || exit 1
     print example
     exit 7

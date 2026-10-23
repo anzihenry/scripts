@@ -368,7 +368,7 @@ test_log_rotation() {
   log_file="$sandbox/run.log"
   payload='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
   ml_log_policy
-  ml_locked_write "$log_file" '' true
+  sk_locked_write "$log_file" '' true
   result="$(printf '%s' "$payload" | ml_stream_log "$log_file")"
   assert_eq "$result" "$payload" "轮转不截断终端输出（长行无换行）"
   assert_eq "$(cat "$log_file.2" "$log_file.1" "$log_file")" "${payload[17,-1]}" "按归档数量保留最近日志且顺序不变"
@@ -437,7 +437,7 @@ test_log_rotation() {
   pass "非法轮转参数在写入前失败"
 
   awk '/^# BEGIN STANDALONE LOGGING$/ { active=1; next } /^# END STANDALONE LOGGING$/ { exit } active { print }' "$REPO_ROOT/bootstrap/install.sh" > "$sandbox/embedded"
-  sed '1,2d' "$REPO_ROOT/lib/logging.sh" > "$sandbox/shared"
+  { sed '1,2d' "$REPO_ROOT/packages/zsh-kit/lib/logging.sh"; sed -n '/# BEGIN APP ADAPTER/,/# END APP ADAPTER/p' "$REPO_ROOT/lib/logging.sh"; } > "$sandbox/shared"
   cmp -s "$sandbox/embedded" "$sandbox/shared" || fail "独立 bootstrap 日志实现与公共库不同步"
   pass "独立 bootstrap 与公共轮转实现保持一致"
   rm -rf "$sandbox"
@@ -532,8 +532,8 @@ test_log_capture_exit_and_links() {
 #!/bin/zsh
 set -euo pipefail
 source "$1/lib/utils.sh"
-functions[original_locked_write]="$functions[ml_locked_write]"
-ml_locked_write() {
+functions[original_locked_write]="$functions[sk_locked_write]"
+sk_locked_write() {
   if [[ -n "$2" ]]; then
     [[ "$CAPTURE_ENDING" != logger-failure ]] || return 1
     /bin/sleep 0.05
@@ -541,7 +541,7 @@ ml_locked_write() {
   original_locked_write "$@"
 }
 enable_log_capture "$2/run.log"
-printf '%s' "$ML_CAPTURE_PID" > "$2/logger-pid"
+printf '%s' "$SK_CAPTURE_PID" > "$2/logger-pid"
 trap 'print -u2 SIGNAL_END; exit 143' TERM
 for ((index=1; index<=500; index++)); do print "line-$index"; done
 print -u2 FINAL_STDERR
@@ -572,7 +572,7 @@ RUNNER
         assert_contains "$content" FINAL_STDOUT "$ending: 返回调用方前最后日志已落盘"
       fi
     fi
-    [[ -z "$(print -l -- "$sandbox/tmp"/macos-scripts-log.*(N))" ]] || fail "日志通道临时目录未清理"
+    [[ -z "$(print -l -- "$sandbox/tmp"/zsh-kit-log.*(N))" ]] || fail "日志通道临时目录未清理"
     pass "$ending: 关闭并清理私有日志通道"
     rm -f "$sandbox/run.log" "$sandbox/run.log.lock"
   done

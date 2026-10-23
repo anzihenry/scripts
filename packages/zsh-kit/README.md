@@ -1,0 +1,22 @@
+# zsh-kit 0.1
+
+面向 macOS 14+ 系统 Zsh 的离线公共组件，MIT 许可。直接 source `lib/zsh-kit.sh` 或单个模块。source 不创建文件、不设置调用方选项/trap，重复加载保留状态。入口脚本自行开启 `set -euo pipefail`。
+
+| 模块 | 公开接口（位置参数） |
+| --- | --- |
+| console | `sk_log level message`；`sk_info/warning/error/success message`；`sk_time_start key [message]`、`sk_time_end key [message] [level]` |
+| command_runtime | `sk_command_preview command args...`；`sk_run_command command args...`；`sk_run_logged_command description command args...`；`sk_run_timed_command_or_fail key start success failure detail command args...` |
+| workflow | `sk_run_stages label function ...`，失败停止并保留动作退出码 |
+| resource_lock | `sk_resource_lock_acquire resource`；`sk_with_resource_lock resource command args...`；`sk_resource_locks_release_owned` |
+| config_writer | `sk_write_managed_file path content [dry_run] [mode]`；`sk_write_managed_block path section manager content [dry_run] [marker_style] [validate_zsh]`；`sk_set_ini_values path section key value ...`；`sk_set_ini_value path section key value` |
+| logging | `sk_append_log path data`；`sk_start_capture path`；`sk_finish_capture` |
+
+其他函数为实现细节，不保证兼容。日志目录由调用方创建并传入；库不选择用户目录。`SK_LOG_MAX_BYTES` 默认 5242880、`SK_LOG_BACKUPS` 默认 5、`SK_LOG_RETENTION_DAYS` 默认 30；在写入/启动捕获时验证。`SK_DRY_RUN=true` 仅预览执行器命令；文件写入器使用显式 dry_run 参数。`SK_LOCK_TIMEOUT` 默认 10 秒。`SK_RECOVERY_MESSAGE` 可补充阶段失败提示。`SK_LOG_SINK` 可指定接收 level/message 的日志函数。
+
+诊断写 stderr，预览/数据写 stdout；动作错误保留原码。库不替调用方开启 errexit，动作必须显式传播内部失败。捕获开始会重定向当前进程 stdout/stderr，并安装 `zshexit_functions` 排空钩子；结束恢复描述符且保持进入结束函数前的退出码。业务在退出前输出最终摘要；记录器失败只报告日志不完整，不覆盖业务状态。不支持嵌套捕获。
+
+写入器使用同目录候选文件和 rename；无变化不重写，保留普通权限；不承诺 ACL/扩展属性及多文件原子事务。有效符号链接解析到真实文件后加锁；失效链接拒绝。Shell 块语法校验由调用方显式开启。
+
+锁协议 v1 固定目录 `/tmp/macos-scripts-locks-$EUID`，保留历史名称以协调旧调用方；不按项目名或 TMPDIR 隔离。资源绝对路径规范化后 SHA-256；锁文件永久保留，内核 fcntl 锁随进程退出释放。同步重入可继承父锁；持锁事务内禁止并行派生写入任务。调用方退出或调用 release 释放自己的锁，不释放父事务锁。
+
+依赖均来自系统：Zsh（zsh/system）、awk、sed、stat、shasum、mktemp、cmp、chmod、mv、cp、mkdir、rm、date、tail、mkfifo。没有 Homebrew、Python、网络和业务目录运行依赖。版本与应用 VERSION 分开；0.x 次版本允许审阅后迁移，补丁版本保持公开 API。

@@ -1,59 +1,8 @@
 #!/bin/zsh
 # filepath: lib/command_runtime.sh
-
-command_preview() {
-  local parts=()
-  local arg
-
-  for arg in "$@"; do
-    parts+=("$(printf '%q' "$arg")")
-  done
-
-  local IFS=' '
-  printf '%s' "${parts[*]}"
-}
-
-run_command() {
-  if [[ "${DRY_RUN:-false}" == "true" ]]; then
-    print_code "$(command_preview "$@")"
-    return 0
-  fi
-
-  "$@"
-}
-
-run_logged_command() {
-  local description="$1"
-  shift
-
-  if [[ "${DRY_RUN:-false}" == "true" ]]; then
-    if [[ -n "$description" ]]; then
-      info "[dry-run] $description"
-    fi
-    print_code "$(command_preview "$@")"
-    return 0
-  fi
-
-  if [[ -n "$description" ]]; then
-    info "$description"
-  fi
-
-  "$@"
-}
-
-run_timed_command_or_fail() {
-  local timer_key="$1"
-  local start_message="$2"
-  local success_message="$3"
-  local failure_message="$4"
-  local failure_detail="$5"
-  shift 5
-
-  log_time_start "$timer_key" "$start_message"
-  if ! run_logged_command "$start_message" "$@"; then
-    log_time_end "$timer_key" "$failure_message" "error"
-    error "$failure_detail"
-    return 1
-  fi
-  log_time_end "$timer_key" "$success_message"
-}
+source "${${(%):-%x}:A:h}/../packages/zsh-kit/lib/command_runtime.sh"
+_ms_command_log() { local level="$1"; shift; "$level" "$@"; }
+command_preview() { local SK_LOG_SINK=_ms_command_log SK_CODE_SINK=print_code; local SK_DRY_RUN="${DRY_RUN:-false}"; sk_command_preview "$@"; }
+run_command() { local SK_LOG_SINK=_ms_command_log SK_CODE_SINK=print_code; local SK_DRY_RUN="${DRY_RUN:-false}"; sk_run_command "$@"; }
+run_logged_command() { local SK_LOG_SINK=_ms_command_log SK_CODE_SINK=print_code; local SK_DRY_RUN="${DRY_RUN:-false}"; sk_run_logged_command "$@"; }
+run_timed_command_or_fail() { local SK_LOG_SINK=_ms_command_log SK_CODE_SINK=print_code; local SK_DRY_RUN="${DRY_RUN:-false}"; sk_run_timed_command_or_fail "$@"; }

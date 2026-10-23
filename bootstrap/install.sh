@@ -113,45 +113,45 @@ else
 # BEGIN STANDALONE LOGGING
 # 有界日志：按字节轮转，归档清理；系统文件锁协调多个写入进程。
 
-ml_log_policy() {
-  ML_MAX_BYTES="${MACOS_SCRIPTS_LOG_MAX_BYTES:-5242880}"
-  ML_BACKUPS="${MACOS_SCRIPTS_LOG_BACKUPS:-5}"
-  ML_RETENTION_DAYS="${MACOS_SCRIPTS_LOG_RETENTION_DAYS:-30}"
+sk_log_policy() {
+  SK_MAX_BYTES="${SK_LOG_MAX_BYTES:-5242880}"
+  SK_BACKUPS="${SK_LOG_BACKUPS:-5}"
+  SK_RETENTION_DAYS="${SK_LOG_RETENTION_DAYS:-30}"
   local value
-  for value in "$ML_MAX_BYTES" "$ML_BACKUPS" "$ML_RETENTION_DAYS"; do
+  for value in "$SK_MAX_BYTES" "$SK_BACKUPS" "$SK_RETENTION_DAYS"; do
     if [[ "$value" != <-> || ${#value} -gt 10 ]] || (( value < 1 )); then
       printf '日志轮转参数必须为正整数。\n' >&2
       return 1
     fi
   done
-  if (( ML_MAX_BYTES > 1073741824 || ML_BACKUPS > 100 || ML_RETENTION_DAYS > 3650 )); then
+  if (( SK_MAX_BYTES > 1073741824 || SK_BACKUPS > 100 || SK_RETENTION_DAYS > 3650 )); then
     printf '日志轮转上限：单文件 1 GiB、100 份归档、3650 天。\n' >&2
     return 1
   fi
 }
 
-ml_trim_log() {
+sk_trim_log() {
   local target="$1" size temp_file
   size="$(stat -f '%z' "$target")" || return 1
-  (( size > ML_MAX_BYTES )) || return 0
+  (( size > SK_MAX_BYTES )) || return 0
   temp_file="$(mktemp "${target}.trim.XXXXXXXX")" || return 1
-  if ! tail -c "$ML_MAX_BYTES" "$target" > "$temp_file" || ! mv -f "$temp_file" "$target"; then
+  if ! tail -c "$SK_MAX_BYTES" "$target" > "$temp_file" || ! mv -f "$temp_file" "$target"; then
     rm -f "$temp_file"
     return 1
   fi
 }
 
-ml_rotate_log() {
+sk_rotate_log() {
   local log_file="$1" index
-  rm -f "$log_file.$ML_BACKUPS" || return 1
-  for ((index = ML_BACKUPS - 1; index >= 1; index--)); do
+  rm -f "$log_file.$SK_BACKUPS" || return 1
+  for ((index = SK_BACKUPS - 1; index >= 1; index--)); do
     [[ ! -f "$log_file.$index" ]] || mv -f "$log_file.$index" "$log_file.$((index + 1))" || return 1
   done
   [[ ! -f "$log_file" ]] || mv -f "$log_file" "$log_file.1" || return 1
   : > "$log_file"
 }
 
-ml_locked_write() (
+sk_locked_write() (
   emulate -L zsh
   setopt no_multibyte
   umask 077
@@ -170,32 +170,32 @@ ml_locked_write() (
   # 内核锁随进程/描述符退出释放，不依赖清理 PID 文件。
   zsystem flock -t 5 -f lock_fd "$lock_file" || return 1
   if [[ "$maintain" == true ]]; then
-    cutoff=$(( $(date +%s) - ML_RETENTION_DAYS * 86400 ))
+    cutoff=$(( $(date +%s) - SK_RETENTION_DAYS * 86400 ))
     for candidate in "$log_file".*(N); do
       suffix="${candidate##*.}"
       [[ "$suffix" == <-> && ${#suffix} -le 9 ]] || continue
       modified="$(stat -f '%m' "$candidate")" || return 1
-      if (( suffix < 1 || suffix > ML_BACKUPS || modified < cutoff )); then
+      if (( suffix < 1 || suffix > SK_BACKUPS || modified < cutoff )); then
         rm -f "$candidate" || return 1
       else
-        ml_trim_log "$candidate" || return 1
+        sk_trim_log "$candidate" || return 1
       fi
     done
   fi
   : >> "$log_file" || return 1
   size="$(stat -f '%z' "$log_file")" || return 1
-  if (( size > ML_MAX_BYTES )); then
+  if (( size > SK_MAX_BYTES )); then
     # 接管旧的大文件时只保留末尾预算内内容，再作为最近归档保留。
-    ml_trim_log "$log_file" || return 1
-    ml_rotate_log "$log_file" || return 1
+    sk_trim_log "$log_file" || return 1
+    sk_rotate_log "$log_file" || return 1
     size=0
   fi
   while [[ -n "$data" ]]; do
-    if (( size >= ML_MAX_BYTES )); then
-      ml_rotate_log "$log_file" || return 1
+    if (( size >= SK_MAX_BYTES )); then
+      sk_rotate_log "$log_file" || return 1
       size=0
     fi
-    room=$(( ML_MAX_BYTES - size ))
+    room=$(( SK_MAX_BYTES - size ))
     part="${data[1,room]}"
     printf '%s' "$part" >> "$log_file" || return 1
     size=$(( size + ${#part} ))
@@ -203,12 +203,13 @@ ml_locked_write() (
   done
 )
 
-ml_append_log() {
-  ml_log_policy || return 1
-  ml_locked_write "$1" "$2" true
+sk_append_log() {
+    (( $# == 2 )) || return 2
+  sk_log_policy || return 1
+  sk_locked_write "$1" "$2" true
 }
 
-ml_stream_log() {
+sk_stream_log() {
   emulate -L zsh
   setopt no_multibyte localtraps
   # 让父进程先完成中断摘要并关闭输出；记录器排空管道后再退出。
@@ -217,7 +218,7 @@ ml_stream_log() {
   local log_file="$1" chunk="" failed=false
   while sysread -s 65536 chunk; do
     printf '%s' "$chunk"
-    if [[ "$failed" == false ]] && ! ml_locked_write "$log_file" "$chunk" false; then
+    if [[ "$failed" == false ]] && ! sk_locked_write "$log_file" "$chunk" false; then
       printf '日志写入或轮转失败，终端输出继续保留，请检查: %s\n' "$log_file" >&2
       failed=true
     fi
@@ -225,53 +226,70 @@ ml_stream_log() {
   [[ "$failed" == false ]]
 }
 
-ml_start_capture() {
-  ml_log_policy || return 1
-  ml_locked_write "$1" '' true || return 1
+sk_start_capture() {
+    (( $# == 1 )) || return 2
+  [[ "${SK_CAPTURE_ACTIVE:-false}" != true ]] || { print -u2 "日志捕获已启动"; return 2; }
+  sk_log_policy || return 1
+  sk_locked_write "$1" '' true || return 1
   # Zsh 的进程替换不保证提供 $!；使用私有 FIFO 启动可 wait 的子进程。
   # FIFO 在双方打开后立即删除，正常运行和中断均不留下临时文件。
   local stream_dir stream_fifo
-  stream_dir="$(mktemp -d "${TMPDIR:-/tmp}/macos-scripts-log.XXXXXXXX")" || return 1
+  stream_dir="$(mktemp -d "${TMPDIR:-/tmp}/zsh-kit-log.XXXXXXXX")" || return 1
   stream_fifo="$stream_dir/stream"
   if ! (umask 077; mkfifo "$stream_fifo"); then
     rmdir "$stream_dir"
     return 1
   fi
-  exec {ML_CAPTURE_STDOUT}>&1 {ML_CAPTURE_STDERR}>&2
+  exec {SK_CAPTURE_STDOUT}>&1 {SK_CAPTURE_STDERR}>&2
   setopt localoptions no_bg_nice
-  ml_stream_log "$1" < "$stream_fifo" >&$ML_CAPTURE_STDOUT 2>&$ML_CAPTURE_STDERR &
-  ML_CAPTURE_PID=$!
+  sk_stream_log "$1" < "$stream_fifo" >&$SK_CAPTURE_STDOUT 2>&$SK_CAPTURE_STDERR &
+  SK_CAPTURE_PID=$!
   exec > "$stream_fifo" 2>&1
-  ML_CAPTURE_ACTIVE=true
-  ML_CAPTURE_DIR="$stream_dir"
+  SK_CAPTURE_ACTIVE=true
+  SK_CAPTURE_DIR="$stream_dir"
   if rm -f "$stream_fifo" && rmdir "$stream_dir"; then
-    ML_CAPTURE_DIR=""
+    SK_CAPTURE_DIR=""
   else
     printf '日志通道临时目录清理失败，退出时重试: %s\n' "$stream_dir" >&2
   fi
   # 与业务 EXIT trap 分离；显式退出/正常退出时排空记录器，保留原退出码。
   typeset -ga zshexit_functions
-  (( ${zshexit_functions[(Ie)ml_finish_capture]} )) || zshexit_functions+=(ml_finish_capture)
+  (( ${zshexit_functions[(Ie)sk_finish_capture]} )) || zshexit_functions+=(sk_finish_capture)
 }
 
-ml_finish_capture() {
+sk_finish_capture() {
   local exit_code=$?
-  [[ "${ML_CAPTURE_ACTIVE:-false}" == true ]] || return "$exit_code"
-  ML_CAPTURE_ACTIVE=false
-  exec 1>&$ML_CAPTURE_STDOUT 2>&$ML_CAPTURE_STDERR
-  exec {ML_CAPTURE_STDOUT}>&- {ML_CAPTURE_STDERR}>&-
+  [[ "${SK_CAPTURE_ACTIVE:-false}" == true ]] || return "$exit_code"
+  SK_CAPTURE_ACTIVE=false
+  exec 1>&$SK_CAPTURE_STDOUT 2>&$SK_CAPTURE_STDERR
+  exec {SK_CAPTURE_STDOUT}>&- {SK_CAPTURE_STDERR}>&-
   local capture_code=0
-  wait "$ML_CAPTURE_PID" || capture_code=$?
+  wait "$SK_CAPTURE_PID" || capture_code=$?
   if (( capture_code != 0 )); then
     printf '运行日志不完整（记录器退出码 %s）；业务退出码仍为 %s，请检查日志目录权限和剩余空间。\n' "$capture_code" "$exit_code" >&2
   fi
-  if [[ -n "${ML_CAPTURE_DIR:-}" ]]; then
-    if ! { rm -f "$ML_CAPTURE_DIR/stream" && rmdir "$ML_CAPTURE_DIR"; }; then
-      printf '日志通道临时目录未能清理，请检查: %s\n' "$ML_CAPTURE_DIR" >&2
+  if [[ -n "${SK_CAPTURE_DIR:-}" ]]; then
+    if ! { rm -f "$SK_CAPTURE_DIR/stream" && rmdir "$SK_CAPTURE_DIR"; }; then
+      printf '日志通道临时目录未能清理，请检查: %s\n' "$SK_CAPTURE_DIR" >&2
     fi
   fi
   return "$exit_code"
 }
+# BEGIN APP ADAPTER
+_ms_log_config() {
+  SK_LOG_MAX_BYTES="${MACOS_SCRIPTS_LOG_MAX_BYTES:-5242880}"
+  SK_LOG_BACKUPS="${MACOS_SCRIPTS_LOG_BACKUPS:-5}"
+  SK_LOG_RETENTION_DAYS="${MACOS_SCRIPTS_LOG_RETENTION_DAYS:-30}"
+}
+ml_log_policy() { _ms_log_config; sk_log_policy "$@"; }
+ml_trim_log() { sk_trim_log "$@"; }
+ml_rotate_log() { sk_rotate_log "$@"; }
+ml_locked_write() { sk_locked_write "$@"; }
+ml_append_log() { _ms_log_config; sk_append_log "$@"; }
+ml_stream_log() { sk_stream_log "$@"; }
+ml_start_capture() { _ms_log_config; sk_start_capture "$@"; }
+ml_finish_capture() { sk_finish_capture "$@"; }
+# END APP ADAPTER
 # END STANDALONE LOGGING
 fi
 ml_start_capture "$BOOTSTRAP_LOG_FILE" || {
@@ -463,21 +481,54 @@ if [[ -r "$REPO_ROOT/lib/resource_lock.sh" ]]; then
   source "$REPO_ROOT/lib/resource_lock.sh"
 else
 # BEGIN RESOURCE LOCK
+sk_log() {
+    local level="$1"; shift
+    if [[ -n "${SK_LOG_SINK:-}" ]]; then "$SK_LOG_SINK" "$level" "$@"; return $?; fi
+    local color='' reset=''
+    if [[ "${NO_COLOR:-false}" != true && ( -t 2 || "${FORCE_COLOR:-false}" == true ) ]]; then
+        color=$'\e[36m'; reset=$'\e[0m'
+        [[ "$level" != error ]] || color=$'\e[31m'
+    fi
+    printf '%s[%s]%s %s\n' "$color" "$level" "$reset" "$*" >&2
+}
+sk_info() { sk_log info "$@"; }
+sk_warning() { sk_log warning "$@"; }
+sk_error() { sk_log error "$@"; }
+sk_success() { sk_log success "$@"; }
+sk_print_code() {
+    if [[ -n "${SK_CODE_SINK:-}" ]]; then "$SK_CODE_SINK" "$@"; else printf '%s\n' "$@"; fi
+}
+sk_time_start() {
+    local key="${1:-default}"
+    typeset -gA SK_TIMERS
+    SK_TIMERS[$key]="$(date +%s)" || return 1
+    [[ -z "${2:-}" ]] || sk_info "$2 (开始)"
+    return 0
+}
+sk_time_end() {
+    local key="${1:-default}" now
+    typeset -gA SK_TIMERS
+    [[ -n "${SK_TIMERS[$key]:-}" ]] || return 1
+    now="$(date +%s)" || return 1
+    sk_log "${3:-success}" "${2:-任务完成}，耗时 $((now - SK_TIMERS[$key]))s"
+    unset 'SK_TIMERS[$key]'
+}
 # 同步调用链可重入的资源锁。锁文件永久保留，禁止删除/替换正在使用的 inode。
 # 获取顺序：业务运行锁 -> Homebrew 实例 -> 配置文件。不可并行派生共享事务。
-typeset -ga MS_RESOURCE_LOCKS MS_RESOURCE_FDS MS_RESOURCE_OWNERS
 
-resource_lock_acquire() {
+sk_resource_lock_acquire() {
+    (( $# == 1 )) || return 2
+    typeset -ga SK_RESOURCE_LOCKS SK_RESOURCE_FDS SK_RESOURCE_OWNERS
     local resource="$1" key lock_file lock_fd
     # 不随 CONFIG_DIR/TMPDIR 改变，保证不同入口仍协调同一真实资源。
     local directory="/tmp/macos-scripts-locks-$EUID"
-    local timeout="${MACOS_SCRIPTS_LOCK_TIMEOUT:-10}"
+    local timeout="${SK_LOCK_TIMEOUT:-10}"
     [[ "$resource" != /* ]] || resource="${resource:A}"
-    (( ${MS_RESOURCE_LOCKS[(Ie)$resource]} == 0 )) || return 0
-    [[ "$timeout" == <-> && ${#timeout} -le 4 ]] || { error "锁等待时间必须为 0–9999 秒"; return 1; }
-    [[ ! -L "$directory" ]] || { error "锁目录不能是符号链接: $directory"; return 1; }
+    (( ${SK_RESOURCE_LOCKS[(Ie)$resource]} == 0 )) || return 0
+    [[ "$timeout" == <-> && ${#timeout} -le 4 ]] || { sk_error "锁等待时间必须为 0–9999 秒"; return 1; }
+    [[ ! -L "$directory" ]] || { sk_error "锁目录不能是符号链接: $directory"; return 1; }
     (umask 077; mkdir -p "$directory") || return 1
-    [[ "$(stat -f '%u:%Lp' "$directory")" == "$EUID:700" ]] || { error "锁目录所有者或权限异常: $directory"; return 1; }
+    [[ "$(stat -f '%u:%Lp' "$directory")" == "$EUID:700" ]] || { sk_error "锁目录所有者或权限异常: $directory"; return 1; }
     key="$(printf '%s' "$resource" | shasum -a 256)" || return 1
     lock_file="$directory/${key%% *}.lock"
     [[ ! -L "$lock_file" && ( ! -e "$lock_file" || -f "$lock_file" ) ]] || return 1
@@ -485,21 +536,41 @@ resource_lock_acquire() {
     (umask 077; : >> "$lock_file") || return 1
     zmodload zsh/system || return 1
     if ! zsystem flock -t "$timeout" -i 0.1 -f lock_fd "$lock_file"; then
-        error "资源正在使用或无法加锁: $resource；等待其他操作完成后重试。"
+        sk_error "资源正在使用或无法加锁: $resource；等待其他操作完成后重试。"
         return 1
     fi
-    MS_RESOURCE_LOCKS+=("$resource")
-    MS_RESOURCE_FDS+=("$lock_fd")
-    MS_RESOURCE_OWNERS+=("$sysparams[pid]")
+    SK_RESOURCE_LOCKS+=("$resource")
+    SK_RESOURCE_FDS+=("$lock_fd")
+    SK_RESOURCE_OWNERS+=("$sysparams[pid]")
 }
 
-with_resource_lock() (
+sk_with_resource_lock() (
+    (( $# >= 2 )) || return 2
     local resource="$1"
     shift
-    resource_lock_acquire "$resource" || return 1
+    sk_resource_lock_acquire "$resource" || return 1
     "$@"
 )
 
+
+
+# 仅释放当前进程获取的锁，不能释放父事务的锁。
+sk_resource_locks_release_owned() {
+    zmodload zsh/system || return 1
+    typeset -ga SK_RESOURCE_LOCKS SK_RESOURCE_FDS SK_RESOURCE_OWNERS
+    local index
+    for ((index=${#SK_RESOURCE_LOCKS}; index>=1; index--)); do
+        [[ "${SK_RESOURCE_OWNERS[index]}" == "$sysparams[pid]" ]] || continue
+        zsystem flock -u "${SK_RESOURCE_FDS[index]}" || return 1
+        SK_RESOURCE_LOCKS[index]=()
+        SK_RESOURCE_FDS[index]=()
+        SK_RESOURCE_OWNERS[index]=()
+    done
+}
+# BEGIN APP ADAPTER
+resource_lock_acquire() { local SK_LOCK_TIMEOUT="${MACOS_SCRIPTS_LOCK_TIMEOUT:-10}"; sk_resource_lock_acquire "$@"; }
+with_resource_lock() ( local resource="$1"; shift; resource_lock_acquire "$resource" || return 1; "$@" )
+resource_locks_release_owned() { sk_resource_locks_release_owned "$@"; }
 homebrew_resource_lock() {
     local brew_bin="${1:-}" prefix
     [[ -n "$brew_bin" ]] || brew_bin="$(resolve_homebrew_bin)" || return 1
@@ -507,19 +578,7 @@ homebrew_resource_lock() {
     [[ -n "$prefix" && "$prefix" == /* ]] || { error "Homebrew prefix 无效"; return 1; }
     resource_lock_acquire "${prefix:A}/.macos-scripts-resource"
 }
-
-# 仅释放当前进程获取的锁，不能释放父事务的锁。
-resource_locks_release_owned() {
-    zmodload zsh/system || return 1
-    local index
-    for ((index=${#MS_RESOURCE_LOCKS}; index>=1; index--)); do
-        [[ "${MS_RESOURCE_OWNERS[index]}" == "$sysparams[pid]" ]] || continue
-        zsystem flock -u "${MS_RESOURCE_FDS[index]}" || return 1
-        MS_RESOURCE_LOCKS[index]=()
-        MS_RESOURCE_FDS[index]=()
-        MS_RESOURCE_OWNERS[index]=()
-    done
-}
+# END APP ADAPTER
 # END RESOURCE LOCK
 fi
 

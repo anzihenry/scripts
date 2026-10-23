@@ -24,3 +24,7 @@ The target environment is macOS 14+, system Zsh.
 `bin/macos-scripts` initializes log/configuration paths and assembles the CLI. Business executors perform system operations. Shared logging and dependency checks live in `lib/`; Homebrew installation helpers live in `setup/lib/`.
 
 [CLI layering rules](cli-layering.en.md), [development validation](../guides/development.en.md).
+
+## Reusable components
+
+`packages/zsh-kit/lib` owns logging, execution, stages, resource locks and atomic configuration writers. Root `lib/` retains application defaults and compatibility adapters. Homebrew and installation policies remain in the application. See [component contracts](../../packages/zsh-kit/README.md) and the [implementation plan](reuse-plan.md).
