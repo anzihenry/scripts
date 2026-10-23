@@ -88,3 +88,5 @@ Reusable package contracts and offline vendoring are covered by `zsh tests/zsh_k
 Run `zsh tests/template_guard.sh` to generate a renamed project in a path containing spaces and verify standalone operation, metadata escaping and overwrite protection.
 
 Run `zsh tests/reuse_acceptance_guard.sh` for the independent file organizer example and synthetic compatible patch upgrade. It checks dry-run, repeated execution, conflicts, failure recovery, symlink protection and unchanged business code; all writes remain in temporary directories.
+
+Run `zsh tests/artifact_tools_guard.sh` for canonical-path overlap, concurrent sync, TERM/KILL recovery, backup retention and generator retry.

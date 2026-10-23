@@ -2,6 +2,7 @@
 # filepath: tools/create_zsh_project.sh
 set -euo pipefail
 ROOT="${0:A:h:h}"
+source "$ROOT/tools/lib/artifact_runtime.sh"
 name='' description='A macOS Zsh CLI' repository=''
 while (( $# )); do
  case "$1" in
@@ -16,15 +17,21 @@ while (( $# )); do
 done
 (( $# == 1 )) || { print -u2 '用法: create_zsh_project.sh --name NAME [--description TEXT] [--repository URL] DEST'; exit 2; }
 [[ -n "$name" && "$name" != *[^a-z0-9-]* && "$name" == [a-z]* && "$name" != *- && ${#name} -le 64 ]] || { print -u2 '名称必须是小写字母开头、字母或数字结尾的 kebab-case（最多64字符）'; exit 2; }
-destination="${1:a}"
+[[ -n "$1" && "$1" != *$'\n'* && ! -L "$1" ]] || exit 2
+destination="${1:A}"
+_artifact_lock "$destination"
 [[ ! -e "$destination" && ! -L "$destination" ]] || { print -u2 '目标已存在，拒绝覆盖'; exit 1; }
 mkdir -p "${destination:h}"
-work="$(mktemp -d "${destination:h}/.zsh-project.XXXXXXXX")"
-trap 'rm -rf "$work"' EXIT
+_artifact_begin "$destination" false
+work="$ARTIFACT_WORK"
+trap '_artifact_recover "$work" "$destination" false' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
 cp -R "$ROOT/templates/zsh-cli" "$work/project"
 mv "$work/project/bin/cli" "$work/project/bin/$name"
 mkdir "$work/project/scripts"
 cp "$ROOT/tools/vendor_zsh_kit.sh" "$work/project/scripts/"
+cp -R "$ROOT/tools/lib" "$work/project/scripts/lib"
 cp "$ROOT/LICENSE" "$work/project/LICENSE"
 /bin/zsh "$ROOT/tools/vendor_zsh_kit.sh" --sync "$ROOT/packages/zsh-kit" "$work/project/vendor/zsh-kit"
 prefix="${(U)name//-/_}"
@@ -41,10 +48,7 @@ content="$(cat "$work/project/README.md")"
 print -r -- "${content//@COMMAND@/$name}" > "$work/project/README.md"
 chmod +x "$work/project/bin/$name"
 /bin/zsh -n "$work/project/bin/$name"
-# mkdir claims the final name without overwriting an existing destination.
-mkdir "$destination" || exit 1
-if ! cp -R "$work/project/." "$destination/"; then
- print -u2 -- "复制未完成，部分项目保留在 $destination；请检查后处理。"
- exit 1
-fi
+# Publish the completed directory in one rename while holding the target lock.
+[[ ! -e "$destination" && ! -L "$destination" ]] || { print -u2 '目标已存在，拒绝覆盖'; exit 1; }
+mv "$work/project" "$destination"
 print -- "项目已生成: $destination"

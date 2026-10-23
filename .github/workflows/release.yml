@@ -39,7 +39,7 @@ jobs:
           for t in bootstrap_guard cli_dispatch_guard cli_validators_guard \
                    version_consistency_guard regression_guard zsh_migration_guard \
                    macos_installer_flow_guard release_publish_guard \
-                   setup_runtime_guard maintain_runtime_guard idempotence_guard reliability_guard zsh_kit_guard template_guard reuse_acceptance_guard; do
+                   setup_runtime_guard maintain_runtime_guard idempotence_guard reliability_guard zsh_kit_guard template_guard reuse_acceptance_guard artifact_tools_guard; do
             zsh "tests/${t}.sh"
           done
 
