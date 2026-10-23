@@ -52,6 +52,7 @@ zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
 zsh tests/reuse_acceptance_guard.sh # 独立文件整理示例、故障恢复、兼容升级演练
+zsh tests/package_release_guard.sh  # 干净来源、离线产物、清单头校验、不可覆盖
 zsh tests/api_surface_guard.sh      # 公开接口清单、私有调用边界、旧新消费者行为
 zsh tests/platform_guard.sh         # runner 身份校验逻辑（模拟身份，不计为实机覆盖）
 zsh tests/artifact_tools_guard.sh   # 分发/生成并发、真实路径、中断与恢复
@@ -99,3 +100,7 @@ zsh tests/e2e/run_all.sh
 CI 输出系统版本、架构和系统 Zsh 版本。仓库变量 `MACOS_TEST_RUNNERS` 可设置可用 runner 标签的 JSON 数组，默认 `["macos-latest"]`；增加已配置的 Intel/Apple Silicon runner 后，同一套测试将在各环境执行。标签应以实际可用的 GitHub/自托管 runner 为准。
 
 发布前兼容验证清单：macOS 14 + arm64、macOS 14 + x86_64、当前支持的较新 macOS。每个环境执行本文完整清单，记录 OS/架构/Zsh、提交号和结果；未覆盖的组合应明确列为未验证。命令桩测试不能证明真实 Homebrew 安装、镜像挂载或 USB 抹盘成功；这些操作另在可恢复的测试机/测试介质上验证，不能使用日常数据卷。
+
+## 独立交付产物验证
+
+生成目录产物后执行 `zsh /path/to/artifact/tests/contract.sh` 和 `zsh tools/vendor_zsh_kit.sh --check /path/to/artifact`。前者运行组件契约，后者检查来源清单及文件摘要。离线交付流程见 [zsh-kit 发布指南](releasing-zsh-kit.md)。

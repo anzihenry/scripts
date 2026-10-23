@@ -6,6 +6,8 @@ source "${${(%):-%x}:A:h}/console.sh"
 
 sk_resource_lock_acquire() {
     (( $# == 1 )) || return 2
+    _sk_required "$1" || return 2
+    _sk_uint "${SK_LOCK_TIMEOUT-10}" 0 9999 || return 2
     typeset -ga SK_RESOURCE_LOCKS SK_RESOURCE_FDS SK_RESOURCE_OWNERS
     local resource="$1" key lock_file lock_fd
     # 不随 CONFIG_DIR/TMPDIR 改变，保证不同入口仍协调同一真实资源。
@@ -34,9 +36,11 @@ sk_resource_lock_acquire() {
 
 sk_with_resource_lock() (
     (( $# >= 2 )) || return 2
+    _sk_required "$1" && _sk_required "$2" || return 2
+    _sk_uint "${SK_LOCK_TIMEOUT-10}" 0 9999 || return 2
     local resource="$1"
     shift
-    sk_resource_lock_acquire "$resource" || return 1
+    sk_resource_lock_acquire "$resource" || return $?
     "$@"
 )
 
@@ -44,6 +48,7 @@ sk_with_resource_lock() (
 
 # 仅释放当前进程获取的锁，不能释放父事务的锁。
 sk_resource_locks_release_owned() {
+    (( $# == 0 )) || return 2
     zmodload zsh/system || return 1
     typeset -ga SK_RESOURCE_LOCKS SK_RESOURCE_FDS SK_RESOURCE_OWNERS
     local index

@@ -28,7 +28,15 @@ validate_tree() {
 check() {
  validate_tree "$1" || { print -u2 '组件结构无效或含符号链接'; return 1; }
  [[ -f "$1/.zsh-kit-manifest" ]] || { print -u2 '缺少 vendor 清单'; return 1; }
- local expected actual
+ local expected actual version metadata
+ version="$(cat "$1/VERSION")" || return 1
+ [[ "$version" =~ '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' ]] || { print -u2 '组件版本必须为三段十进制版本'; return 1; }
+ local -a header
+ header=("${(@f)$(sed -n '1,6p' "$1/.zsh-kit-manifest")}")
+ [[ ${#header} == 6 && "$header[1]" == format=1 && "$header[2]" == "version=$version" && "$header[3]" == source_url=?* && "$header[6]" == FILES ]] || { print -u2 '清单头或版本不一致'; return 1; }
+ metadata="${header[4]#source_revision=}"
+ [[ "$header[4]" == source_revision=* && ( "$metadata" == unversioned || ( ${#metadata} == 40 && "$metadata" != *[^0-9a-f]* ) ) ]] || return 1
+ [[ "$header[5]" == source_dirty=false || "$header[5]" == source_dirty=true || "$header[5]" == source_dirty=unknown ]] || return 1
  expected="$(sed '1,/^FILES$/d' "$1/.zsh-kit-manifest")" || return 1
  actual="$(hashes "$1")" || return 1
  [[ -n "$expected" && "$actual" == "$expected" ]] || { print -u2 'vendor 文件与清单不一致；请先保存本地改动'; return 1; }
@@ -46,6 +54,9 @@ if [[ "$mode" == --diff ]]; then
 fi
 # Lock the canonical destination and recheck after acquiring it.
 _artifact_lock "$destination"
+if [[ "${ZSH_KIT_REQUIRE_NEW_DEST:-false}" == true && ( -e "$destination" || -L "$destination" ) ]]; then
+ print -u2 '产物目标已存在，拒绝覆盖'; exit 2
+fi
 mkdir -p "${destination:h}"
 _artifact_begin "$destination" check
 work="$ARTIFACT_WORK"
@@ -57,6 +68,9 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM HUP
+if [[ "${ZSH_KIT_REQUIRE_NEW_DEST:-false}" == true && ( -e "$destination" || -L "$destination" ) ]]; then
+ print -u2 '恢复后的目标已存在，拒绝覆盖'; exit 2
+fi
 [[ ! -e "$destination" && ! -L "$destination" ]] || check "$destination"
 validate_tree "$source_dir"
 mkdir "$work/package"
@@ -71,7 +85,10 @@ if command -v git >/dev/null && git -C "$source_dir" rev-parse --show-toplevel >
  source_url="$(git -C "$source_dir" config --get remote.origin.url || print local)"
  dirty=false
  [[ -z "$(git -C "$source_dir" status --porcelain -- .)" ]] || dirty=true
+ [[ -z "$(git -C "$source_dir" ls-files --others --ignored --exclude-standard -- .)" ]] || dirty=true
 fi
+source_url="${ZSH_KIT_SOURCE_URL-$source_url}"
+[[ -n "$source_url" && "$source_url" != *$'\n'* && "$source_url" != *$'\r'* && "$source_url" != *$'\t'* && "$source_url" != *://*@* ]] || { print -u2 '来源 URL 无效或包含认证信息'; exit 2; }
 {
  print -r -- 'format=1'
  print -r -- "version=$(cat "$source_dir/VERSION")"

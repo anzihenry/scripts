@@ -74,3 +74,5 @@ SK_LOG_MAX_BYTES=8 SK_LOG_BACKUPS=2 sk_append_log "$SANDBOX/run.log" 12345678901
 [[ "$result" == 7 && "$(<"$SANDBOX/capture.log")" == final ]] || fail capture
 pass 'bounded logging and capture preserves business exit'
 print 'zsh-kit contract passed'
+/bin/zsh "$ROOT/tests/arguments.sh"
+/bin/zsh "$ROOT/tests/api.sh"

@@ -51,3 +51,5 @@ Agent collaboration rules are in [AGENTS.md](AGENTS.md) (Chinese). Contributors 
 Use `zsh tools/create_zsh_project.sh --name my-tool --description "My macOS tool" /path/to/new-project`. The generator refuses existing destinations and creates an independent CLI with metadata, pinned offline zsh-kit, tests and CI. See [component contracts](packages/zsh-kit/README.md) and the [development guide](docs/guides/development.en.md).
 
 See [file-organizer](examples/file-organizer/README.md) for an independently runnable generated example with dry-run, idempotence, conflict protection, recovery and offline upgrade acceptance.
+
+The component is zsh-kit 0.2.0 (not yet published). See [independent versioning and offline delivery](docs/guides/releasing-zsh-kit.md).

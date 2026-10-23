@@ -1,6 +1,9 @@
 #!/bin/zsh
 # filepath: packages/zsh-kit/lib/console.sh
+source "${${(%):-%x}:A:h}/validation.sh"
 sk_log() {
+    (( $# >= 2 )) || return 2
+    case "$1" in info|warning|warn|error|success|ok|debug) ;; *) return 2 ;; esac
     local level="$1"; shift
     if [[ -n "${SK_LOG_SINK:-}" ]]; then "$SK_LOG_SINK" "$level" "$@"; return $?; fi
     local color='' reset=''
@@ -14,10 +17,12 @@ sk_info() { sk_log info "$@"; }
 sk_warning() { sk_log warning "$@"; }
 sk_error() { sk_log error "$@"; }
 sk_success() { sk_log success "$@"; }
-sk_print_code() {
+_sk_print_code() {
     if [[ -n "${SK_CODE_SINK:-}" ]]; then "$SK_CODE_SINK" "$@"; else printf '%s\n' "$@"; fi
 }
 sk_time_start() {
+    (( $# <= 2 )) || return 2
+    _sk_required "${1-default}" || return 2
     local key="${1:-default}"
     typeset -gA SK_TIMERS
     SK_TIMERS[$key]="$(date +%s)" || return 1
@@ -25,6 +30,9 @@ sk_time_start() {
     return 0
 }
 sk_time_end() {
+    (( $# <= 3 )) || return 2
+    _sk_required "${1-default}" || return 2
+    case "${3-success}" in info|warning|warn|error|success|ok|debug) ;; *) return 2 ;; esac
     local key="${1:-default}" now
     typeset -gA SK_TIMERS
     [[ -n "${SK_TIMERS[$key]:-}" ]] || return 1

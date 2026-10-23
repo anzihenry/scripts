@@ -53,7 +53,7 @@ organizer_main() {
     # Logs must stay outside the directory being scanned.
     [[ "${log_dir:A}/" != "$directory/"* ]] || { sk_error '日志目录不能位于待整理目录内'; return 2; }
     mkdir -p "$log_dir" || return 1
-    sk_start_capture "$log_dir/run.log" || return 1
+    sk_start_capture "$log_dir/run.log" separate || return 1
     sk_run_timed_command_or_fail organize '开始整理' '整理完成' '整理失败' '查看日志，解决冲突或权限问题后重试。' \
         sk_with_resource_lock "$directory/.file-organizer-resource" organizer_apply "$directory" false
 }
