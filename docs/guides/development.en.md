@@ -90,3 +90,5 @@ Run `zsh tests/template_guard.sh` to generate a renamed project in a path contai
 Run `zsh tests/reuse_acceptance_guard.sh` for the independent file organizer example and synthetic compatible patch upgrade. It checks dry-run, repeated execution, conflicts, failure recovery, symlink protection and unchanged business code; all writes remain in temporary directories.
 
 Run `zsh tests/artifact_tools_guard.sh` for canonical-path overlap, concurrent sync, TERM/KILL recovery, backup retention and generator retry.
+
+Full regression: `zsh tests/run_all.sh --report NEW_DIRECTORY`. CI and release gates use this same ordered runner. Reports retain environment identity, source revision/dirty state, exit codes and per-suite logs. Optional `TEST_EXPECT_OS_MAJOR`/`TEST_EXPECT_ARCH` enforce runner expectations. `platform-validation.yml` accepts configured runners through `MACOS_COMPAT_MATRIX`; unavailable platforms remain unverified. See [platform evidence policy](../engineering/platform-validation.md).

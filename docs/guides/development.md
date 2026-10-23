@@ -17,7 +17,15 @@ updated: 2026-10-22
 
 > 本文是测试命令的唯一权威入口；其他文档通过链接引用。
 
-按测试层级由快到慢执行（CI 已在每次 push/PR 自动运行全部）：
+完整验证统一使用以下入口（CI 与发布门禁调用同一入口）：
+
+```sh
+zsh tests/run_all.sh --report "/tmp/macos-scripts-validation-$(date +%Y%m%d-%H%M%S)"
+```
+
+报告目录必须不存在。入口依次执行环境检查、Bootstrap 同步、语法/lint、smoke、全部 guard、E2E；失败停止并保留逐套日志、环境身份及退出码。`TEST_EXPECT_OS_MAJOR=14` 和 `TEST_EXPECT_ARCH=arm64` 可用于校验指定测试机身份。最低版本/架构矩阵和真实安装验收见 [平台验证](../engineering/platform-validation.md)。
+
+需要定位问题时，按以下顺序选择单项验证：
 
 ```bash
 zsh lint/sync_bootstrap.sh --check # Bootstrap 内嵌代码一致性
@@ -44,6 +52,7 @@ zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
 zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
 zsh tests/reuse_acceptance_guard.sh # 独立文件整理示例、故障恢复、兼容升级演练
+zsh tests/platform_guard.sh         # runner 身份校验逻辑（模拟身份，不计为实机覆盖）
 zsh tests/artifact_tools_guard.sh   # 分发/生成并发、真实路径、中断与恢复
 zsh tests/template_guard.sh         # 改名生成、带空格路径、离线运行、拒绝覆盖
 zsh tests/zsh_kit_guard.sh          # 独立公共包契约、离线分发、摘要与篡改保护
