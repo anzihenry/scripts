@@ -264,6 +264,8 @@ test_append_brew_update_error_log_writes_real_file() {
   local log_file
   log_file="$(mktemp "${TMPDIR:-/tmp}/maintain-brew-errors.XXXXXX.log")"
   ERROR_LOG="$log_file"
+  source "$REPO_ROOT/lib/utils.sh"
+  BREW_UPDATE_LOG_STARTED=false
 
   append_brew_update_error_log "feishu" "Cask 不存在或已失效"
   append_brew_update_error_log "vlc" "brew upgrade --cask 执行失败"
@@ -282,6 +284,13 @@ test_append_brew_update_error_log_writes_real_file() {
   local line_count
   line_count="$(grep -c "更新失败" "$log_file")"
   assert_eq "$line_count" "2" "each failure produces one log line"
+  assert_eq "$(grep -c '^===== 运行开始 =====$' "$log_file")" 1 "multiple failures in one run share one header"
+  assert_contains "$content" '模式: 实际执行' "error log records actual execution mode"
+  BREW_UPDATE_LOG_STARTED=false
+  DRY_RUN=true
+  append_brew_update_error_log "fixture" "第二次运行"
+  assert_eq "$(grep -c '^===== 运行开始 =====$' "$log_file")" 2 "another run appends a new header"
+  assert_contains "$(<"$log_file")" '模式: dry-run' "error log records dry-run mode"
 
   rm -f "$log_file"
 }

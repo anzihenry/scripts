@@ -19,6 +19,7 @@ handle_lint() {
       print_lint_help
       ;;
     *)
+      has_help_flag "$@" && { print_lint_help; return 0; }
       run_zsh_script "lint/lint_shell.sh" "$@"
       ;;
   esac

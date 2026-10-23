@@ -7,8 +7,7 @@ initialize_macos_installer_context() {
   if [[ -z "${SCRIPT_NAME:-}" ]]; then
     SCRIPT_NAME="${0:t}"
   fi
-  MAINTAIN_LOG_FILE="$(prepare_log_file_path "macos-installer.log" "$SCRIPT_DIR/macos-installer.log")"
-  enable_log_capture "$MAINTAIN_LOG_FILE"
+  MAINTAIN_LOG_FILE="${MACOS_SCRIPTS_LOG_DIR:-$HOME/Library/Logs/macos-scripts}/macos-installer.log"
 
   LOCK_DIR=""
   VERBOSE="false"
@@ -41,4 +40,10 @@ parse_macos_installer_global_args() {
   fi
 
   REMAINING_ARGS=("$@")
+}
+
+initialize_macos_installer_logging() {
+  MAINTAIN_LOG_FILE="$(prepare_log_file_path "macos-installer.log")" || return 1
+  enable_log_capture "$MAINTAIN_LOG_FILE" || return 1
+  log_info "日志文件位置: $MAINTAIN_LOG_FILE"
 }

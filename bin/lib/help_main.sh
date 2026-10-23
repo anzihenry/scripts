@@ -12,7 +12,7 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
   setup       初始化与配置开发环境
   maintain    日常维护工具
   release     GitHub Release 发布辅助
-  lint        Shell 脚本检查与格式化
+  lint        Shell 脚本语法与解释器检查
   help        显示帮助
   version     显示版本
 

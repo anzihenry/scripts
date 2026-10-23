@@ -26,6 +26,9 @@ HELP
   esac
 done
 
+source "$REPO_ROOT/lib/utils.sh"
+require_supported_macos || exit 1
+
 (( ${#TARGETS[@]} > 0 )) || TARGETS=("$REPO_ROOT")
 for target in "${TARGETS[@]}"; do
   if [[ -d "$target" ]]; then

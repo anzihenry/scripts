@@ -11,30 +11,35 @@ defaults:
 
 jobs:
   test:
-    name: Shell checks (macOS)
-    runs-on: macos-latest
+    name: Shell checks (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(vars.MACOS_TEST_RUNNERS || '["macos-latest"]') }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Zsh interpreter and syntax guard
-        run: zsh tests/syntax_guard.sh
+      - name: Full sandbox regression
+        run: zsh tests/run_all.sh --report "$RUNNER_TEMP/validation-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
 
-      - name: Zsh checks
-        run: ./lint/lint_shell.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-${{ matrix.runner }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/validation-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: CLI smoke tests
-        run: zsh tests/smoke_cli.sh
-
-      - name: Guard tests (zsh)
-        run: |
-          for t in bootstrap_guard cli_dispatch_guard cli_validators_guard \
-                   version_consistency_guard regression_guard zsh_migration_guard \
-                   macos_installer_flow_guard release_publish_guard \
-                   setup_runtime_guard maintain_runtime_guard; do
-            zsh "tests/${t}.sh"
-          done
-
-      - name: E2E tests (sandbox + command stubs)
-        run: zsh tests/e2e/run_all.sh
+  shell-checks:
+    name: Shell checks (macOS)
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every macOS matrix job to pass
+        shell: bash
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        run: test "$TEST_RESULT" = success

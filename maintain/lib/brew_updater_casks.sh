@@ -6,7 +6,14 @@ append_brew_update_error_log() {
     local message="$2"
     local timestamp
     timestamp="$(date "+%Y-%m-%d %H:%M:%S")"
-    printf '%s 更新失败: %s (%s)\n' "$timestamp" "$cask" "$message" >> "$ERROR_LOG"
+    # 成功运行不创建错误日志；首次失败时才写入本次运行的分隔信息。
+    if [[ "${BREW_UPDATE_LOG_STARTED:-false}" != true ]]; then
+        local mode="实际执行"
+        [[ "${DRY_RUN:-false}" != true ]] || mode="dry-run"
+        ml_append_log "$ERROR_LOG" "$(write_log_run_header "$mode" "${ZSH_ARGZERO:t}" "${BREW_UPDATE_RUN_STARTED_AT:-}")"$'\n' || return 1
+        BREW_UPDATE_LOG_STARTED=true
+    fi
+    ml_append_log "$ERROR_LOG" "$timestamp 更新失败: $cask ($message)"$'\n'
 }
 
 get_outdated_casks() {
@@ -18,10 +25,7 @@ get_outdated_casks() {
 
     # 不能吞掉 brew 的退出码：网络故障/brew 异常时会返回非零，
     # 若与「无更新」一样 return 0，会把失败误报成「没有需要更新的 Cask」。
-    set +e
-    output="$(brew outdated --cask --greedy 2> /dev/null)"
-    outdated_status=$?
-    set -e
+    output="$(brew outdated --cask --greedy 2> /dev/null)" || outdated_status=$?
     if [[ $outdated_status -ne 0 ]]; then
         warning "brew outdated --cask 执行失败（退出码 $outdated_status），本次跳过 Cask 更新检测"
         return 1
@@ -108,12 +112,10 @@ run_cask_upgrades() {
     # `outdated_casks=("${(@f)$(get_outdated_casks)}")` 在 set -e 下会
     # 因赋值语句继承失败状态而终止；同时也不能把失败当作「无更新」。
     local outdated_output="" outdated_status=0
-    set +e
-    outdated_output="$(get_outdated_casks)"
-    outdated_status=$?
-    set -e
+    outdated_output="$(get_outdated_casks)" || outdated_status=$?
     if [[ $outdated_status -ne 0 ]]; then
-        warning "Cask 更新检测失败，跳过本步骤（其余维护步骤继续）"
+        CASK_CHECK_FAILED=true
+        warning "Cask 更新检测失败，跳过本步骤（其余维护步骤继续，最终返回失败）"
         return 0
     fi
 

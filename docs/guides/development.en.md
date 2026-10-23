@@ -2,7 +2,7 @@
 title: Development and validation
 status: current
 owner: project-maintainers
-updated: 2026-10-17
+updated: 2026-10-22
 ---
 
 # Development and validation
@@ -22,6 +22,7 @@ This guide is the single maintained source for test commands; other documents li
 Run tests from faster checks to slower suites; CI runs them on pushes and pull requests:
 
 ```bash
+zsh lint/sync_bootstrap.sh --check # Bootstrap 内嵌代码一致性
 zsh tests/syntax_guard.sh        # ① 语法：统一 #!/bin/zsh 与 zsh -n
 ./lint/lint_shell.sh             # ② 检查：Zsh shebang 与语法（同一检查入口）
 ./tests/smoke_cli.sh             # ③ CLI：关键成功/失败路径
@@ -33,7 +34,7 @@ Smoke and E2E tests override `MACOS_SCRIPTS_LOG_DIR` and `MACOS_SCRIPTS_CONFIG_D
 Function guards, matching the CI guard step:
 
 ```bash
-zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两种模式
+zsh tests/bootstrap_guard.sh          # bootstrap 双入口：root 保护、架构、运行锁/并发/中断、PTY 确认、CLT、Homebrew 换源/dry-run
 zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
 zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
@@ -43,7 +44,13 @@ zsh tests/macos_installer_flow_guard.sh # 安装器流程
 zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
+zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
+zsh tests/reliability_guard.sh      # 多进程配置、回滚互斥、信号、错误传播、预览一致性
 ```
+
+Query regressions cover CLI and standalone help, CLI versions, piped bootstrap help, fresh directories, unusable paths, and existing logs and locks. Command stubs verify that queries do not check the system or network, create directories, rotate logs, or modify locks.
+
+Bootstrap root tests fix the effective-UID condition only in a temporary script copy; they do not run sudo or change the real UID. They verify early rejection without writes and help access for root.
 
 Invoke the listed guards with `zsh tests/<name>.sh`, as documented. Zsh-specific guards fail when invoked with Bash.
 
@@ -59,7 +66,7 @@ Coverage:
 
 - `release verify/publish`: version consistency and gh create/update/verify-only branches and arguments.
 - `maintain brew`: brew call order and Cask failure logs.
-- `setup brew configure`: configuration dry-run and missing-source regressions.
+- `setup brew configure`: dry-run, real temporary Git configuration, repeated execution, staged failure/interruption rollback, backups, and locking.
 - `bootstrap/install.sh`: tap/install calls and log writes.
 
 E2E scripts use Zsh. The `.github/workflows/release.yml` gate runs for `v*` tags and includes actual Formula installation on macOS.
@@ -67,3 +74,25 @@ E2E scripts use Zsh. The `.github/workflows/release.yml` gate runs for `v*` tags
 ## Contributing
 
 Report issues or suggest improvements through Issues or Pull Requests. Before committing, follow the [code of conduct](../../.github/CODE_OF_CONDUCT.md) (Chinese) and run the [validation suite](#run-validation). For long operations, include `log_time_start/_end` logs or screenshots where useful.
+
+## Shared code and compatibility validation
+
+After changing logging, resource locks, macOS requirements, or `first_line`, regenerate standalone bootstrap code with `zsh lint/sync_bootstrap.sh`, then run the checklist above. CI and release gates enforce `--check`.
+
+CI records OS, architecture, and system Zsh versions. Repository variable `MACOS_TEST_RUNNERS` accepts a JSON array of available runner labels, defaulting to `["macos-latest"]`. Configure available Intel/Apple Silicon runners to run the same suite on each; use labels supported by your actual GitHub or self-hosted infrastructure.
+
+Before release, record the commit and results for macOS 14 arm64, macOS 14 x86_64, and a newer supported macOS. Run this full checklist on each and mark unavailable combinations unverified. Stubbed tests do not prove real Homebrew installation, image mounting, or USB creation; validate those separately on recoverable test machines/media.
+
+Reusable package contracts and offline vendoring are covered by `zsh tests/zsh_kit_guard.sh`. This copies the package outside the repository before testing, including repeated loading, errors, atomic writes, cross-project locks, log capture and tamper detection.
+
+Run `zsh tests/template_guard.sh` to generate a renamed project in a path containing spaces and verify standalone operation, metadata escaping and overwrite protection.
+
+Run `zsh tests/reuse_acceptance_guard.sh` for the independent file organizer example and synthetic compatible patch upgrade. It checks dry-run, repeated execution, conflicts, failure recovery, symlink protection and unchanged business code; all writes remain in temporary directories.
+
+Run `zsh tests/artifact_tools_guard.sh` for canonical-path overlap, concurrent sync, TERM/KILL recovery, backup retention and generator retry.
+
+Full regression: `zsh tests/run_all.sh --report NEW_DIRECTORY`. CI and release gates use this same ordered runner. Reports retain environment identity, source revision/dirty state, exit codes and per-suite logs. Optional `TEST_EXPECT_OS_MAJOR`/`TEST_EXPECT_ARCH` enforce runner expectations. `platform-validation.yml` accepts configured runners through `MACOS_COMPAT_MATRIX`; unavailable platforms remain unverified. See [platform evidence policy](../engineering/platform-validation.md).
+
+`zsh tests/api_surface_guard.sh` checks private API boundaries and compares unchanged consumer behavior against old and new components. Independent package contracts verify API.txt and opt-in separated stdout/stderr capture.
+
+`zsh tests/package_release_guard.sh` covers clean tracked sources, reproducible manifests, metadata tampering, ignored payload files and overwrite rejection. Validate exported directories with `zsh /path/to/artifact/tests/contract.sh` and `zsh tools/vendor_zsh_kit.sh --check /path/to/artifact`. See [component delivery](releasing-zsh-kit.md).

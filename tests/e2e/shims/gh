@@ -12,6 +12,19 @@ record_invocation "$@"
 GH_STATE_DIR="${E2E_GH_STATE_DIR:-${E2E_TMP_ROOT:-/tmp}/gh_state}"
 mkdir -p "$GH_STATE_DIR"
 
+save_content() {
+  local item title="" notes=""
+  while (( $# > 0 )); do
+    case "$1" in
+      --title) title="$2"; shift 2 ;;
+      --notes-file) notes="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  printf '%s\n' "$title" > "$GH_STATE_DIR/title"
+  cat "$notes" > "$GH_STATE_DIR/body"
+}
+
 release_created() { [[ -f "$GH_STATE_DIR/release_created" ]]; }
 
 cmd="${1:-}"
@@ -21,6 +34,8 @@ shift 2 2> /dev/null || true
 case "$cmd" in
   api)
     if release_created; then
+      if [[ "$*" == *'.name //'* ]]; then cat "$GH_STATE_DIR/title"; exit 0; fi
+      if [[ "$*" == *'.body //'* ]]; then cat "$GH_STATE_DIR/body"; exit 0; fi
       printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.5.0}"
       exit 0
     fi
@@ -35,11 +50,13 @@ case "$cmd" in
   release)
     case "$sub" in
       create)
+        save_content "$@"
         : > "$GH_STATE_DIR/release_created"
         printf '%s\n' "https://github.com/anzihenry/scripts/releases/tag/${E2E_GH_TAG:-v0.5.0}"
         exit 0
         ;;
       edit)
+        save_content "$@"
         exit 0
         ;;
       *)

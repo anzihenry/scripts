@@ -22,26 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Zsh interpreter and syntax guard
-        run: zsh tests/syntax_guard.sh
+      - name: Full sandbox regression
+        run: zsh tests/run_all.sh --report "$RUNNER_TEMP/release-validation-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
 
-      - name: Zsh checks
-        run: ./lint/lint_shell.sh
-
-      - name: CLI smoke tests
-        run: zsh tests/smoke_cli.sh
-
-      - name: Guard tests (zsh)
-        run: |
-          for t in bootstrap_guard cli_dispatch_guard cli_validators_guard \
-                   version_consistency_guard regression_guard zsh_migration_guard \
-                   macos_installer_flow_guard release_publish_guard \
-                   setup_runtime_guard maintain_runtime_guard; do
-            zsh "tests/${t}.sh"
-          done
-
-      - name: E2E L1 (sandbox + command stubs)
-        run: zsh tests/e2e/run_all.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-sandbox-validation
+          path: ${{ runner.temp }}/release-validation-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Release verify (real gh, non-destructive)
         env:

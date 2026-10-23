@@ -1,0 +1,25 @@
+name: Platform compatibility evidence
+on:
+  workflow_dispatch:
+defaults:
+  run:
+    shell: /bin/zsh -euo pipefail {0}
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(vars.MACOS_COMPAT_MATRIX || '[{"name":"current","runner":"macos-latest","os_major":"","arch":""}]') }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    env:
+      TEST_EXPECT_OS_MAJOR: ${{ matrix.os_major }}
+      TEST_EXPECT_ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: zsh tests/run_all.sh --report "$RUNNER_TEMP/platform-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: platform-${{ matrix.name }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/platform-${{ github.run_id }}-${{ github.run_attempt }}

@@ -35,6 +35,7 @@ E2E_RUN_STATUS=0
 e2e_begin() {
   E2E_TEST_NAME="${1:-unnamed}"
   E2E_TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/macos-scripts-e2e.XXXXXX")"
+  E2E_TMP_ROOT="${E2E_TMP_ROOT:A}"
   E2E_HOME="$E2E_TMP_ROOT/home"
   E2E_CONFIG_DIR="$E2E_TMP_ROOT/config"
   E2E_LOG_DIR="$E2E_TMP_ROOT/logs"

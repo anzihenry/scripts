@@ -127,51 +127,17 @@ __color_format_duration() {
   printf "%s" "${parts[*]}"
 }
 
-log_time_start() {
-  local key="${1:-default}"
-  local message="${2:-}"
-  local var
-  local now
-  var="__COLOR_TIMER_$(__color_timer_key "$key")"
-  now="$(date +%s 2> /dev/null || printf '%s' "${EPOCHSECONDS:-0}")"
-  eval "$var=$now"
-  [[ -n "$message" ]] && log_info "$message (开始)"
-}
-
-log_time_end() {
-  local key="${1:-default}"
-  local message="${2:-任务完成}"
-  local outcome="${3:-success}" # 避免 zsh 内置只读参数名 status
-  local var
-  local start=""
-  var="__COLOR_TIMER_$(__color_timer_key "$key")"
-  eval "start=\${$var:-}"
-
-  if [[ -z "$start" ]]; then
-    log_warn "未找到计时器：$key"
-    return 1
-  fi
-
-  local now
-  now="$(date +%s 2> /dev/null || printf '%s' "${EPOCHSECONDS:-0}")"
-  local duration=$((now - start))
-  local formatted
-  formatted="$(__color_format_duration "$duration")"
-
-  case "$outcome" in
-    success | ok)
-      log_success "${message}，耗时 ${formatted}"
-      ;;
-    warn | warning)
-      log_warn "${message}，耗时 ${formatted}"
-      ;;
-    *)
-      log_error "${message}，耗时 ${formatted}"
-      ;;
+source "${${(%):-%x}:A:h}/../packages/zsh-kit/lib/console.sh"
+_ms_timer_log() {
+  local level="$1"; shift
+  case "$level" in
+    info) log_info "$@" ;; success|ok) log_success "$@" ;;
+    warn|warning) log_warn "$@" ;; *) log_error "$@" ;;
   esac
-
-  eval "unset $var"
 }
+log_time_start() { local SK_LOG_SINK=_ms_timer_log; sk_time_start "$@"; }
+log_time_end() { local SK_LOG_SINK=_ms_timer_log; sk_time_end "$@"; }
+
 
 # 带图标的日志函数
 # 注意：四个函数必须写入 stderr（与 log_info/log_warn/log_error 一致）。

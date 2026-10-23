@@ -6,14 +6,11 @@
 # 旧实现把任意 gh 失败都当成「不存在」，会让 --verify-only 在断网时限流时
 # 打印成功，也可能在状态未知时触发误创建。
 release_status() {
-  local stderr_file release_state
+  local stderr_file release_state=0
   stderr_file="$(mktemp "${TMPDIR:-/tmp}/release-status.XXXXXX")"
 
   # 注意：变量名不能用 status——zsh 中 status/pipestatus 是只读特殊变量。
-  set +e
-  env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" > /dev/null 2> "$stderr_file"
-  release_state=$?
-  set -e
+  env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" > /dev/null 2> "$stderr_file" || release_state=$?
 
   if [[ $release_state -eq 0 ]]; then
     rm -f "$stderr_file"
@@ -70,6 +67,13 @@ confirm_publish() {
   [[ "$reply" =~ ^[Yy]$ ]]
 }
 
+release_content_matches() {
+  local current_title current_body
+  current_title="$(env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" --jq '.name // ""')" || return 2
+  current_body="$(env GH_PAGER=cat gh api "repos/$REPO_SLUG/releases/tags/$TAG" --jq '.body // ""')" || return 2
+  [[ "$current_title" == "$TITLE" && "$current_body" == "$(<"$NOTES_FILE")" ]]
+}
+
 create_or_update_release() {
   print_header "执行 GitHub Release"
 
@@ -82,6 +86,15 @@ create_or_update_release() {
   fi
 
   if [[ $release_state -eq 0 ]]; then
+    local content_state=0
+    release_content_matches || content_state=$?
+    if [[ "$content_state" == 0 ]]; then
+      success "Release 标题和正文一致，跳过更新。"
+      return 0
+    elif [[ "$content_state" == 2 ]]; then
+      error "无法读取已有 Release 内容，未执行更新，请检查网络/权限后重试。"
+      return 1
+    fi
     if [[ "$UPDATE_EXISTING" != "true" ]]; then
       error "Release 已存在。如需更新，请追加 --update-existing。"
       exit 1

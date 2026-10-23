@@ -79,10 +79,10 @@ run_optional_cleanup() {
 }
 
 run_brew_updater_workflow() {
-    run_homebrew_update
-    run_optional_formulae_upgrade
-    run_optional_cask_upgrades
-    run_optional_cleanup
+    run_homebrew_update || return $?
+    run_optional_formulae_upgrade || return $?
+    run_optional_cask_upgrades || return $?
+    run_optional_cleanup || return $?
 }
 
 print_summary() {
@@ -95,6 +95,11 @@ print_summary() {
 
     if [[ ${#SKIPPED_CASKS[@]} -gt 0 ]]; then
         warning "已排除的 Cask: ${SKIPPED_CASKS[*]}"
+    fi
+
+    if [[ "${CASK_CHECK_FAILED:-false}" == true ]]; then
+        error "Cask 更新检测未完成，请检查网络/Homebrew 后重新运行。"
+        return 1
     fi
 
     if [[ ${#FAILED_CASKS[@]} -gt 0 ]]; then

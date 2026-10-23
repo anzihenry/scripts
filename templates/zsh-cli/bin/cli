@@ -1,0 +1,9 @@
+#!/bin/zsh
+# filepath: bin/cli (generated command name)
+set -euo pipefail
+APP_ROOT="${0:A:h:h}"
+source "$APP_ROOT/project.conf"
+source "$APP_ROOT/src/main.sh"
+result=0
+app_main "$@" || result=$?
+exit "$result"

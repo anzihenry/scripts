@@ -2,7 +2,7 @@
 title: 开发与验证
 status: current
 owner: project-maintainers
-updated: 2026-10-17
+updated: 2026-10-22
 ---
 
 # 开发与验证
@@ -17,9 +17,18 @@ updated: 2026-10-17
 
 > 本文是测试命令的唯一权威入口；其他文档通过链接引用。
 
-按测试层级由快到慢执行（CI 已在每次 push/PR 自动运行全部）：
+完整验证统一使用以下入口（CI 与发布门禁调用同一入口）：
+
+```sh
+zsh tests/run_all.sh --report "/tmp/macos-scripts-validation-$(date +%Y%m%d-%H%M%S)"
+```
+
+报告目录必须不存在。入口依次执行环境检查、Bootstrap 同步、语法/lint、smoke、全部 guard、E2E；失败停止并保留逐套日志、环境身份及退出码。`TEST_EXPECT_OS_MAJOR=14` 和 `TEST_EXPECT_ARCH=arm64` 可用于校验指定测试机身份。最低版本/架构矩阵和真实安装验收见 [平台验证](../engineering/platform-validation.md)。
+
+需要定位问题时，按以下顺序选择单项验证：
 
 ```bash
+zsh lint/sync_bootstrap.sh --check # Bootstrap 内嵌代码一致性
 zsh tests/syntax_guard.sh        # ① 语法：统一 #!/bin/zsh 与 zsh -n
 ./lint/lint_shell.sh             # ② 检查：Zsh shebang 与语法（同一检查入口）
 ./tests/smoke_cli.sh             # ③ CLI：关键成功/失败路径
@@ -31,7 +40,7 @@ zsh tests/e2e/run_all.sh         # ④ 进程级：沙箱 + 命令桩 E2E（5 �
 函数级 guard 测试（zsh 运行，与 CI 的 guard 步骤一致）：
 
 ```bash
-zsh tests/bootstrap_guard.sh          # bootstrap 本地文件 / curl 管道两种模式
+zsh tests/bootstrap_guard.sh          # bootstrap 双入口：root 保护、架构、运行锁/并发/中断、PTY 确认、CLT、Homebrew 换源/dry-run
 zsh tests/cli_dispatch_guard.sh       # CLI 分发路由
 zsh tests/cli_validators_guard.sh     # CLI 参数校验
 zsh tests/version_consistency_guard.sh # VERSION 与各 fallback/Formula 引用一致性
@@ -41,7 +50,20 @@ zsh tests/macos_installer_flow_guard.sh # 安装器流程
 zsh tests/release_publish_guard.sh    # release 发布流程
 zsh tests/setup_runtime_guard.sh      # setup 流程编排
 zsh tests/maintain_runtime_guard.sh   # Homebrew 维护流程
+zsh tests/idempotence_guard.sh       # 重复执行、失败恢复、资源复用与安装器状态
+zsh tests/reuse_acceptance_guard.sh # 独立文件整理示例、故障恢复、兼容升级演练
+zsh tests/package_release_guard.sh  # 干净来源、离线产物、清单头校验、不可覆盖
+zsh tests/api_surface_guard.sh      # 公开接口清单、私有调用边界、旧新消费者行为
+zsh tests/platform_guard.sh         # runner 身份校验逻辑（模拟身份，不计为实机覆盖）
+zsh tests/artifact_tools_guard.sh   # 分发/生成并发、真实路径、中断与恢复
+zsh tests/template_guard.sh         # 改名生成、带空格路径、离线运行、拒绝覆盖
+zsh tests/zsh_kit_guard.sh          # 独立公共包契约、离线分发、摘要与篡改保护
+zsh tests/reliability_guard.sh      # 多进程配置、回滚互斥、信号、错误传播、预览一致性
 ```
+
+> 查询回归覆盖 CLI/独立脚本帮助、CLI 版本、独立管道入口，以及新目录、不可写路径和已有日志/锁；命令桩验证不触发系统/网络检查、目录创建、日志轮转或锁修改。
+
+> bootstrap 的 root 用例只在临时脚本副本中固定有效 UID 判断结果，不执行 sudo 或修改真实 UID；覆盖提前退出无写入及 root 帮助。
 
 > 以上 guard 均为 zsh 脚本，请用 `zsh tests/<name>.sh` 调用（用 bash 运行会因 zsh 语法报错）。
 
@@ -57,7 +79,7 @@ zsh tests/e2e/run_all.sh
 
 - `release verify` / `release publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
 - `maintain brew`：brew 调用顺序、Cask 失败错误日志
-- `setup brew configure`：配置流程 dry-run，防缺失 source 依赖回归
+- `setup brew configure`：dry-run、真实临时 Git 配置、重复执行、分阶段故障/中断回滚、备份和锁保护
 - `bootstrap/install.sh`：tap + install 调用与日志写入
 
 > E2E 用例均为 Zsh 脚本，用 `zsh tests/e2e/run_all.sh` 调用。发布门禁见 `.github/workflows/release.yml`（打 `v*` tag 时自动执行，含真实 macOS 上的 Formula 实装校验）。
@@ -70,3 +92,15 @@ zsh tests/e2e/run_all.sh
 - 按[「运行验证」](#-运行验证)的清单执行回归（语法 / lint / smoke / guard / E2E），命令与说明以该节为唯一权威源。
 
 > 若涉及长耗时任务，建议附带 `log_time_start/_end` 输出截图或日志片段。
+
+## 公共代码与兼容验证
+
+修改日志、资源锁、macOS 检查或 `first_line` 后，运行 `zsh lint/sync_bootstrap.sh` 生成独立 Bootstrap 的内嵌代码，再按上述清单验证。`--check` 已接入 CI 和发布门禁，禁止手动维护副本。
+
+CI 输出系统版本、架构和系统 Zsh 版本。仓库变量 `MACOS_TEST_RUNNERS` 可设置可用 runner 标签的 JSON 数组，默认 `["macos-latest"]`；增加已配置的 Intel/Apple Silicon runner 后，同一套测试将在各环境执行。标签应以实际可用的 GitHub/自托管 runner 为准。
+
+发布前兼容验证清单：macOS 14 + arm64、macOS 14 + x86_64、当前支持的较新 macOS。每个环境执行本文完整清单，记录 OS/架构/Zsh、提交号和结果；未覆盖的组合应明确列为未验证。命令桩测试不能证明真实 Homebrew 安装、镜像挂载或 USB 抹盘成功；这些操作另在可恢复的测试机/测试介质上验证，不能使用日常数据卷。
+
+## 独立交付产物验证
+
+生成目录产物后执行 `zsh /path/to/artifact/tests/contract.sh` 和 `zsh tools/vendor_zsh_kit.sh --check /path/to/artifact`。前者运行组件契约，后者检查来源清单及文件摘要。离线交付流程见 [zsh-kit 发布指南](releasing-zsh-kit.md)。

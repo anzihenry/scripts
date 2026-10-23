@@ -98,7 +98,7 @@ test_precheck_runs_expected_phases() {
   success() { calls+=("success:$1"); }
 
   precheck
-  assert_eq "${calls[*]}" "header:系统环境预检 config platform network brew success:系统环境预检通过" "precheck keeps expected phase order"
+  assert_eq "${calls[*]}" "header:系统环境预检 platform config network brew success:系统环境预检通过" "precheck keeps expected phase order"
 }
 
 test_install_core_software_reports_failure() {
@@ -131,7 +131,9 @@ EOF
     return 0
   }
 
-  install_core_software > "$output_file"
+  local rc=0
+  install_core_software > "$output_file" || rc=$?
+  assert_eq "$rc" 1 "partial package failure returns nonzero"
   output="$(cat "$output_file")"
   rm -f "$output_file"
   rm -rf "$temp_root"

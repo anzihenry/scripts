@@ -26,6 +26,7 @@ fi
 
 # ==== 日志与颜色：集成 utils.sh（自动加载 colors.sh 并提供 fallback）====
 # shellcheck disable=SC1090
+source "$SCRIPT_DIR/../lib/colors.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
 # shellcheck disable=SC1090
 source "$SCRIPT_DIR/lib/macos_installer_args.sh"
@@ -38,15 +39,10 @@ source "$SCRIPT_DIR/lib/macos_installer_utils.sh"
 
 die() { log_fatal "$@"; }
 
-# 脚本退出时统一清理所有已获取的安装器锁目录
-# （acquire_installer_lock 只登记到 INSTALLER_LOCK_DIRS，不再自设 trap）
-cleanup_installer_locks() {
-  local lock_dir
-  for lock_dir in "${INSTALLER_LOCK_DIRS[@]:-}"; do
-    rm -rf "$lock_dir"
-  done
-}
-trap cleanup_installer_locks EXIT INT TERM HUP
+# 信号必须结束运行，避免清理后继续操作。资源锁在进程退出时由内核释放。
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 
 usage() {
   cat <<EOF
@@ -57,8 +53,8 @@ usage() {
 
 说明:
   list        列出可用完整安装器版本 (softwareupdate --list-full-installers)
-  download    幂等：若指定版本安装器已在 /Applications 中则跳过；--force 可强制重新下载
-  create      幂等：若目标卷已是同版本可启动安装器则跳过；不同版本需 --force 才覆盖（会抹掉分区）
+  download    幂等：若指定系统版本安装器已通过完整性检查则跳过；--force 可强制重新下载
+  create      幂等：校验卷 UUID、安装器摘要、完成记录及引导文件后跳过；--force 显式重做（会抹掉分区）
   日志        默认写入 ${MAINTAIN_LOG_FILE}
 示例:
   $SCRIPT_NAME list
@@ -75,8 +71,7 @@ main() {
 
   [ $# -ge 1 ] || { usage; exit 1; }
 
-  log_info "日志文件位置: $MAINTAIN_LOG_FILE"
   dispatch_macos_installer_command "$@"
 }
 
-main "$@"
+main "$@" || exit $?

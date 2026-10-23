@@ -3,6 +3,8 @@
 # 通用工具库：日志 fallback、运行时辅助、命令检查、Xcode CLI 安装
 # 用法: source "$(dirname "$0")/../lib/utils.sh"
 
+source "${${(%):-%x}:A:h}/resource_lock.sh"
+
 # ===== 1. 日志 fallback（colors.sh 不可用时生效）=====
 _utils_has() { typeset -f "$1" > /dev/null 2>&1; }
 
@@ -34,75 +36,86 @@ if ! _utils_has log_info; then
 fi
 
 unset -f _utils_has
+source "${${(%):-%x}:A:h}/logging.sh"
 
 # ===== 2. 运行时辅助 =====
 prepare_log_file_path() {
   local file_name="$1"
-  local fallback_path="${2:-$file_name}"
-  local candidate=""
-  local candidate_dir=""
-  local fallback_dir=""
+  local log_dir="${MACOS_SCRIPTS_LOG_DIR:-$HOME/Library/Logs/macos-scripts}"
+  log_dir="${log_dir:a}"
+  local candidate="$log_dir/$file_name"
 
-  if [[ -n "${MACOS_SCRIPTS_LOG_DIR:-}" ]]; then
-    candidate="${MACOS_SCRIPTS_LOG_DIR%/}/$file_name"
-    candidate_dir="${candidate%/*}"
-    if mkdir -p "$candidate_dir" > /dev/null 2>&1 && [[ -w "$candidate_dir" ]]; then
-      printf '%s' "$candidate"
-      return 0
-    fi
+  if ! mkdir -p "$log_dir" 2>/dev/null || [[ ! -w "$log_dir" ]]; then
+    error "日志目录不可用，请检查权限或设置 MACOS_SCRIPTS_LOG_DIR: $log_dir"
+    return 1
   fi
+  if [[ -e "$candidate" && ( ! -f "$candidate" || ! -w "$candidate" ) ]]; then
+    error "日志文件不可写，请检查权限或设置 MACOS_SCRIPTS_LOG_DIR: $candidate"
+    return 1
+  fi
+  printf '%s' "$candidate"
+}
 
-  fallback_dir="${fallback_path%/*}"
-  [[ "$fallback_dir" == "$fallback_path" ]] && fallback_dir="."
-  mkdir -p "$fallback_dir" > /dev/null 2>&1 || true
-  printf '%s' "$fallback_path"
+get_log_run_mode() {
+  # 只识别执行开关，不输出参数；跳过带值选项，避免把标题等值误作开关。
+  local mode="实际执行"
+  while (( $# > 0 )); do
+    case "$1" in
+      --dry-run) mode="dry-run"; shift ;;
+      --tag|--notes-file|--target|--title|--repo|-d|--domain|-t|--type)
+        (( $# >= 2 )) || break
+        shift 2
+        ;;
+      --) break ;;
+      *) shift ;;
+    esac
+  done
+  printf '%s' "$mode"
+}
+
+write_log_run_header() {
+  local mode="${1:-实际执行}"
+  local script_name="${2:-${ZSH_ARGZERO:t}}"
+  local started_at="${3:-$(date '+%Y-%m-%d %H:%M:%S %z')}"
+  printf '\n===== 运行开始 =====\n开始时间: %s\n脚本: %s\n模式: %s\nPID: %s\n====================\n' \
+    "$started_at" "$script_name" "$mode" "$$"
 }
 
 enable_log_capture() {
   local log_file="$1"
+  local mode="${2:-实际执行}"
 
   if [[ -z "$log_file" ]]; then
-    warning "未提供日志文件路径，跳过日志重定向"
+    error "未提供日志文件路径，无法启用日志记录"
     return 1
   fi
 
-  if ! : >> "$log_file" 2> /dev/null; then
-    warning "日志文件不可写，跳过日志重定向: $log_file"
+  # ml_start_capture 先验证普通文件/符号链接，再创建或打开日志。
+  ml_start_capture "$log_file" || {
+    error "无法初始化日志，请检查权限、日志策略或 MACOS_SCRIPTS_LOG_DIR: $log_file"
+    return 1
+  }
+  write_log_run_header "$mode"
+}
+
+# BEGIN MACOS REQUIREMENT
+require_supported_macos() {
+  local os_version major_version
+  if ! command -v sw_vers >/dev/null 2>&1 || ! os_version="$(sw_vers -productVersion)"; then
+    error "无法读取 macOS 版本；仅支持 macOS 14 及以上版本，请检查 sw_vers -productVersion。"
     return 1
   fi
-
-  exec > >(tee -a "$log_file") 2>&1
-}
-
-get_macos_version_code() {
-  local os_version="${1:-}"
-  local major_version=""
-  local minor_version=""
-
-  if [[ -z "$os_version" ]]; then
-    os_version="$(sw_vers -productVersion)"
+  if [[ ! "$os_version" =~ ^[0-9]+([.][0-9]+){0,2}$ ]]; then
+    error "无法识别 macOS 版本：${os_version:-空}；请检查 sw_vers -productVersion。"
+    return 1
   fi
-
-  major_version="$(printf '%s' "$os_version" | awk -F. '{print $1}')"
-  minor_version="$(printf '%s' "$os_version" | awk -F. '{print $2}')"
-  printf '%s' $((major_version * 100 + minor_version))
-}
-
-require_macos_min_version() {
-  local min_version_code="$1"
-  local message="${2:-}"
-  local os_version
-  local current_version_code
-
-  os_version="$(sw_vers -productVersion)"
-  current_version_code="$(get_macos_version_code "$os_version")"
-  if [[ "$current_version_code" -lt "$min_version_code" ]]; then
-    if [[ -n "$message" ]]; then
-      log_fatal "${message}，当前版本：${os_version}"
-    fi
-    log_fatal "当前 macOS 版本过低：$os_version"
+  major_version="${os_version%%.*}"
+  if (( ${#major_version} > 3 )) || (( 10#$major_version < 14 )); then
+    error "仅支持 macOS 14 及以上版本，当前版本: $os_version；请升级 macOS 后重新运行。"
+    return 1
   fi
 }
+# END MACOS REQUIREMENT
 
 check_network_reachability() {
   local probe_url="${1:-https://mirrors.ustc.edu.cn}"
@@ -119,9 +132,11 @@ check_network_reachability() {
 # 用 awk 读完整管道再退出，而不是 `cmd | head -n1`：后者在
 # `set -o pipefail` 下，当 writer 因 head 提前退出收到 SIGPIPE(141) 时，
 # 整个命令替换会被判为失败。
+# BEGIN FIRST LINE
 first_line() {
-  "$@" 2> /dev/null | awk 'NR == 1 { print; exit }'
+  "$@" 2> /dev/null | awk 'NR == 1 { print }'
 }
+# END FIRST LINE
 
 # ===== 3. 命令检查 =====
 require_command() {
@@ -162,7 +177,7 @@ resolve_homebrew_bin() {
 # ===== 5. Xcode CLI 安装 =====
 # 参数:
 #   --timeout N     最大轮询次数（每次间隔 5 秒），默认 60
-#   --no-check      跳过 /usr/bin/clang 验证
+#   --no-check      仅验证开发工具路径，跳过 xcrun clang 定位检查
 #   --dry-run       仅打印预览
 ensure_xcode_cli_installed() {
   local timeout=60
@@ -172,6 +187,10 @@ ensure_xcode_cli_installed() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --timeout)
+        if [[ $# -lt 2 || ! "${2:-}" =~ ^[1-9][0-9]*$ ]]; then
+          error "--timeout 需要正整数（每次轮询间隔 5 秒）"
+          return 1
+        fi
         timeout="$2"
         shift 2
         ;;
@@ -183,36 +202,45 @@ ensure_xcode_cli_installed() {
         dry_run=true
         shift
         ;;
-      *) shift ;;
+      *)
+        error "Xcode CLI 检查不支持参数: $1"
+        return 1
+        ;;
     esac
   done
 
-  if xcode-select -p &> /dev/null; then
+  require_command xcode-select
+  [[ "$check_clang" != true ]] || require_command xcrun
+  if xcode-select -p > /dev/null 2>&1; then
+    if [[ "$check_clang" == true ]] && ! xcrun --find clang > /dev/null 2>&1; then
+      error "开发工具路径已存在，但无法定位 clang。请检查 xcode-select -p 和 xcrun --find clang，修复所选 Xcode/Command Line Tools 后重新运行。"
+      return 1
+    fi
     success "Xcode 命令行工具已就绪"
     return 0
   fi
 
   if [[ "$dry_run" == "true" ]]; then
-    info "[dry-run] 将执行 xcode-select --install 并等待安装完成"
+    info "[dry-run] 将执行 xcode-select --install 并等待开发工具就绪（最多 $((timeout * 5)) 秒；默认同时验证 xcrun --find clang）"
     return 0
   fi
 
-  warning "正在安装 Xcode CLI 工具... 请在弹出的窗口中完成安装。"
-  xcode-select --install
+  warning "正在安装 Xcode CLI 工具，请在系统窗口中完成安装；--yes 不会自动操作该窗口。"
+  if ! xcode-select --install; then
+    error "无法启动 Xcode CLI 安装。请手动执行 xcode-select --install，安装完成后重新运行。"
+    return 1
+  fi
 
   local wait_count=0
-  until xcode-select -p &> /dev/null; do
-    info "等待 Xcode CLI 安装完成... (${wait_count}/${timeout})"
-    sleep 5
-    # 注意：不要用 ((wait_count++))——从 0 起时该算术表达式返回假，
-    # 在 set -e 下会触发 errexit 提前退出。
+  until xcode-select -p > /dev/null 2>&1 && { [[ "$check_clang" != true ]] || xcrun --find clang > /dev/null 2>&1; }; do
+    if (( wait_count >= timeout )); then
+      error "Xcode CLI 安装超时（$((timeout * 5)) 秒）。请检查 xcode-select -p 和 xcrun --find clang，完成或修复系统安装后重新运行。"
+      return 1
+    fi
+    info "等待 Xcode CLI 安装完成... (${wait_count}/${timeout}，每次间隔 5 秒)"
+    sleep 5 || return 1
     wait_count=$((wait_count + 1))
-    [[ $wait_count -gt $timeout ]] && log_fatal "安装超时，请手动执行: xcode-select --install"
   done
-
-  if [[ "$check_clang" == "true" ]]; then
-    [[ -f /usr/bin/clang ]] || log_fatal "CLI 工具安装不完整"
-  fi
 
   success "Xcode 命令行工具已安装"
 }

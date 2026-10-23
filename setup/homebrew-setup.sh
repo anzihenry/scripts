@@ -15,8 +15,6 @@ source "$SCRIPT_DIR/lib/config_writer.sh"
 source "$SCRIPT_DIR/lib/homebrew_config.sh"
 
 # ===== 初始化配置 =====
-SETUP_LOG_FILE="$(prepare_log_file_path "homebrew-setup.log" "$SCRIPT_DIR/setup.log")"
-enable_log_capture "$SETUP_LOG_FILE"
 
 BREW_BIN=""
 DRY_RUN="false"
@@ -28,6 +26,8 @@ usage() {
 
 说明:
     仅校准已安装 Homebrew 的镜像、shellenv 和当前环境。
+    默认使用 USTC，修改前备份；成功删除本次备份，失败恢复 .zshrc 和 Git 配置并保留备份。
+    配置阶段不更新或重置仓库，实际更新请使用 maintain brew。
     如果系统尚未安装 Homebrew，请改用 bootstrap/install.sh。
 
 选项:
@@ -71,7 +71,7 @@ precheck() {
     print_header "Homebrew 配置预检"
 
     require_commands curl git
-    require_macos_min_version "1015" "需要 macOS Catalina (10.15) 或更高版本"
+    require_supported_macos || return 1
     check_network_reachability "https://mirrors.ustc.edu.cn" "223.5.5.5" || \
         log_fatal "中科大源异常，网络连接失败，请检查网络设置"
 
@@ -87,7 +87,7 @@ precheck() {
 # ===== Homebrew 配置 =====
 configure_homebrew() {
     print_header "配置 Homebrew"
-    configure_homebrew_environment "$BREW_BIN" "$DRY_RUN"
+    configure_homebrew_environment "$BREW_BIN" "$DRY_RUN" || return $?
     if [[ "$DRY_RUN" == "true" ]]; then
         success "Homebrew dry-run 预演完成 (版本: $(first_line "$BREW_BIN" --version))"
     else
@@ -98,8 +98,10 @@ configure_homebrew() {
 # ===== 主执行流程 =====
 main() {
     parse_args "$@"
-    precheck
-    configure_homebrew
+    SETUP_LOG_FILE="$(prepare_log_file_path "homebrew-setup.log")"
+    enable_log_capture "$SETUP_LOG_FILE" "$(get_log_run_mode "$@")"
+    precheck || return $?
+    configure_homebrew || return $?
     
     print_header "配置完成!"
     info "日志文件位置: $SETUP_LOG_FILE"
