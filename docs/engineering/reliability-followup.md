@@ -18,3 +18,7 @@
 阶段 1 已完成；完整沙箱回归通过（报告 `/private/tmp/scripts-stage1b-20261029`）。组件源修复不直接修改冻结 vendor，消费者通过显式升级获取新版本。
 
 阶段 2 已完成；发布能力移入 `tools/release/`，公共 CLI/安装包不包含发布模块。版本缺失或不一致拒绝验收；workflow 明确 tag、源码身份、Formula URL 和实际安装版本，通过后才进入发布 job。完整沙箱回归通过（`/private/tmp/scripts-stage2b-20261029`）；本次未触发远端发布或真实安装。
+
+阶段 3：Homebrew 备份增加 active/rolled-back/committed 状态、作用域、原始摘要和步骤完成后的检查点。下次启动先验证所有目标、备份完整性及当前内容，再恢复中断事务；成功提交删除备份，失败恢复保留备份。写入与检查点之间被 KILL 时无法证明文件归属，保守拒绝自动覆盖；提示核对备份并人工恢复后将 state 标记 rolled-back。没有承诺断电时文件系统缓存的持久性；不将进程信号测试当作真实断电验收。
+
+阶段 3 完整沙箱回归通过：`/private/tmp/scripts-stage3-20261029`，包括新 SIGKILL 恢复测试和原有真实临时 Git 配置回滚测试。

@@ -114,3 +114,5 @@ Configuration writes lock the resolved resource path, including symlink targets.
 Advisory locks coordinate cooperating project processes, not editors or manual commands. Synchronous nested calls may reuse a parent transaction lock; do not fork parallel writers inside a transaction. SIGKILL/power loss releases kernel locks but cannot run rollback. Completed installations remain; retries inspect actual state, and retained backups support manual recovery. Signal exit codes are INT=130, TERM=143, HUP=129. Recorder failures report incomplete logs without replacing the business exit code.
 
 Common implementations live in `lib/config_writer.sh`, `lib/command_runtime.sh`, `lib/resource_lock.sh`, and `lib/workflow.sh`; old writer/command import paths remain compatible. SSH identity, configuration, GitHub API, and connection output are separate setup libraries.
+
+Homebrew 配置的未完成事务在下次运行时检查：内容匹配检查点则自动恢复；后续编辑、备份损坏或未记录写入会停止，保留备份并提示人工处理。恢复成功保留旧备份，新事务成功删除本次备份。

@@ -59,6 +59,7 @@ zsh tests/artifact_tools_guard.sh   # 分发/生成并发、真实路径、中�
 zsh tests/template_guard.sh         # 改名生成、带空格路径、离线运行、拒绝覆盖
 zsh tests/zsh_kit_guard.sh          # 独立公共包契约、离线分发、摘要与篡改保护
 zsh tests/reliability_guard.sh      # 多进程配置、回滚互斥、信号、错误传播、预览一致性
+zsh tests/homebrew_recovery_guard.sh # SIGKILL 后恢复、后续编辑、损坏备份与未记录写入
 ```
 
 > 查询回归覆盖 CLI/独立脚本帮助、CLI 版本、独立管道入口，以及新目录、不可写路径和已有日志/锁；命令桩验证不触发系统/网络检查、目录创建、日志轮转或锁修改。
