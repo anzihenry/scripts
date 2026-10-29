@@ -24,8 +24,6 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 
 ./bin/macos-scripts maintain brew --dry-run
 ./bin/macos-scripts maintain installer list
-./bin/macos-scripts release verify v0.5.0
-./bin/macos-scripts release publish v0.5.0 --yes
 
 ./bin/macos-scripts lint check
 ```
@@ -50,7 +48,6 @@ Setup converges to the same target state for the same arguments. Healthy resourc
 | `setup packages` | Skip installed packages and recheck partial batch successes; activate an installed local LTS without implicitly upgrading Node/npm; merge pip keys, compare mirrors, and deduplicate PATH |
 | Installer downloads | Check createinstallmedia, payload image integrity, and payload OS metadata; match complete version components and select complete installers by modification time |
 | USB creation | Recheck under the device lock; skip only when volume UUID, payload/Info digests, completion record, application version and boot markers match; force explicitly rebuilds |
-| Releases | Skip matching title/body; a failed content query never triggers an edit; differences follow the existing update policy |
 | Homebrew maintenance | Continue updating software and metadata; failed Cask detection makes the overall result fail so it can be retried |
 
 Forced SSH replacement retains the old keys in `backups/ssh-key.<random>/` under the configuration directory for recovery. A missing public key for an encrypted private key requires manual unlocking/export; the private key is preserved. Unverifiable existing repository directories are preserved for inspection.

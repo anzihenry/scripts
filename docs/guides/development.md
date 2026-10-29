@@ -77,7 +77,7 @@ zsh tests/e2e/run_all.sh
 
 覆盖场景：
 
-- `release verify` / `release publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
+- 内部 `tools/release/release.sh verify / publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
 - `maintain brew`：brew 调用顺序、Cask 失败错误日志
 - `setup brew configure`：dry-run、真实临时 Git 配置、重复执行、分阶段故障/中断回滚、备份和锁保护
 - `bootstrap/install.sh`：tap + install 调用与日志写入

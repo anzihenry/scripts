@@ -1,10 +1,10 @@
 #!/bin/zsh
-# filepath: bin/lib/help_release.sh
+# filepath: tools/release/lib/help_release.sh
 
 print_release_publish_help() {
   cat <<'EOF'
 用法:
-  macos-scripts release publish <tag> [选项]
+  zsh tools/release/release.sh publish <tag> [选项]
 
 说明:
   创建或更新 GitHub Release。
@@ -27,7 +27,7 @@ EOF
 print_release_verify_help() {
   cat <<'EOF'
 用法:
-  macos-scripts release verify <tag> [选项]
+  zsh tools/release/release.sh verify <tag> [选项]
 
 说明:
   仅检查 tag、gh 登录状态和现有 Release 状态。
@@ -48,8 +48,8 @@ EOF
 print_release_help() {
   cat <<'EOF'
 用法:
-  macos-scripts release publish <tag> [参数]
-  macos-scripts release verify <tag> [参数]
+  zsh tools/release/release.sh publish <tag> [参数]
+  zsh tools/release/release.sh verify <tag> [参数]
 
 说明:
   publish          创建或更新 GitHub Release

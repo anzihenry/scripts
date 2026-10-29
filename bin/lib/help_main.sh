@@ -11,7 +11,6 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
 一级命令:
   setup       初始化与配置开发环境
   maintain    日常维护工具
-  release     GitHub Release 发布辅助
   lint        Shell 脚本语法与解释器检查
   help        显示帮助
   version     显示版本
@@ -23,8 +22,6 @@ macos-scripts v${MACOS_SCRIPTS_VERSION}
   macos-scripts setup github --force
   macos-scripts maintain brew --dry-run
   macos-scripts maintain installer list
-  macos-scripts release verify v0.5.0
-  macos-scripts release publish v0.5.0 --yes
   macos-scripts lint check setup
 EOF
 }

@@ -35,14 +35,6 @@ handle_help() {
         *) command_error "未知的 maintain 帮助主题: $action" print_maintain_help ;;
       esac
       ;;
-    release)
-      case "$action" in
-        ""|help) print_release_help ;;
-        publish) print_release_publish_help ;;
-        verify) print_release_verify_help ;;
-        *) command_error "未知的 release 帮助主题: $action" print_release_help ;;
-      esac
-      ;;
     lint)
       case "$action" in
         ""|help) print_lint_help ;;

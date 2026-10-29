@@ -16,3 +16,5 @@
 验证命令以 [开发指南](../guides/development.md) 为准。每阶段完成后在此补充结果。
 
 阶段 1 已完成；完整沙箱回归通过（报告 `/private/tmp/scripts-stage1b-20261029`）。组件源修复不直接修改冻结 vendor，消费者通过显式升级获取新版本。
+
+阶段 2 已完成；发布能力移入 `tools/release/`，公共 CLI/安装包不包含发布模块。版本缺失或不一致拒绝验收；workflow 明确 tag、源码身份、Formula URL 和实际安装版本，通过后才进入发布 job。完整沙箱回归通过（`/private/tmp/scripts-stage2b-20261029`）；本次未触发远端发布或真实安装。

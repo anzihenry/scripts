@@ -1,5 +1,5 @@
 #!/bin/zsh
-# filepath: bin/lib/validators_release.sh
+# filepath: tools/release/lib/validators_release.sh
 
 infer_release_notes_file() {
   local tag="$1"
@@ -135,13 +135,14 @@ verify_release_version_consistency() {
   local tag_version="${tag#v}"
 
   if [[ -z "$expected_version" ]]; then
-    warning "未找到 VERSION 权威文件（$REPO_ROOT/VERSION），跳过版本一致性检查"
+    error "未找到 VERSION 权威文件（$REPO_ROOT/VERSION），发布验证失败"
+    return 1
   elif [[ "$tag_version" != "$expected_version" ]]; then
     warning "版本不一致: tag=$tag，VERSION 文件=$expected_version"
     has_mismatch=true
   fi
 
-  if [[ -n "$formula_version" && "$tag_version" != "$formula_version" ]]; then
+  if [[ -z "$formula_version" || "$tag_version" != "$formula_version" ]]; then
     warning "版本不一致: tag=$tag，Formula 引用=$formula_version"
     has_mismatch=true
   fi

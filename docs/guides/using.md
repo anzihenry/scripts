@@ -22,8 +22,6 @@ updated: 2026-10-22
 
 ./bin/macos-scripts maintain brew --dry-run
 ./bin/macos-scripts maintain installer list
-./bin/macos-scripts release verify v0.5.0
-./bin/macos-scripts release publish v0.5.0 --yes
 
 ./bin/macos-scripts lint check
 ```
@@ -49,7 +47,6 @@ GitHub 配置默认不带 `--force`；仅在明确需要重建已有 SSH 密钥�
 | `setup packages` | Homebrew 已有包跳过；批量部分失败后复查已安装项；已有本地 LTS 用 `nvm use --lts` 激活，不隐式升级 Node/npm；pip 按键合并，镜像一致不重写；PATH 去重 |
 | 安装器下载 | 检查 `createinstallmedia`、载荷镜像完整性及载荷元数据中的 macOS 版本；版本按组件边界匹配；无版本指定时按修改时间选择完整安装器 |
 | USB 制作 | 设备锁内复查；同时匹配卷 UUID、安装载荷/Info 摘要、完成记录、应用版本与引导标记才跳过；`--force` 可重做；没有可信完成记录的已有安装器须显式确认覆盖 |
-| Release | 标题和正文一致时成功跳过；内容查询失败不执行编辑；有差异时遵循原有更新选项 |
 | Homebrew 维护 | 仍更新软件和元数据；Cask 检测失败不再报告整体成功，可重新执行 |
 
 SSH `--force` 会把旧密钥保留在配置目录的 `backups/ssh-key.<随机标识>/`，不会自动删除，以便恢复。加密私钥缺失公钥时，自动恢复会停止并保留原文件，需要先解锁再手动导出。无法验证的已有仓库也会保留并提示检查，不自动删除。

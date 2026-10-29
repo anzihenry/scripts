@@ -1,5 +1,5 @@
 class MacosScripts < Formula
-  desc "Unified macOS automation CLI for setup, maintenance, releases, and lint"
+  desc "Unified macOS automation CLI for setup, maintenance, and lint"
   homepage "https://github.com/anzihenry/scripts"
   url "https://github.com/anzihenry/scripts/archive/refs/tags/v0.5.0.tar.gz"
   # Homebrew infers the stable version from the tag URL.

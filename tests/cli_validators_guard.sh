@@ -43,6 +43,8 @@ source "$REPO_ROOT/bin/lib/help.sh"
 source "$REPO_ROOT/bin/lib/cli_runtime.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/validators.sh"
+source "$REPO_ROOT/tools/release/lib/validators_release.sh"
+source "$REPO_ROOT/tools/release/lib/help_release.sh"
 
 run_expect_failure_contains() {
   local name="$1"
@@ -126,9 +128,9 @@ test_help_topics() {
     "macos-scripts maintain installer download" \
     handle_help maintain installer
 
-  run_expect_success_contains \
-    "help release topic stays consistent" \
-    "macos-scripts release publish" \
+  run_expect_failure_contains \
+    "release help removed from public CLI" \
+    "未知的帮助主题: release" \
     handle_help release
 
 }

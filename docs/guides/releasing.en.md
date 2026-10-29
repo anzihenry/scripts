@@ -13,11 +13,11 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 
 ## GitHub Release
 
-Use the unified CLI for release operations:
+Releases are repository maintenance, orchestrated by `.github/workflows/release.yml`. Internal tools under `tools/release/` are excluded from Formula installation and the public CLI. For local diagnosis:
 
 ```bash
-./bin/macos-scripts release verify v0.5.0
-./bin/macos-scripts release publish v0.5.0 --yes
+zsh tools/release/release.sh verify v0.5.0
+zsh tools/release/release.sh publish v0.5.0 --yes
 ```
 
 - `release verify <tag>` checks the tag, gh authentication, and existing release state.
@@ -30,7 +30,7 @@ Use the unified CLI for release operations:
 
 The root `VERSION` file is authoritative, currently `0.5.0`. The CLI version/help reads it; local bootstrap prefers it and piped execution uses a built-in fallback. The Formula installs VERSION into libexec.
 
-Verify/publish compares the target tag to VERSION and the Formula reference. Publish aborts on inconsistency. Update VERSION and the Formula URL/checksum for a new release, then check consistency with verify.
+Verify/publish compares the target tag to VERSION and the Formula reference. Both verify and publish abort on inconsistency. Update VERSION and the Formula URL/checksum for a new release, then check consistency with verify.
 
 ## Release sequence
 
@@ -38,6 +38,6 @@ Verify/publish compares the target tag to VERSION and the Formula reference. Pub
 2. Run [development validation](development.en.md) and record the candidate commit and results.
 3. Review and commit version changes, create and push the version tag, and wait for the release workflow.
 4. Compute SHA-256 from the `refs/tags/<tag>` source archive and update the Formula on main. Do not move a frozen tag.
-5. After Formula installation and release gates pass, run publish and record the official URL, artifact identity, and publication time.
+5. Rerun the workflow after updating the Formula. Manual dispatch requires an explicit tag. The gate checks source/tag identity, the tap Formula URL and the exact installed version; the dependent publish job creates or updates the release only after success.
 
 Each version's `validation.md` contains its checklist. Historical checklists do not prove current acceptance or official publication.
