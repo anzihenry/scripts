@@ -27,3 +27,5 @@ updated: 2026-10-23
 [CLI 分层规则](cli-layering.md)、[开发验证](../guides/development.md)。
 
 公共接口与迁移规则见 [实施约定](reuse-plan.md) 和 [zsh-kit](../../packages/zsh-kit/README.md)。
+
+应用脚本直接加载根目录 `lib/config_writer.sh`、`lib/command_runtime.sh` 适配层，不再通过 setup/maintain 下的同名转发文件。共享模块按自身文件路径定位依赖；Homebrew 恢复和 SSH 信任策略仍属于应用层。仓库发布工具位于 `tools/release/`，不进入公共 CLI 或 Formula 运行目录。

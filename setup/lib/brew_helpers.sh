@@ -4,7 +4,7 @@
 
 # ===== 日志函数兜底（由 lib/utils.sh 统一提供）=====
 # shellcheck disable=SC1091
-source "$(cd "$(dirname "$0")" && pwd)/../../lib/utils.sh"
+source "${${(%):-%x}:A:h}/../../lib/utils.sh"
 
 # ===== 全局状态 =====
 : "${BH_DEFAULT_RETRIES:=2}"

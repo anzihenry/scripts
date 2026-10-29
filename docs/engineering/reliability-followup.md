@@ -28,3 +28,7 @@
 阶段 4 完整沙箱回归通过：`/private/tmp/scripts-stage4-20261029`。认证响应与参数通过命令桩验证，没有连接真实 Git 服务或改动用户 known_hosts。
 
 阶段 5 本地部分完成：新增配置路径/权限/语法失败测试及不含发布工具的安装布局测试；完整沙箱回归和三个 workflow 的 YAML 语法检查通过。报告 `/private/tmp/scripts-stage5-20261029`，持久证据见 [平台记录](platform-validation.md)。macOS 14、Intel、真实 Homebrew 安装及 USB 启动验收仍待专用环境；不阻塞后续模块收敛，但不声明这些环境通过。
+
+阶段 6：删除 setup/config_writer 与 maintain/command_runtime 的纯转发层，应用直接加载根 lib 适配层；三个共享业务模块改用自身路径定位依赖。公共包补充失败后状态、重试和清理契约，配置保真修复记为 0.2.1（待发布）。业务事务与认证策略不抽入公共包。组件源先提交，示例再从该干净提交同步并单独提交，以保留可追溯的 vendor 清单。
+
+阶段 6 源代码完整沙箱回归通过：`/private/tmp/scripts-stage6-20261029`。

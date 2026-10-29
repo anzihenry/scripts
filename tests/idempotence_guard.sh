@@ -9,7 +9,7 @@ export HOME="$SANDBOX/home" MACOS_SCRIPTS_CONFIG_DIR="$SANDBOX/config" MACOS_SCR
 mkdir -p "$HOME" "$SANDBOX/bin"
 source "$ROOT/lib/colors.sh"
 source "$ROOT/lib/utils.sh"
-source "$ROOT/setup/lib/config_writer.sh"
+source "$ROOT/lib/config_writer.sh"
 PASS_COUNT=0
 pass() { print "[PASS] $1"; PASS_COUNT=$((PASS_COUNT+1)); }
 fail() { print -u2 "[FAIL] $1"; exit 1; }

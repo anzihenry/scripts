@@ -56,4 +56,4 @@ zsh tools/create_zsh_project.sh --name my-tool --description "我的 macOS 工�
 
 [`examples/file-organizer`](examples/file-organizer/README.md) 提供从模板生成的独立文件整理示例，展示预览、幂等、冲突保护和失败重跑，以及离线升级验收。
 
-公共组件当前为 zsh-kit 0.2.0（待发布）；独立版本与离线交付规则见 [组件发布指南](docs/guides/releasing-zsh-kit.md)。
+公共组件当前为 zsh-kit 0.2.1（待发布）；独立版本与离线交付规则见 [组件发布指南](docs/guides/releasing-zsh-kit.md)。

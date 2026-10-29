@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/utils.sh"
-source "$SCRIPT_DIR/lib/config_writer.sh"
+source "$SCRIPT_DIR/../lib/config_writer.sh"
 
 # ========== 工具函数 ==========
 source "$SCRIPT_DIR/lib/ssh_identity.sh"

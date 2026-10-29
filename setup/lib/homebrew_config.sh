@@ -2,7 +2,7 @@
 # filepath: setup/lib/homebrew_config.sh
 
 # shellcheck disable=SC1091
-source "$(cd "$(dirname "$0")" && pwd)/../../lib/utils.sh"
+source "${${(%):-%x}:A:h}/../../lib/utils.sh"
 source "${${(%):-%x}:A:h}/homebrew_transaction.sh"
 
 homebrew_config_run() {
