@@ -57,6 +57,17 @@ cmp -s "$SANDBOX/config" "$SANDBOX/before" || fail ini-atomic
 [[ -z "$(print -l -- "$SANDBOX"/*.write.*(N) "$SANDBOX"/*.ini-batch.*(N))" ]] || fail temp-cleanup
 result=0; sk_write_managed_file || result=$?; [[ "$result" == 2 ]] || fail argument-status
 pass 'atomic file/INI failure, symlinks and unchanged writes'
+# awk command-line assignments interpret backslashes; all accepted text must be literal.
+for literal in 'C:\new\tools' '中文 value = "quoted"' '' 'a\\b\t\n'; do
+ sk_set_ini_value "$SANDBOX/literal.ini" 'my\section' 'my\key' "$literal"
+ printf '[my\\section]\nmy\\key = %s\n' "$literal" > "$SANDBOX/expected.ini"
+ cmp -s "$SANDBOX/literal.ini" "$SANDBOX/expected.ini" || fail literal-ini
+done
+sk_write_managed_block "$SANDBOX/literal.block" 'a\name' 'my\tool' content
+cp "$SANDBOX/literal.block" "$SANDBOX/expected.block"
+sk_write_managed_block "$SANDBOX/literal.block" 'a\name' 'my\tool' content
+cmp -s "$SANDBOX/literal.block" "$SANDBOX/expected.block" || fail literal-markers
+pass 'literal INI values and managed markers preserve backslashes and Unicode'
 # Different application HOME values must still coordinate on the same canonical path.
 (
  sk_resource_lock_acquire "$SANDBOX/config"

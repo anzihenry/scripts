@@ -7,7 +7,7 @@ update_ssh_config() (
   config_file="${config_file:A}"
   resource_lock_acquire "$config_file" || return 1
   host_alias="$(generate_host_alias "$domain" "$usage_type")" || return 1
-  candidate="$(mktemp "$HOME/.ssh/.config.XXXXXXXX")" || return 1
+  candidate="$(mktemp "${config_file:h}/.config.XXXXXXXX")" || return 1
   trap 'rm -f "$candidate"' EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM HUP
