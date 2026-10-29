@@ -115,4 +115,6 @@ Advisory locks coordinate cooperating project processes, not editors or manual c
 
 Common implementations live in `lib/config_writer.sh`, `lib/command_runtime.sh`, `lib/resource_lock.sh`, and `lib/workflow.sh`; old writer/command import paths remain compatible. SSH identity, configuration, GitHub API, and connection output are separate setup libraries.
 
-Homebrew 配置的未完成事务在下次运行时检查：内容匹配检查点则自动恢复；后续编辑、备份损坏或未记录写入会停止，保留备份并提示人工处理。恢复成功保留旧备份，新事务成功删除本次备份。
+Interrupted Homebrew transactions are checked on the next run. Matching checkpoints can be restored; later edits, damaged backups or unrecorded writes stop recovery and retain the backup for manual inspection. A successful new transaction deletes only its own backup.
+
+SSH setup reports local configuration separately from remote authentication. Tests use batch mode and strict host-key checking. Verify unknown or changed fingerprints through a trusted channel before manually confirming known_hosts. Authentication failures preserve local configuration and the original exit code; unknown custom-server responses need manual verification.
