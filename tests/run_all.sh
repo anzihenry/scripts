@@ -38,7 +38,7 @@ run_check lint ./lint/lint_shell.sh || exit $?
 run_check smoke ./tests/smoke_cli.sh || exit $?
 for suite in bootstrap_guard cli_dispatch_guard cli_validators_guard version_consistency_guard regression_guard \
  zsh_migration_guard macos_installer_flow_guard release_publish_guard setup_runtime_guard maintain_runtime_guard \
- idempotence_guard reliability_guard homebrew_recovery_guard ssh_runtime_guard zsh_kit_guard template_guard reuse_acceptance_guard artifact_tools_guard platform_guard api_surface_guard package_release_guard; do
+ idempotence_guard reliability_guard homebrew_recovery_guard ssh_runtime_guard config_boundary_guard zsh_kit_guard template_guard reuse_acceptance_guard artifact_tools_guard platform_guard api_surface_guard package_release_guard; do
  run_check "$suite" /bin/zsh "tests/$suite.sh" || exit $?
 done
 run_check e2e /bin/zsh tests/e2e/run_all.sh || exit $?

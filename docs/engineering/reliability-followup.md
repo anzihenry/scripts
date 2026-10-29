@@ -26,3 +26,5 @@
 阶段 4：SSH 单独报告本地配置完成与远端认证；正常会话退出 0 以及退出 1 的 GitHub/GitLab 标准成功响应视为已确认。其他失败保留原码，255 不会被成功文案覆盖。BatchMode 与 StrictHostKeyChecking=yes 防止隐式密码交互和自动信任；首次连接需用户通过可信渠道核对指纹后手动确认。公钥上传或认证失败保留本地配置，可重试。
 
 阶段 4 完整沙箱回归通过：`/private/tmp/scripts-stage4-20261029`。认证响应与参数通过命令桩验证，没有连接真实 Git 服务或改动用户 known_hosts。
+
+阶段 5 本地部分完成：新增配置路径/权限/语法失败测试及不含发布工具的安装布局测试；完整沙箱回归和三个 workflow 的 YAML 语法检查通过。报告 `/private/tmp/scripts-stage5-20261029`，持久证据见 [平台记录](platform-validation.md)。macOS 14、Intel、真实 Homebrew 安装及 USB 启动验收仍待专用环境；不阻塞后续模块收敛，但不声明这些环境通过。
