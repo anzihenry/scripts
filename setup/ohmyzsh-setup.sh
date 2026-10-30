@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="${0:A:h}"
 source "$SCRIPT_DIR/../lib/colors.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
-source "$SCRIPT_DIR/lib/config_writer.sh"
+source "$SCRIPT_DIR/../lib/config_writer.sh"
 source "$SCRIPT_DIR/lib/shell_setup.sh"
 
 source "$SCRIPT_DIR/lib/setup_options.sh"

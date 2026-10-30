@@ -22,8 +22,6 @@ updated: 2026-10-22
 
 ./bin/macos-scripts maintain brew --dry-run
 ./bin/macos-scripts maintain installer list
-./bin/macos-scripts release verify v0.5.0
-./bin/macos-scripts release publish v0.5.0 --yes
 
 ./bin/macos-scripts lint check
 ```
@@ -49,7 +47,6 @@ GitHub 配置默认不带 `--force`；仅在明确需要重建已有 SSH 密钥�
 | `setup packages` | Homebrew 已有包跳过；批量部分失败后复查已安装项；已有本地 LTS 用 `nvm use --lts` 激活，不隐式升级 Node/npm；pip 按键合并，镜像一致不重写；PATH 去重 |
 | 安装器下载 | 检查 `createinstallmedia`、载荷镜像完整性及载荷元数据中的 macOS 版本；版本按组件边界匹配；无版本指定时按修改时间选择完整安装器 |
 | USB 制作 | 设备锁内复查；同时匹配卷 UUID、安装载荷/Info 摘要、完成记录、应用版本与引导标记才跳过；`--force` 可重做；没有可信完成记录的已有安装器须显式确认覆盖 |
-| Release | 标题和正文一致时成功跳过；内容查询失败不执行编辑；有差异时遵循原有更新选项 |
 | Homebrew 维护 | 仍更新软件和元数据；Cask 检测失败不再报告整体成功，可重新执行 |
 
 SSH `--force` 会把旧密钥保留在配置目录的 `backups/ssh-key.<随机标识>/`，不会自动删除，以便恢复。加密私钥缺失公钥时，自动恢复会停止并保留原文件，需要先解锁再手动导出。无法验证的已有仓库也会保留并提示检查，不自动删除。
@@ -112,3 +109,7 @@ cd maintain
 > 脚本为关键命令记录耗时，并使用锁避免并发冲突；通过 `macos-scripts` 安装态运行时，日志默认写入 `~/Library/Logs/macos-scripts/macos-installer.log`。
 
 更多见[安装与配置](installation.md)、[发布指南](releasing.md)。
+
+Homebrew 配置的未完成事务在下次运行时检查：内容匹配检查点则自动恢复；后续编辑、备份损坏或未记录写入会停止，保留备份并提示人工处理。恢复成功保留旧备份，新事务成功删除本次备份。
+
+SSH 初始化先报告本地密钥与配置结果，再验证远端认证。测试使用严格主机密钥检查和非交互模式；未知或变化的指纹不会自动接受。请经可信渠道核对后手动确认 known_hosts。认证失败保留配置和原始退出码；自建服务未知响应需手动核实。

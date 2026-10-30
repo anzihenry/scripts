@@ -93,6 +93,8 @@ Run `zsh tests/artifact_tools_guard.sh` for canonical-path overlap, concurrent s
 
 Full regression: `zsh tests/run_all.sh --report NEW_DIRECTORY`. CI and release gates use this same ordered runner. Reports retain environment identity, source revision/dirty state, exit codes and per-suite logs. Optional `TEST_EXPECT_OS_MAJOR`/`TEST_EXPECT_ARCH` enforce runner expectations. `platform-validation.yml` accepts configured runners through `MACOS_COMPAT_MATRIX`; unavailable platforms remain unverified. See [platform evidence policy](../engineering/platform-validation.md).
 
+Additional boundary guards are `homebrew_recovery_guard.sh` (SIGKILL recovery and conflicts), `ssh_runtime_guard.sh` (authentication responses and host trust), and `config_boundary_guard.sh` (links, permissions, failed validation and an installation layout without release tooling). Release E2E invokes the repository-only `tools/release/release.sh`; the public CLI no longer exposes release commands.
+
 `zsh tests/api_surface_guard.sh` checks private API boundaries and compares unchanged consumer behavior against old and new components. Independent package contracts verify API.txt and opt-in separated stdout/stderr capture.
 
 `zsh tests/package_release_guard.sh` covers clean tracked sources, reproducible manifests, metadata tampering, ignored payload files and overwrite rejection. Validate exported directories with `zsh /path/to/artifact/tests/contract.sh` and `zsh tools/vendor_zsh_kit.sh --check /path/to/artifact`. See [component delivery](releasing-zsh-kit.md).

@@ -55,7 +55,8 @@ sk_write_managed_block() (
     trap 'exit 143' TERM HUP
     printf '%s\n' "$start_marker" "$content" "$end_marker" > "$replacement" || return 1
     [[ ! -f "$target_file" ]] || input="$target_file"
-    if ! awk -v start="$start_marker" -v end="$end_marker" -v block="$replacement" '
+    if ! SK_AWK_START="$start_marker" SK_AWK_END="$end_marker" SK_AWK_BLOCK="$replacement" awk '
+      BEGIN { start=ENVIRON["SK_AWK_START"]; end=ENVIRON["SK_AWK_END"]; block=ENVIRON["SK_AWK_BLOCK"] }
       function emit( line) { while ((getline line < block) > 0) print line; close(block) }
       $0 == start { if (seen++ || active) { bad=1; exit 1 }; active=1; emit(); next }
       $0 == end { if (!active) { bad=1; exit 1 }; active=0; next }
@@ -113,7 +114,8 @@ _sk_update_ini_candidate() (
     trap 'exit 143' TERM
     trap 'exit 129' HUP
     [[ ! -f "$target" ]] || input="$target"
-    awk -v wanted="[$section]" -v key="$key" -v value="$value" '
+    SK_AWK_SECTION="[$section]" SK_AWK_KEY="$key" SK_AWK_VALUE="$value" awk '
+      BEGIN { wanted=ENVIRON["SK_AWK_SECTION"]; key=ENVIRON["SK_AWK_KEY"]; value=ENVIRON["SK_AWK_VALUE"] }
       /^[[:space:]]*\[/ {
         if (active && !written) { print key " = " value; written=1 }
         header=$0; gsub(/^[[:space:]]+|[[:space:]]+$/, "", header)

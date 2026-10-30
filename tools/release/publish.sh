@@ -1,10 +1,10 @@
 #!/bin/zsh
-# filepath: maintain/github_release_publish.sh
+# filepath: tools/release/publish.sh
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/lib/colors.sh"
@@ -15,14 +15,16 @@ source "$SCRIPT_DIR/lib/release_publish_context.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/release_publish_args.sh"
 # shellcheck disable=SC1091
-source "$SCRIPT_DIR/lib/command_runtime.sh"
+source "$REPO_ROOT/lib/command_runtime.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/release_publish_flow.sh"
+
+source "$SCRIPT_DIR/lib/validators_release.sh"
 
 usage() {
   cat << EOF
 用法:
-  maintain/github_release_publish.sh --tag <vX.Y.Z> --notes-file <path> [选项]
+  tools/release/publish.sh --tag <vX.Y.Z> --notes-file <path> [选项]
 
 说明:
   使用 gh CLI 非交互创建或更新 GitHub Release，避免依赖 VS Code UI。
@@ -42,12 +44,12 @@ usage() {
   -h, --help                显示帮助
 
 示例:
-  zsh maintain/github_release_publish.sh \
+  zsh tools/release/publish.sh \
     --tag v0.3.0 \
     --notes-file docs/releases/0.3.0/README.md \
     --yes
 
-  zsh maintain/github_release_publish.sh \
+  zsh tools/release/publish.sh \
     --tag v0.3.0 \
     --notes-file docs/releases/0.3.0/README.md \
     --verify-only
@@ -57,8 +59,9 @@ EOF
 main() {
   initialize_release_publish_context "$@"
   parse_release_publish_args "$@"
-  initialize_release_publish_logging "$@"
   require_supported_macos || exit 1
+  verify_release_version_consistency "$TAG" || return 1
+  initialize_release_publish_logging "$@"
   check_release_prerequisites
   local state=0
   print_release_state || state=$?

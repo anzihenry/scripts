@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/colors.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/utils.sh"
-source "$SCRIPT_DIR/lib/config_writer.sh"
+source "$SCRIPT_DIR/../lib/config_writer.sh"
 
 # ========== 工具函数 ==========
 source "$SCRIPT_DIR/lib/ssh_identity.sh"
@@ -110,6 +110,7 @@ pub_key="$(generate_ssh_key "$domain" "$usage_type" "$force")" || exit $?
 
 # 2. 更新SSH配置
 host_alias="$(update_ssh_config "$domain" "$usage_type" "$(ssh_key_path "$domain" "$usage_type")")" || exit $?
+success "本地 SSH 密钥和配置已完成；远端认证将在后续单独验证。"
 
 # 3. GitHub公钥上传
 if [[ "$skip_upload" != "true" && "$domain" == "github.com" ]]; then
@@ -134,13 +135,15 @@ fi
 
 # 4. 连接测试
 print_header "SSH连接测试"
-test_ssh_connection "$host_alias" || {
+connection_code=0
+test_ssh_connection "$host_alias" || connection_code=$?
+if (( connection_code != 0 )); then
   log_error "请检查："
   log_error "1. 公钥是否已添加到Git平台"
   log_error "2. 防火墙或网络设置"
   log_error "3. SSH配置是否正确"
-  exit 1
-}
+  exit "$connection_code"
+fi
 
 # 5. 输出使用说明
 print_usage_instructions "$host_alias"

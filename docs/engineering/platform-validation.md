@@ -2,6 +2,8 @@
 
 平台支持目标：macOS 14+，arm64 与 x86_64，系统 `/bin/zsh`。目标与验证结果分开记录。
 
+2026-10-29 边界可靠性验证：[环境与逐套结果](evidence/reliability-followup-platform.txt)。本机 macOS 27.0.1 / arm64 全部沙箱回归通过；记录包含阶段 5 未提交测试变更，代表该工作区快照。新增配置边界、Homebrew SIGKILL 恢复、SSH 认证与安装布局测试。未执行真实安装、远端认证、USB 操作或其他系统/架构测试。
+
 | 环境 | 沙箱回归 | 真实安装/系统操作 |
 | --- | --- | --- |
 | 当前本机 macOS 27.0.1 / arm64 / Zsh 5.9 | 通过，[环境与逐套退出码](evidence/hardening-platform.txt) | 未执行 |

@@ -103,7 +103,7 @@ main() {
 
   run_expect_failure_contains \
     "Release verify missing tag" \
-    "release verify 需要提供版本 tag" \
+    "未知命令: release" \
     zsh bin/macos-scripts release verify
 
   run_expect_failure_contains \
@@ -123,7 +123,7 @@ main() {
 
   run_expect_failure_contains \
     "Release verify rejects unsupported arg" \
-    "release verify 不支持参数: --bogus" \
+    "未知命令: release" \
     zsh bin/macos-scripts release verify v0.3.0 --bogus
 
   run_expect_failure_contains \

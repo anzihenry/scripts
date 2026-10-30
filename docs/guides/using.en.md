@@ -24,8 +24,6 @@ Translation of the Chinese primary version. Commands and historical log excerpts
 
 ./bin/macos-scripts maintain brew --dry-run
 ./bin/macos-scripts maintain installer list
-./bin/macos-scripts release verify v0.5.0
-./bin/macos-scripts release publish v0.5.0 --yes
 
 ./bin/macos-scripts lint check
 ```
@@ -50,7 +48,6 @@ Setup converges to the same target state for the same arguments. Healthy resourc
 | `setup packages` | Skip installed packages and recheck partial batch successes; activate an installed local LTS without implicitly upgrading Node/npm; merge pip keys, compare mirrors, and deduplicate PATH |
 | Installer downloads | Check createinstallmedia, payload image integrity, and payload OS metadata; match complete version components and select complete installers by modification time |
 | USB creation | Recheck under the device lock; skip only when volume UUID, payload/Info digests, completion record, application version and boot markers match; force explicitly rebuilds |
-| Releases | Skip matching title/body; a failed content query never triggers an edit; differences follow the existing update policy |
 | Homebrew maintenance | Continue updating software and metadata; failed Cask detection makes the overall result fail so it can be retried |
 
 Forced SSH replacement retains the old keys in `backups/ssh-key.<random>/` under the configuration directory for recovery. A missing public key for an encrypted private key requires manual unlocking/export; the private key is preserved. Unverifiable existing repository directories are preserved for inspection.
@@ -117,3 +114,7 @@ Configuration writes lock the resolved resource path, including symlink targets.
 Advisory locks coordinate cooperating project processes, not editors or manual commands. Synchronous nested calls may reuse a parent transaction lock; do not fork parallel writers inside a transaction. SIGKILL/power loss releases kernel locks but cannot run rollback. Completed installations remain; retries inspect actual state, and retained backups support manual recovery. Signal exit codes are INT=130, TERM=143, HUP=129. Recorder failures report incomplete logs without replacing the business exit code.
 
 Common implementations live in `lib/config_writer.sh`, `lib/command_runtime.sh`, `lib/resource_lock.sh`, and `lib/workflow.sh`; old writer/command import paths remain compatible. SSH identity, configuration, GitHub API, and connection output are separate setup libraries.
+
+Interrupted Homebrew transactions are checked on the next run. Matching checkpoints can be restored; later edits, damaged backups or unrecorded writes stop recovery and retain the backup for manual inspection. A successful new transaction deletes only its own backup.
+
+SSH setup reports local configuration separately from remote authentication. Tests use batch mode and strict host-key checking. Verify unknown or changed fingerprints through a trusted channel before manually confirming known_hosts. Authentication failures preserve local configuration and the original exit code; unknown custom-server responses need manual verification.

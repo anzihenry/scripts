@@ -59,6 +59,9 @@ zsh tests/artifact_tools_guard.sh   # 分发/生成并发、真实路径、中�
 zsh tests/template_guard.sh         # 改名生成、带空格路径、离线运行、拒绝覆盖
 zsh tests/zsh_kit_guard.sh          # 独立公共包契约、离线分发、摘要与篡改保护
 zsh tests/reliability_guard.sh      # 多进程配置、回滚互斥、信号、错误传播、预览一致性
+zsh tests/homebrew_recovery_guard.sh # SIGKILL 后恢复、后续编辑、损坏备份与未记录写入
+zsh tests/ssh_runtime_guard.sh       # forge 响应、原始错误码与严格主机信任策略
+zsh tests/config_boundary_guard.sh   # 内容/权限/链接边界，安装布局不依赖发布工具
 ```
 
 > 查询回归覆盖 CLI/独立脚本帮助、CLI 版本、独立管道入口，以及新目录、不可写路径和已有日志/锁；命令桩验证不触发系统/网络检查、目录创建、日志轮转或锁修改。
@@ -77,7 +80,7 @@ zsh tests/e2e/run_all.sh
 
 覆盖场景：
 
-- `release verify` / `release publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
+- 内部 `tools/release/release.sh verify / publish`：版本一致性、gh 创建/更新/verify-only 分支与调用参数
 - `maintain brew`：brew 调用顺序、Cask 失败错误日志
 - `setup brew configure`：dry-run、真实临时 Git 配置、重复执行、分阶段故障/中断回滚、备份和锁保护
 - `bootstrap/install.sh`：tap + install 调用与日志写入

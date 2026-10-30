@@ -7,7 +7,7 @@
 #      —— 写 stdout 会污染 $(...) 返回值
 #   2. setup/lib/setup_runtime.sh 成功路径不得返回非零（tail 位置 && 缺陷）
 #   4. maintain/lib/macos_installer_flow.sh 陈旧锁必须能自动接管
-#   5. maintain/lib/release_publish_flow.sh release_status 三态语义
+#   5. tools/release/lib/release_publish_flow.sh release_status 三态语义
 #   6. lib/utils.sh first_line 不引入 | head 的 SIGPIPE 风险
 
 set -euo pipefail
@@ -227,7 +227,7 @@ test_release_status_three_states() {
   TAG="v9.9.9"
   REPO_SLUG="anzihenry/scripts"
   # shellcheck disable=SC1091
-  source "$REPO_ROOT/maintain/lib/release_publish_flow.sh"
+  source "$REPO_ROOT/tools/release/lib/release_publish_flow.sh"
 
   local ghdir rc
 
@@ -486,7 +486,7 @@ SHIM
   done
   MACOS_TEST_VERSION=13.7.8
   local -a args
-  for entry in bootstrap/install.sh setup/homebrew-setup.sh setup/macos-setup.sh setup/ohmyzsh-setup.sh setup/git_forge_ssh_setup.sh maintain/formulaes_casks_updater.sh maintain/github_release_publish.sh maintain/macos_sys_usb_maker.sh lint/lint_shell.sh; do
+  for entry in bootstrap/install.sh setup/homebrew-setup.sh setup/macos-setup.sh setup/ohmyzsh-setup.sh setup/git_forge_ssh_setup.sh maintain/formulaes_casks_updater.sh tools/release/publish.sh maintain/macos_sys_usb_maker.sh lint/lint_shell.sh; do
     args=()
     [[ "$entry" != maintain/macos_sys_usb_maker.sh ]] || args=(list)
     rc=0
@@ -621,21 +621,21 @@ SHIM
   local -a query_args query_cases=(
     'bin/macos-scripts|' 'bin/macos-scripts|help' 'bin/macos-scripts|--help' 'bin/macos-scripts|-h'
     'bin/macos-scripts|version' 'bin/macos-scripts|--version' 'bin/macos-scripts|-v'
-    'bin/macos-scripts|setup' 'bin/macos-scripts|maintain' 'bin/macos-scripts|release'
+    'bin/macos-scripts|setup' 'bin/macos-scripts|maintain' 'tools/release/release.sh|help'
     'bin/macos-scripts|help setup' 'bin/macos-scripts|help maintain installer create'
     'bin/macos-scripts|setup shell --help' 'bin/macos-scripts|setup packages --help'
     'bin/macos-scripts|setup brew configure --help' 'bin/macos-scripts|setup git --help'
     'bin/macos-scripts|setup github --help' 'bin/macos-scripts|maintain brew --help'
     'bin/macos-scripts|maintain installer list --help' 'bin/macos-scripts|maintain installer download --help'
-    'bin/macos-scripts|maintain installer create --help' 'bin/macos-scripts|release verify --help'
-    'bin/macos-scripts|release publish --help' 'bin/macos-scripts|lint --help'
+    'bin/macos-scripts|maintain installer create --help' 'tools/release/release.sh|verify --help'
+    'tools/release/release.sh|publish --help' 'bin/macos-scripts|lint --help'
     'bin/macos-scripts|lint check --help' 'bin/macos-scripts|lint fix --help'
     'bin/macos-scripts|lint --fix --help'
     'bootstrap/install.sh|--help' 'bootstrap/install.sh|-h' 'bootstrap/install.sh|help'
     'setup/homebrew-setup.sh|--help' 'setup/homebrew-setup.sh|help'
     'setup/macos-setup.sh|--help' 'setup/ohmyzsh-setup.sh|--help'
     'setup/git_forge_ssh_setup.sh|--help' 'maintain/formulaes_casks_updater.sh|--help'
-    'maintain/github_release_publish.sh|--help' 'maintain/macos_sys_usb_maker.sh|--help'
+    'tools/release/publish.sh|--help' 'maintain/macos_sys_usb_maker.sh|--help'
     'maintain/macos_sys_usb_maker.sh|list --help' 'maintain/macos_sys_usb_maker.sh|download --help'
     'maintain/macos_sys_usb_maker.sh|create --help' 'maintain/macos_sys_usb_maker.sh|--verbose download --help'
     'lint/lint_shell.sh|--help'
@@ -659,7 +659,7 @@ SHIM
     rc=0
     result="$(cd "$sandbox"; /bin/zsh -s -- --help < "$REPO_ROOT/bootstrap/install.sh" 2>&1)" || rc=$?
     assert_eq "$rc" 0 "$phase: 独立管道帮助不依赖日志或系统检查"
-    for entry in bootstrap/install.sh setup/homebrew-setup.sh setup/macos-setup.sh setup/ohmyzsh-setup.sh setup/git_forge_ssh_setup.sh maintain/formulaes_casks_updater.sh maintain/github_release_publish.sh maintain/macos_sys_usb_maker.sh bin/macos-scripts; do
+    for entry in bootstrap/install.sh setup/homebrew-setup.sh setup/macos-setup.sh setup/ohmyzsh-setup.sh setup/git_forge_ssh_setup.sh maintain/formulaes_casks_updater.sh tools/release/publish.sh maintain/macos_sys_usb_maker.sh bin/macos-scripts; do
       rc=0
       result="$(/bin/zsh "$REPO_ROOT/$entry" --bad-query-flag </dev/null 2>&1)" || rc=$?
       [[ "$rc" != 0 && "$result" == *未知* ]] || fail "$phase/$entry 无效参数应明确失败：$result"
@@ -668,7 +668,7 @@ SHIM
     result="$(/bin/zsh "$REPO_ROOT/bin/macos-scripts" version unexpected 2>&1)" || rc=$?
     [[ "$rc" != 0 && "$result" == *参数错误* ]] || fail "version 不应忽略多余参数"
     rc=0
-    result="$(/bin/zsh "$REPO_ROOT/bin/macos-scripts" release publish --title help 2>&1)" || rc=$?
+    result="$(/bin/zsh "$REPO_ROOT/tools/release/release.sh" publish --title help 2>&1)" || rc=$?
     [[ "$rc" != 0 && "$result" == *需要提供版本* ]] || fail "参数值 help 不应绕过 tag 校验"
     pass "$phase: 无效参数和版本查询多余参数仍返回非零"
     [[ ! -e "$QUERY_CALLS" ]] || fail "查询不应调用写入、系统或网络命令：$(<"$QUERY_CALLS")"

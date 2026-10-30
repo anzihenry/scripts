@@ -58,6 +58,8 @@ print_setup_git_help() {
   安装态日志默认写入 ~/Library/Logs/macos-scripts/setup-git.log。
   已有匹配密钥直接复用；配置相同不重写，缺失公钥可从未加密私钥恢复。
   --force 替换的旧密钥备份保留在 ~/.config/macos-scripts/backups/。
+  本地配置与远端认证分别报告；认证测试不自动信任未知主机。
+  首次连接请通过可信渠道核对服务端指纹，手动确认 known_hosts 后重试。
 
 选项:
   -d, --domain <domain>         Git 平台域名，默认 github.com

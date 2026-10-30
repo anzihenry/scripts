@@ -62,7 +62,7 @@ confirm() { return 0; }
 prepare_log_file_path() { printf '%s' "/tmp/$1"; }
 
 # shellcheck disable=SC1091
-source "$REPO_ROOT/maintain/lib/command_runtime.sh"
+source "$REPO_ROOT/lib/command_runtime.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/maintain/lib/brew_updater_args.sh"
 # shellcheck disable=SC1091

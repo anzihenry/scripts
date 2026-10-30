@@ -9,7 +9,7 @@ export HOME="$SANDBOX/home" MACOS_SCRIPTS_CONFIG_DIR="$SANDBOX/config" MACOS_SCR
 mkdir -p "$HOME" "$SANDBOX/bin"
 source "$ROOT/lib/colors.sh"
 source "$ROOT/lib/utils.sh"
-source "$ROOT/setup/lib/config_writer.sh"
+source "$ROOT/lib/config_writer.sh"
 PASS_COUNT=0
 pass() { print "[PASS] $1"; PASS_COUNT=$((PASS_COUNT+1)); }
 fail() { print -u2 "[FAIL] $1"; exit 1; }
@@ -102,11 +102,21 @@ rm "$HOME/.ssh/id_ed25519_github_personal.pub"
 /bin/zsh "$ROOT/setup/git_forge_ssh_setup.sh" --skip-upload </dev/null > "$SANDBOX/ssh-output" 2>&1
 [[ -s "$HOME/.ssh/id_ed25519_github_personal.pub" ]] && cmp -s "$HOME/.ssh/id_ed25519_github_personal" "$SANDBOX/key-first" || fail '应从私钥恢复公钥'
 pass 'SSH 无交互复用私钥和配置，并恢复缺失公钥'
+mkdir -p "$SANDBOX/dot files"
+mv "$HOME/.ssh/config" "$SANDBOX/dot files/ssh config"
+ln -s "$SANDBOX/dot files/ssh config" "$HOME/.ssh/config"
+/bin/zsh "$ROOT/setup/git_forge_ssh_setup.sh" --domain github.example.com --skip-upload </dev/null > "$SANDBOX/ssh-output" 2>&1
+[[ -L "$HOME/.ssh/config" ]] || fail 'SSH 配置链接必须保留'
+cp "$HOME/.ssh/config" "$SANDBOX/linked-ssh-first"
+/bin/zsh "$ROOT/setup/git_forge_ssh_setup.sh" --domain github.example.com --skip-upload </dev/null > "$SANDBOX/ssh-output" 2>&1
+cmp -s "$HOME/.ssh/config" "$SANDBOX/linked-ssh-first" || fail '链接配置重复执行必须不变'
+pass 'SSH 跨目录符号链接和带空格路径可更新且重复稳定'
 /bin/zsh "$ROOT/setup/git_forge_ssh_setup.sh" --domain gitlab.company.com --skip-upload </dev/null > "$SANDBOX/ssh-output" 2>&1
 /bin/zsh "$ROOT/setup/git_forge_ssh_setup.sh" --domain gitlab.other.com --skip-upload </dev/null > "$SANDBOX/ssh-output" 2>&1
 [[ -f "$HOME/.ssh/id_ed25519_gitlab.company.com_personal" && -f "$HOME/.ssh/id_ed25519_gitlab.other.com_personal" ]] || fail '完整域名隔离密钥'
 pass '不同 Git 域名不共用身份'
-sed -i '' 's/HostName github.com$/HostName github.company.com/' "$HOME/.ssh/config"
+ssh_config_target="${HOME}/.ssh/config"
+sed -i '' 's/HostName github.com$/HostName github.company.com/' "${ssh_config_target:A}"
 /bin/zsh "$ROOT/setup/git_forge_ssh_setup.sh" --skip-upload </dev/null > "$SANDBOX/ssh-output" 2>&1
 [[ -s "$HOME/.ssh/id_ed25519_github.com_personal" ]] || fail '旧私有域名别名不应与公网身份冲突'
 cmp -s "$HOME/.ssh/id_ed25519_github_personal" "$SANDBOX/key-first" || fail '旧私有域名密钥不得覆盖'

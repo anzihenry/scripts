@@ -51,7 +51,7 @@ success() { printf 'SUCCESS:%s\n' "$*"; }
 print_header() { printf 'HEADER:%s\n' "$1"; }
 
 # shellcheck disable=SC1091
-source "$REPO_ROOT/maintain/lib/release_publish_flow.sh"
+source "$REPO_ROOT/tools/release/lib/release_publish_flow.sh"
 
 test_confirm_publish_short_circuit() {
   YES="false"

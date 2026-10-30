@@ -1,5 +1,5 @@
 #!/bin/zsh
-# filepath: maintain/lib/release_publish_context.sh
+# filepath: tools/release/lib/release_publish_context.sh
 
 # 本文件是被 source 的共享状态模块：变量在此初始化，
 # 由 release_publish_args.sh 赋值、release_publish_flow.sh 消费。

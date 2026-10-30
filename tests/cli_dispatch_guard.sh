@@ -48,7 +48,8 @@ source "$REPO_ROOT/bin/lib/cli_runtime.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_forward_args.sh"
 # shellcheck disable=SC1091
-source "$REPO_ROOT/bin/lib/cli_dispatch_release.sh"
+source "$REPO_ROOT/tools/release/lib/cli_dispatch_release.sh"
+source "$REPO_ROOT/tools/release/lib/forward_args.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_dispatch_setup.sh"
 # shellcheck disable=SC1091

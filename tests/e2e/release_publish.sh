@@ -22,7 +22,7 @@ printf 'Release notes stub\n' > "$NOTES_FILE"
 # 1) dry-run：应打印将执行的命令，但不实际调用 gh release create
 e2e_run_expect_success \
   "release publish dry-run" \
-  zsh bin/macos-scripts release publish "$CURRENT_TAG" --dry-run --notes-file "$NOTES_FILE"
+  zsh tools/release/release.sh publish "$CURRENT_TAG" --dry-run --notes-file "$NOTES_FILE"
 
 e2e_assert_contains "$E2E_RUN_OUTPUT" "dry-run 模式未实际创建 release" "dry-run 输出未实际创建"
 e2e_assert_contains "$E2E_RUN_OUTPUT" "gh release create $CURRENT_TAG" "dry-run 打印将执行的 gh 命令"
@@ -31,7 +31,7 @@ e2e_assert_transcript_not_contains "gh release create" "dry-run 未实际调用 
 # 2) 真实发布：创建路径（release 尚不存在）
 e2e_run_expect_success \
   "release publish 真实创建" \
-  zsh bin/macos-scripts release publish "$CURRENT_TAG" --yes --notes-file "$NOTES_FILE"
+  zsh tools/release/release.sh publish "$CURRENT_TAG" --yes --notes-file "$NOTES_FILE"
 
 e2e_assert_transcript_contains \
   "gh release create $CURRENT_TAG --repo anzihenry/scripts --title $CURRENT_TAG --target main --notes-file $NOTES_FILE" \
@@ -46,18 +46,18 @@ e2e_assert_file "$E2E_LOG_DIR/github-release-publish.log" "发布日志写入沙
 # 3) 再次发布：更新路径（release 已存在，CLI 默认带 --update-existing）
 e2e_run_expect_success \
   "release publish 更新已存在" \
-  zsh bin/macos-scripts release publish "$CURRENT_TAG" --yes --notes-file "$NOTES_FILE"
+  zsh tools/release/release.sh publish "$CURRENT_TAG" --yes --notes-file "$NOTES_FILE"
 
 e2e_assert_contains "$E2E_RUN_OUTPUT" '标题和正文一致' "相同 Release 跳过更新"
 e2e_assert_transcript_not_contains 'gh release edit' "重复发布不调用 edit"
 printf 'Changed release notes\n' > "$NOTES_FILE"
-e2e_run_expect_success "正文有变化时更新" zsh bin/macos-scripts release publish "$CURRENT_TAG" --yes --notes-file "$NOTES_FILE"
+e2e_run_expect_success "正文有变化时更新" zsh tools/release/release.sh publish "$CURRENT_TAG" --yes --notes-file "$NOTES_FILE"
 e2e_assert_transcript_contains \
   "gh release edit $CURRENT_TAG --repo anzihenry/scripts --title $CURRENT_TAG --notes-file $NOTES_FILE" \
   "gh release edit 更新调用参数正确"
 
 # 标题位于 tag 前，且值为 help；应继续按真实 tag 发布校验，而非输出帮助。
-e2e_run_expect_success "发布选项可放在 tag 前" zsh bin/macos-scripts release publish --title help --notes-file "$NOTES_FILE" "$CURRENT_TAG" --dry-run
+e2e_run_expect_success "发布选项可放在 tag 前" zsh tools/release/release.sh publish --title help --notes-file "$NOTES_FILE" "$CURRENT_TAG" --dry-run
 e2e_assert_contains "$E2E_RUN_OUTPUT" "版本一致性检查通过: $CURRENT_TAG" "校验使用真实 tag 而非标题值"
 e2e_assert_contains "$E2E_RUN_OUTPUT" "gh release edit $CURRENT_TAG --repo anzihenry/scripts --title help" "保留标题值和正确发布 tag"
 

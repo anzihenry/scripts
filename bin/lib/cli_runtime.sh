@@ -32,10 +32,6 @@ load_forwarded_args() {
   eval "$target_name=($serialized)"
 }
 
-run_release_script() {
-  run_zsh_script "maintain/github_release_publish.sh" "$@"
-}
-
 run_maintain_installer_action() {
   local action="$1"
   shift

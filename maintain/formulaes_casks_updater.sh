@@ -14,7 +14,7 @@ source "$SCRIPT_DIR/lib/brew_updater_args.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/brew_updater_casks.sh"
 # shellcheck disable=SC1091
-source "$SCRIPT_DIR/lib/command_runtime.sh"
+source "$SCRIPT_DIR/../lib/command_runtime.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/brew_updater_runtime.sh"
 

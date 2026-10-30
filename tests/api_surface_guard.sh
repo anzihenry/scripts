@@ -13,6 +13,16 @@ fi
 /bin/zsh "$ROOT/packages/zsh-kit/tests/consumer.sh" "$ROOT/packages/zsh-kit" > "$sandbox/new" 2> "$sandbox/new.err"
 cmp -s "$sandbox/old" "$sandbox/new"
 cmp -s "$sandbox/old.err" "$sandbox/new.err"
+# Shared application modules resolve their own location, independent of cwd/$0 options.
+/bin/zsh -c '
+ set -euo pipefail
+ unsetopt FUNCTION_ARGZERO
+ cd /
+ for module in setup/lib/homebrew_config.sh setup/lib/brew_helpers.sh maintain/lib/macos_installer_utils.sh; do
+   source "$1/$module"
+ done
+ (( ${+functions[resolve_homebrew_bin]} && ${+functions[bh_reset_summary]} && ${+functions[sanitize_key]} ))
+' zsh "$ROOT"
 # A missing public entry must be detected without relying on source text matching.
 cp -R "$ROOT/packages/zsh-kit" "$sandbox/broken"
 print 'sk_nonexistent_api' >> "$sandbox/broken/API.txt"

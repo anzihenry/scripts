@@ -3,7 +3,7 @@
 # 这些函数被 macos_sys_usb_maker.sh 等脚本复用，便于测试与维护。
 
 # shellcheck disable=SC1091
-source "$(cd "$(dirname "$0")" && pwd)/../../lib/utils.sh"
+source "${${(%):-%x}:A:h}/../../lib/utils.sh"
 
 sanitize_key() {
   echo "$1" | sed 's#[^A-Za-z0-9]#_#g'

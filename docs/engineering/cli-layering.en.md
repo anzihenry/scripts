@@ -82,3 +82,5 @@ The [development guide](../guides/development.en.md) is authoritative. CLI chang
 ## When to stop abstracting
 
 Prefer documentation or tests when a helper saves only two or three lines while adding navigation cost, combines special cases across domains, dispatch is already a thin orchestrator, or another abstraction does not improve readability/testability. The goal is stable, readable, testable CLI layering that supports further development.
+
+Release commands have moved out of the public CLI. Release-specific modules are loaded only by `tools/release/release.sh`; see the release guide.

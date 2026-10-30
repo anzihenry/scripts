@@ -6,7 +6,6 @@ source "$REPO_ROOT/bin/lib/cli_dispatch_setup.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_dispatch_maintain.sh"
 # shellcheck disable=SC1091
-source "$REPO_ROOT/bin/lib/cli_dispatch_release.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/bin/lib/cli_dispatch_lint.sh"
 
@@ -20,9 +19,6 @@ main() {
       ;;
     maintain)
       handle_maintain "$@"
-      ;;
-    release)
-      handle_release "$@"
       ;;
     lint)
       handle_lint "$@"

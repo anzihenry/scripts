@@ -60,7 +60,7 @@ updated: 2026-10-17
 - `bin/lib/help_main.sh`
 - `bin/lib/help_setup.sh`
 - `bin/lib/help_maintain.sh`
-- `bin/lib/help_release.sh`
+- `tools/release/lib/help_release.sh`
 - `bin/lib/help_lint.sh`
 
 职责：
@@ -142,7 +142,7 @@ updated: 2026-10-17
 - `bin/lib/validators.sh`
 - `bin/lib/validators_setup.sh`
 - `bin/lib/validators_maintain.sh`
-- `bin/lib/validators_release.sh`
+- `tools/release/lib/validators_release.sh`
 
 职责：
 
@@ -172,7 +172,7 @@ updated: 2026-10-17
 - `bin/lib/cli_dispatch.sh`
 - `bin/lib/cli_dispatch_setup.sh`
 - `bin/lib/cli_dispatch_maintain.sh`
-- `bin/lib/cli_dispatch_release.sh`
+- `tools/release/lib/cli_dispatch_release.sh`
 - `bin/lib/cli_dispatch_lint.sh`
 
 职责：
@@ -257,3 +257,5 @@ updated: 2026-10-17
 - 新抽象无法明显提升测试性或可读性
 
 本项目当前的目标不是“抽象最多”，而是 **让 CLI 分层稳定、可读、可测、可继续演进**。
+
+发布命令已迁出用户 CLI；release 专用模块仅由 `tools/release/release.sh` 加载，见发布指南。

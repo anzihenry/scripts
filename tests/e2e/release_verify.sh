@@ -18,7 +18,7 @@ CURRENT_TAG="v${CURRENT_VERSION}"
 
 e2e_run_expect_success \
   "release verify 版本一致通过" \
-  zsh bin/macos-scripts release verify "$CURRENT_TAG"
+  zsh tools/release/release.sh verify "$CURRENT_TAG"
 
 e2e_assert_contains "$E2E_RUN_OUTPUT" "版本一致性检查通过" "release verify 输出一致性通过"
 e2e_assert_contains "$E2E_RUN_OUTPUT" "verify-only 检查完成" "release verify 完成 verify-only 链路"
@@ -28,8 +28,16 @@ e2e_assert_transcript_contains \
 
 e2e_run_expect_failure \
   "release verify 版本不匹配失败" \
-  zsh bin/macos-scripts release verify v9.9.9
+  zsh tools/release/release.sh verify v9.9.9
 
 e2e_assert_contains "$E2E_RUN_OUTPUT" "版本不一致" "release verify 提示版本不一致"
+
+cat > "$E2E_TMP_ROOT/installed" <<'SHIM'
+#!/bin/zsh
+print 'macos-scripts v9.9.9'
+SHIM
+chmod +x "$E2E_TMP_ROOT/installed"
+e2e_run_expect_failure '安装旧版本不能通过门禁' zsh tools/release/verify_installed.sh "$CURRENT_TAG" "$E2E_TMP_ROOT/installed"
+e2e_run_expect_success '精确安装版本通过门禁' zsh tools/release/verify_installed.sh v9.9.9 "$E2E_TMP_ROOT/installed"
 
 e2e_summary

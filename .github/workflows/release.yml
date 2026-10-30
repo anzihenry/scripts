@@ -8,6 +8,14 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      tag:
+        description: '已推送的版本 tag，例如 v0.5.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 defaults:
   run:
@@ -21,6 +29,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Validate release identity
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          [[ "$RELEASE_TAG" =~ '^v[0-9]+\.[0-9]+\.[0-9]+$' ]]
+          [[ "$(git rev-parse HEAD)" == "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" ]]
+          [[ "$(cat VERSION)" == "${RELEASE_TAG#v}" ]]
 
       - name: Full sandbox regression
         run: zsh tests/run_all.sh --report "$RUNNER_TEMP/release-validation-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
@@ -34,9 +53,9 @@ jobs:
       - name: Release verify (real gh, non-destructive)
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          ./bin/macos-scripts release verify "$TAG"
+          zsh tools/release/release.sh verify "$RELEASE_TAG"
 
       - name: Bootstrap install dry-run (real macOS)
         run: zsh bootstrap/install.sh --dry-run
@@ -53,9 +72,29 @@ jobs:
         # 本仓库名为 scripts 而非 homebrew-scripts，必须显式指定远端 URL。
         # 读取的是 tap 仓库 main 分支的 Formula（sha256 已在 main 回填），
         # 与 tag 内 Formula 解耦，避免 tag 冻结与 sha256 回填的循环依赖。
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           brew tap anzihenry/scripts https://github.com/anzihenry/scripts
+          formula="$(brew --repository anzihenry/scripts)/Formula/macos-scripts.rb"
+          grep -Fq "refs/tags/$RELEASE_TAG.tar.gz" "$formula"
           brew install anzihenry/scripts/macos-scripts 2>&1 | tail -30
           command -v macos-scripts
-          macos-scripts --version
+          zsh tools/release/verify_installed.sh "$RELEASE_TAG" "$(command -v macos-scripts)"
           macos-scripts help setup git
+
+  publish:
+    needs: e2e-gate
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: zsh tools/release/release.sh publish "$RELEASE_TAG" --yes

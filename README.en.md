@@ -52,4 +52,4 @@ Use `zsh tools/create_zsh_project.sh --name my-tool --description "My macOS tool
 
 See [file-organizer](examples/file-organizer/README.md) for an independently runnable generated example with dry-run, idempotence, conflict protection, recovery and offline upgrade acceptance.
 
-The component is zsh-kit 0.2.0 (not yet published). See [independent versioning and offline delivery](docs/guides/releasing-zsh-kit.md).
+The component is zsh-kit 0.2.1 (not yet published). See [independent versioning and offline delivery](docs/guides/releasing-zsh-kit.md).

@@ -1,5 +1,5 @@
 #!/bin/zsh
-# filepath: bin/lib/cli_dispatch_release.sh
+# filepath: tools/release/lib/cli_dispatch_release.sh
 
 handle_release_publish() {
   has_help_flag "$@" && { print_release_publish_help; return 0; }
@@ -26,7 +26,7 @@ handle_release_verify() {
   load_release_forwarded_args forwarded_args verify "$@"
   local tag="${forwarded_args[2]}"
   if [[ -n "$tag" ]]; then
-    verify_release_version_consistency "$tag" || true
+    verify_release_version_consistency "$tag" || return 1
   fi
 
   run_release_script "${forwarded_args[@]}"

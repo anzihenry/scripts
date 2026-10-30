@@ -1,6 +1,7 @@
 #!/bin/zsh
 # filepath: setup/lib/homebrew_transaction.sh
 # Homebrew 配置事务：备份实际文件，子进程内写入，失败/中断时恢复。
+source "${${(%):-%x}:A:h}/homebrew_recovery.sh"
 
 homebrew_snapshot_file() {
     local target_file="$1"
@@ -11,6 +12,8 @@ homebrew_snapshot_file() {
         return 1
     fi
     target_file="${target_file:A}"
+    [[ "$target_file" != *$'\n'* && "$target_file" != *$'\t'* ]] || return 1
+    resource_lock_acquire "$target_file" || return 1
     if [[ -e "$target_file" && ! -f "$target_file" ]]; then
         error "配置目标不是普通文件: $target_file"
         return 1
@@ -66,6 +69,7 @@ homebrew_transaction_cleanup() {
     trap - EXIT INT TERM HUP
     if [[ "$HBC_COMMITTED" != true && "$HBC_STARTED" == true ]]; then
         if homebrew_restore_snapshot; then
+            homebrew_journal_state rolled-back || warning "无法记录回滚状态，请保留备份: $HBC_BACKUP_DIR"
             warning "Homebrew 配置失败，已恢复本次修改；已安装的 Homebrew 和 CLI 保留。"
         else
             error "Homebrew 配置失败，部分文件未能自动恢复。备份: $HBC_BACKUP_DIR"
@@ -101,15 +105,31 @@ run_homebrew_config_transaction() (
     local HBC_BACKUP_DIR=""
     local HBC_COMMITTED=false HBC_STARTED=false
     local -a HBC_TARGETS=() HBC_EXISTED=()
-    local brew_repo core_repo
+    local -a HBC_ALLOWED_TARGETS=()
+    local brew_repo core_repo repo config_path HBC_SCOPE
 
     homebrew_resource_lock "$brew_bin" || return 1
     resource_lock_acquire "$HOME/.zshrc" || return 1
-    mkdir -p "$backup_root" || return 1
+    [[ ! -L "$backup_root" ]] || { error "备份目录不能是符号链接: $backup_root"; return 1; }
+    (umask 077; mkdir -p "$backup_root") || return 1
+    [[ "$(stat -f '%u' "$backup_root")" == "$EUID" ]] || return 1
     if [[ -e "$HBC_LOCK_DIR" ]]; then
         error "另一个 Homebrew 配置可能正在运行。确认其已结束后，可清理锁目录再重试: $HBC_LOCK_DIR"
         return 1
     fi
+    brew_repo="$($brew_bin --repo)" || return 1
+    [[ -d "$brew_repo" ]] || return 1
+    core_repo="$brew_repo/Library/Taps/homebrew/homebrew-core"
+    HBC_ALLOWED_TARGETS+=("${HOME:A}/.zshrc")
+    HBC_ALLOWED_TARGETS[1]="${HBC_ALLOWED_TARGETS[1]:A}"
+    for repo in "$brew_repo" "$core_repo"; do
+        [[ -d "$repo" ]] || continue
+        config_path="$(git -C "$repo" rev-parse --git-path config)" || return 1
+        [[ "$config_path" == /* ]] || config_path="$repo/$config_path"
+        HBC_ALLOWED_TARGETS+=("${config_path:A}")
+    done
+    HBC_SCOPE="${brew_repo:A}|${HOME:A}"
+    homebrew_recover_pending "$backup_root" || return 1
     trap homebrew_transaction_cleanup EXIT
     trap 'exit 130' INT
     trap 'exit 143' TERM
@@ -132,11 +152,13 @@ run_homebrew_config_transaction() (
         homebrew_snapshot_git_config "$core_repo" || return 1
     fi
 
+    homebrew_journal_begin || return 1
     HBC_STARTED=true
-    configure_homebrew_shellenv "$brew_bin" false || return 1
-    configure_homebrew_mirror_exports false || return 1
+    homebrew_transaction_step configure_homebrew_shellenv "$brew_bin" false || return 1
+    homebrew_transaction_step configure_homebrew_mirror_exports false || return 1
     /bin/zsh -n "$HOME/.zshrc" || { error ".zshrc 语法校验失败，恢复原配置。"; return 1; }
-    sync_homebrew_mirror_remotes "$brew_bin" false || return 1
+    homebrew_transaction_step sync_homebrew_mirror_remotes "$brew_bin" false || return 1
+    homebrew_journal_state committed || return 1
     HBC_COMMITTED=true
     success "Homebrew 配置已完成。"
 )
